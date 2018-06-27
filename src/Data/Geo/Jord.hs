@@ -104,7 +104,7 @@ destination p b d = fromNVector (add (scale v (cos ta)) (scale de (sin ta)))
   where
     v = toNVector p
     ed = normalise (cross north v) -- east direction vector at v
-    nd = cross v de -- north direction vector at v
+    nd = cross v ed -- north direction vector at v
     a = toRadians b -- azimuth in radians
     ta = meters d / meanEarthRadius -- angle travelled in radians
     de = add (scale nd (cos a)) (scale ed (sin a)) -- unit vector in the direction of the azimuth

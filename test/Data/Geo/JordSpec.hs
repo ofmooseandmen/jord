@@ -31,6 +31,11 @@ spec =
                 distance (read "500359N1795959W" :: GeoPos) (read "500359N1795959E" :: GeoPos)
                 `shouldBe`
                 Meters 39.65337387228698
+        describe "destination" $ do
+            it "return the estination point along great-circle at distance and bearing" $
+                destination (read "531914N0014347W" :: GeoPos) (Degrees 96.0217) (Meters 124800)
+                `shouldBe`
+                geo 53.18826910476228 0.13327424091892526
         describe "north pole" $ do
             it "returns the (90, 0)" $
                 (north :: GeoPos) `shouldBe` geo 90.0 0.0

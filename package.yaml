@@ -1,0 +1,45 @@
+name:                jord
+version:             0.1.0.0
+github:              "ofmooseandmen/jord"
+license:             BSD3
+author:              "Cedric Liegeois"
+maintainer:          "ofmooseandmen@yahoo.com"
+copyright:           "2018 Cedric Liegeois"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+description:         Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+
+executables:
+  jord-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - jord
+
+tests:
+  jord-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - jord

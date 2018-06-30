@@ -72,7 +72,7 @@ newtype MetersPerSecond = MetersPerSecond
 -- | An instant or duration in milliseconds.
 newtype Millis = Millis
     { millis :: Int
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 -- | The 'Position' class defines 2 functions to convert a position to and from a 'NVector'.
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
@@ -114,6 +114,7 @@ arc p1 p2 = Arc (toNVector p1) (toNVector p2)
 --
 -- This is known as the direct geodetic problem.
 destination :: (Position a) => a -> Degrees -> Meters -> a
+destination p _ (Meters 0) = p
 destination p b d = fromNVector (add (scale v (cos ta)) (scale de (sin ta)))
   where
     v = toNVector p
@@ -133,8 +134,13 @@ distance p1 p2 = Meters (meters meanEarthRadius * atan2 (norm (cross v1 v2)) (do
 
 -- | Computes the interpolated 'Position' at time @ti@,
 -- knowing the 'Position' @p0@ at time @t0@ and the 'Position' @p1@ at time @t1@.
+-- @t0@ <= @ti@ <= @t1@
 interpolate :: (Position a) => a -> Millis -> a -> Millis -> Millis -> a
-interpolate p0 t0 p1 t1 ti = fromNVector (normalise (add v0 (scale (subtract v1 v0) s)))
+interpolate p0 t0 p1 t1 ti
+    | ti < t0 || ti > t1 || t0 > t1 = error "expected t0 <= ti <= t1"
+    | ti == t0 = p0
+    | ti == t1 = p1
+    | otherwise = fromNVector (normalise (add v0 (scale (subtract v1 v0) s)))
   where
     v0 = toNVector p0
     v1 = toNVector p1
@@ -144,8 +150,10 @@ interpolate p0 t0 p1 t1 ti = fromNVector (normalise (add v0 (scale (subtract v1 
 meanEarthRadius :: Meters
 meanEarthRadius = Meters 6371008.8
 
--- | Computes the mid 'Position' between the two given 'Position's.
+-- | Computes the mid 'Position' between the given 'Position's which must be non-empty.
 midpoint :: (Position a) => [a] -> a
+midpoint [] = error "midpoint expects a non-empty list"
+midpoint [p] = p
 midpoint ps = fromNVector (normalise (foldl add zero vs))
   where
     vs = map toNVector ps

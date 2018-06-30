@@ -134,7 +134,8 @@ distance p1 p2 = Meters (meters meanEarthRadius * atan2 (norm (cross v1 v2)) (do
 
 -- | Computes the interpolated 'Position' at time @ti@,
 -- knowing the 'Position' @p0@ at time @t0@ and the 'Position' @p1@ at time @t1@.
--- @t0@ <= @ti@ <= @t1@
+--
+-- Expects @t0@ <= @ti@ <= @t1@
 interpolate :: (Position a) => a -> Millis -> a -> Millis -> Millis -> a
 interpolate p0 t0 p1 t1 ti
     | ti < t0 || ti > t1 || t0 > t1 = error "expected t0 <= ti <= t1"
@@ -150,7 +151,7 @@ interpolate p0 t0 p1 t1 ti
 meanEarthRadius :: Meters
 meanEarthRadius = Meters 6371008.8
 
--- | Computes the mid 'Position' between the given 'Position's which must be non-empty.
+-- | Computes the mid 'Position' between the given list of 'Position's which must be non-empty.
 midpoint :: (Position a) => [a] -> a
 midpoint [] = error "midpoint expects a non-empty list"
 midpoint [p] = p

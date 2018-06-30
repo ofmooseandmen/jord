@@ -8,7 +8,7 @@ import Test.Hspec
 
 spec :: Spec
 spec =
-    describe "Jord" $ do
+    describe "GreatCircle" $ do
         describe "antipode" $ do
             it "returns the antipodal point" $
                 antipode (readGeo "484137N0061105E") `geoShouldBe` geo (-48.69361) (-173.81527)

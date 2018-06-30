@@ -8,7 +8,7 @@ import Test.Hspec
 
 spec :: Spec
 spec =
-    describe "Read GeoPos" $ do
+    describe "GeoPos" $ do
         describe "Reading valid DMS text" $ do
             it "reads 553621N0130002E" $
                 readGeo "553621N0130002E" `geoShouldBe` geo 55.60583 13.00055
@@ -19,11 +19,14 @@ spec =
             it "reads 011659S0364900E" $
                 readGeo "011659S0364900E" `geoShouldBe` geo (-1.28305) 36.81666
             it "reads 0116S03649E" $ readGeo "0116S03649E" `geoShouldBe` geo (-1.26666) 36.81666
+            it "reads 1°16'S 36°49'E" $
+                readGeo "1°16'S 36°49'E" `geoShouldBe` geo (-1.26666) 36.81666
             it "reads 01S036E" $ readGeo "01S036E" `geoShouldBe` geo (-1.0) 36.0
             it "reads 473622N1221955W" $
                 readGeo "473622N1221955W" `geoShouldBe` geo 47.60611 (-122.33194)
             it "reads 4736N12219W" $ readGeo "4736N12219W" `geoShouldBe` geo 47.6 (-122.31666)
             it "reads 47N122W" $ readGeo "47N122W" `geoShouldBe` geo 47.0 (-122.0)
+            it "reads 47°N 122°W" $ readGeo "47°N 122°W" `geoShouldBe` geo 47.0 (-122.0)
             it "reads 544807S0681811W" $
                 readGeo "544807S0681811W" `geoShouldBe` geo (-54.80194) (-68.30305)
             it "reads 5448S06818W" $ readGeo "5448S06818W" `geoShouldBe` geo (-54.8) (-68.3)
@@ -38,3 +41,12 @@ spec =
             it "fails to read 544807S1811811W" $ readGeoM "544807S1811811W" `shouldBe` Nothing
             it "fails to read 546007S1801811W" $ readGeoM "546007S1801811W" `shouldBe` Nothing
             it "fails to read 545907S1801860W" $ readGeoM "545907S1801860W" `shouldBe` Nothing
+        describe "Showing GeoPos" $ do
+            it "return the N/E position formatted in DMS with symbols" $
+                show (geo 55.60583333 13.00055556) `shouldBe` "55°36'20''N 13°0'2''E"
+            it "return the S/E position formatted in DMS with symbols" $
+                show (geo (-1.28305556) 36.81666) `shouldBe` "1°16'59''S 36°48'59''E"
+            it "return the N/W position formatted in DMS with symbols" $
+                show (geo 47.60611 (-122.33194)) `shouldBe` "47°36'21''N 122°19'54''W"
+            it "return the S/W position formatted in DMS with symbols" $
+                show (geo (-54.80194) (-68.30305)) `shouldBe` "54°48'6''S 68°18'10''W"

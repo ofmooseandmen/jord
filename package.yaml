@@ -1,35 +1,37 @@
 name:                jord
 version:             0.1.0.0
-github:              "ofmooseandmen/jord"
+github:              ofmooseandmen/jord
 license:             BSD3
-author:              "Cedric Liegeois"
-maintainer:          "ofmooseandmen@yahoo.com"
-copyright:           "2018 Cedric Liegeois"
+author:              Cedric Liegeois
+maintainer:          Cedric Liegeois <ofmooseandmen@yahoo.com>
+copyright:           2018 Cedric Liegeois
+category:            Geography
+stability:           experimental
+homepage:            https://ofmooseandmen.github.io/jord
+synopsis:            Geographic position calculations on Great Circles
+description:         Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 
 extra-source-files:
 - README.md
 - ChangeLog.md
 
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
-
-description:         Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
+ghc-options: -Wall
 
 dependencies:
 - base >= 4.7 && < 5
 
 library:
   source-dirs: src
+  exposed-modules:
+    - Data.Geo.Jord
+    - Data.Geo.Jord.GeoPos
+    - Data.Geo.Jord.GreatCircle
+    - Data.Geo.Jord.NVector
 
 executables:
   jord-exe:
     main:                Main.hs
     source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
     dependencies:
     - jord
 
@@ -37,9 +39,7 @@ tests:
   jord-test:
     main:                Spec.hs
     source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
     dependencies:
     - jord
+    - hspec == 2.* 
+    - HUnit == 1.6.*

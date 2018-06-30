@@ -1,17 +1,26 @@
+-- This file has been generated from package.yaml by hpack version 0.28.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 82a6d215be86351fb92a0e50b44adbc08f7604a57ff5e02e567de0d245c2b91d
+
 name:           jord
 version:        0.1.0.0
-synopsis:       TODO
+synopsis:       Geographic position calculations on Great Circles
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
-homepage:       https://github.com/ofmooseandmen/jord#readme
+category:       Geography
+stability:      experimental
+homepage:       https://ofmooseandmen.github.io/jord
 bug-reports:    https://github.com/ofmooseandmen/jord/issues
 author:         Cedric Liegeois
-maintainer:     ofmooseandmen@yahoo.com
+maintainer:     Cedric Liegeois <ofmooseandmen@yahoo.com>
 copyright:      2018 Cedric Liegeois
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
 extra-source-files:
+    ChangeLog.md
     README.md
 
 source-repository head
@@ -21,14 +30,17 @@ source-repository head
 library
   exposed-modules:
       Data.Geo.Jord
+      Data.Geo.Jord.GeoPos
+      Data.Geo.Jord.GreatCircle
+      Data.Geo.Jord.NVector
   other-modules:
       Paths_jord
   hs-source-dirs:
       src
+  ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
   default-language: Haskell2010
-  ghc-options: -Wall
 
 executable jord-exe
   main-is: Main.hs
@@ -36,7 +48,7 @@ executable jord-exe
       Paths_jord
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
     , jord
@@ -45,13 +57,17 @@ executable jord-exe
 test-suite jord-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
-  other-modules: Data.Geo.Expectations
+  other-modules:
+      Data.Geo.Jord.Expectations
+      Data.Geo.Jord.GeoPosSpec
+      Data.Geo.Jord.GreatCircleSpec
+      Paths_jord
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall
   build-depends:
-      base >=4.7 && <5
+      HUnit ==1.6.*
+    , base >=4.7 && <5
+    , hspec ==2.*
     , jord
-    , hspec == 2.*
-    , HUnit >= 1.6
   default-language: Haskell2010

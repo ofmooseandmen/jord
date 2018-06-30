@@ -45,8 +45,7 @@ executable jord-exe
 test-suite jord-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
-  other-modules:
-      Paths_jord
+  other-modules: Data.Geo.Expectations
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
@@ -54,4 +53,5 @@ test-suite jord-test
       base >=4.7 && <5
     , jord
     , hspec == 2.*
+    , HUnit >= 1.6
   default-language: Haskell2010

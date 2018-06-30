@@ -12,8 +12,8 @@
 --
 module Data.Geo.Jord
     ( Position
-    , GeoPos
-    , NVector
+    , GeoPos(latitude, longitude)
+    , NVector(x, y, z)
     , Degrees(..)
     , Meters(..)
     , MetersPerSecond(..)
@@ -28,12 +28,17 @@ module Data.Geo.Jord
     , midpoint
     , north
     , nvector
+    , readGeo
+    , readGeoE
+    , readGeoM
     , south
     ) where
 
 import Control.Applicative
+import Control.Monad.Fail
 import Data.Char
-import Prelude hiding (subtract)
+import Prelude hiding (fail, subtract)
+import Text.Read hiding (choice, pfail)
 import Text.ParserCombinators.ReadP
 
 data GeoPos = GeoPos
@@ -116,7 +121,9 @@ distance p1 p2 = Meters (meanEarthRadius * atan2 (norm (cross v1 v2)) (dot v1 v2
     v2 = toNVector p2
 
 geo :: Double -> Double -> GeoPos
-geo lat lon = GeoPos (Degrees lat) (Degrees lon)
+geo lat lon | not (isValidLatitude lat)  = error ("invalid latitude=" ++ show lat)
+            | not (isValidLongitude lon) = error ("invalid longitude=" ++ show lon)
+            | otherwise                  = GeoPos (Degrees lat) (Degrees lon)
 
 interpolate :: (Position a) => a -> Millis -> a -> Millis -> Millis -> a
 interpolate p0 t0 p1 t1 ti = fromNVector (normalise (add v0 (scale (subtract v1 v0) s)))
@@ -138,6 +145,19 @@ north = fromNVector (NVector 0.0 0.0 1.0)
 
 nvector :: Double -> Double -> Double -> NVector
 nvector x' y' z' = normalise (NVector x' y' z')
+
+readGeo :: (MonadFail m) => String -> m GeoPos
+readGeo s =
+  let pg = readGeoE s 
+  in case pg of
+         Left e -> fail e
+         Right g -> return g
+
+readGeoE :: String -> Either String GeoPos
+readGeoE s = readEither s
+
+readGeoM :: String -> Maybe GeoPos
+readGeoM s = readMaybe s
 
 south :: (Position a) => a
 south = fromNVector (NVector 0.0 0.0 (-1.0))
@@ -190,6 +210,12 @@ toDegrees r = Degrees (r / pi * 180.0)
 zero :: NVector
 zero = NVector 0.0 0.0 0.0
 
+isValidLatitude :: (Ord a, Num a) => a -> Bool
+isValidLatitude lat = lat >= -90 && lat <= 90
+
+isValidLongitude :: (Ord a, Num a) => a -> Bool
+isValidLongitude lon = lon >= -180  && lon <= 180
+
 -- parsing
 
 geo' :: ReadP GeoPos
@@ -197,7 +223,7 @@ geo' = do
     lat <- latitude'
     skipSpaces
     lon <- longitude'
-    return (GeoPos (Degrees lat) (Degrees lon))
+    return (geo lat lon)
 
 latitude' :: ReadP Double
 latitude' = do
@@ -216,7 +242,12 @@ longitude' = do
 deg :: Int -> ReadP Double
 deg n = do
     d <- numbers n
-    return (fromIntegral d)
+    _ <- option ' ' (char '°' )
+    if n == 2 && not (isValidLatitude d)
+    then pfail
+    else if n == 3 && not (isValidLongitude d)
+    then pfail
+    else return (fromIntegral d)
 
 mOrMs :: ReadP Double
 mOrMs = choice [minSec, minute]
@@ -224,19 +255,34 @@ mOrMs = choice [minSec, minute]
 minSec :: ReadP Double
 minSec = do
     m <- numbers 2
+    _ <- option ' ' (char '\'')
     s <- numbers 2
-    return (fromIntegral m / 60.0 + fromIntegral s / 3600.0)
+    _ <- option "" (string "''")
+    if not (isValidMinute m)
+    then pfail
+    else if not (isValidSecond s)
+    then pfail
+    else return (fromIntegral m / 60.0 + fromIntegral s / 3600.0)
 
 minute :: ReadP Double
 minute = do
     m <- numbers 2
-    return (fromIntegral m / 60.0)
+    _ <- option ' ' (char '\'')
+    if not (isValidMinute m)
+    then pfail
+    else return (fromIntegral m / 60.0)
 
 digit :: ReadP Char
 digit = satisfy isDigit
 
 numbers :: Int -> ReadP Int
 numbers n = fmap read (count n digit)
+
+isValidMinute :: Int -> Bool
+isValidMinute m = m >= 0 && m <= 59
+
+isValidSecond :: Int -> Bool
+isValidSecond s = s >= 0 && s <= 59
 
 decimal :: Double -> Double -> Bool -> Double
 decimal d ms positive

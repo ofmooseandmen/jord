@@ -9,13 +9,10 @@ import Data.Geo.Jord
 import Test.HUnit
 import Test.Hspec
 
-geoShouldBe :: (HasCallStack) => Maybe GeoPos -> GeoPos -> Expectation
+geoShouldBe :: (HasCallStack) => GeoPos -> GeoPos -> Expectation
 actual `geoShouldBe` expected = do
-    case actual of
-        Nothing -> assertFailure "No GeoPos"
-        Just g -> do
-            (latitude g) `degreesShouldBe` (latitude expected)
-            (longitude g) `degreesShouldBe` (longitude expected)
+    latitude actual `degreesShouldBe` latitude expected
+    longitude actual `degreesShouldBe` longitude expected
 
 metersShouldBe :: (HasCallStack) => Meters -> Meters -> Expectation
 actual `metersShouldBe` expected = assertDoubleEquals tolerance (meters expected) (meters actual)

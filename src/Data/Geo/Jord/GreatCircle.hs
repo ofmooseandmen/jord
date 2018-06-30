@@ -23,8 +23,8 @@ module Data.Geo.Jord.GreatCircle
     , interpolate
     , meanEarthRadius
     , midpoint
-    , north
-    , south
+    , northPole
+    , southPole
     ) where
 
 import Data.Geo.Jord.GeoPos
@@ -80,7 +80,7 @@ destination :: (Position a) => a -> Degrees -> Meters -> a
 destination p b d = fromNVector (add (scale v (cos ta)) (scale de (sin ta)))
   where
     v = toNVector p
-    ed = normalise (cross north v) -- east direction vector at v
+    ed = normalise (cross northPole v) -- east direction vector at v
     nd = cross v ed -- north direction vector at v
     a = toRadians b -- azimuth in radians
     ta = meters d / meters meanEarthRadius -- angle travelled in radians
@@ -107,11 +107,11 @@ midpoint ps = fromNVector (normalise (foldl add zero vs))
   where
     vs = map toNVector ps
 
-north :: (Position a) => a
-north = fromNVector (nvector 0.0 0.0 1.0)
+northPole :: (Position a) => a
+northPole = fromNVector (nvector 0.0 0.0 1.0)
 
-south :: (Position a) => a
-south = fromNVector (nvector 0.0 0.0 (-1.0))
+southPole :: (Position a) => a
+southPole = fromNVector (nvector 0.0 0.0 (-1.0))
 
 toRadians :: Degrees -> Double
 toRadians d = degrees d * pi / 180.0

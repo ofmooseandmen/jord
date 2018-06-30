@@ -6,7 +6,7 @@ module Data.Geo.Jord.GeoPos
     , GeoPos(latitude, longitude)
     , geo
     , readGeo
-    , readGeoE
+    , readGeoF
     , readGeoM
     ) where
 
@@ -35,18 +35,18 @@ geo lat lon
     | not (isValidLongitude lon) = error ("invalid longitude=" ++ show lon)
     | otherwise = GeoPos (Degrees lat) (Degrees lon)
 
-readGeo :: (MonadFail m) => String -> m GeoPos
-readGeo s =
-    let pg = readGeoE s
+readGeo :: String -> GeoPos
+readGeo s = read s :: GeoPos
+
+readGeoF :: (MonadFail m) => String -> m GeoPos
+readGeoF s =
+    let pg = readEither s
      in case pg of
             Left e -> fail e
             Right g -> return g
 
-readGeoE :: String -> Either String GeoPos
-readGeoE s = readEither s
-
 readGeoM :: String -> Maybe GeoPos
-readGeoM s = readMaybe s
+readGeoM = readMaybe
 
 isValidLatitude :: (Ord a, Num a) => a -> Bool
 isValidLatitude lat = lat >= -90 && lat <= 90

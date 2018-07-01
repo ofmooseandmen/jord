@@ -5,6 +5,7 @@ module Data.Geo.Jord.GreatCircleSpec
 import Control.Exception.Base
 import Data.Geo.Jord
 import Data.Geo.Jord.Expectations
+import Data.Maybe
 import Test.Hspec
 
 spec :: Spec
@@ -36,15 +37,16 @@ spec = do
         it "return the destination point along great-circle at distance and bearing" $
             destination (readGeo "531914N0014347W") (Degrees 96.0217) (Meters 124800) `geoShouldBe`
             geo 53.1882691 0.1332742
-    describe "midpoint" $ do
-        it "fails if no point is given" $
-            evaluate (midpoint [] :: GeoPos) `shouldThrow`
-            errorCall "midpoint expects a non-empty list"
-        it "returns the unique given point" $
-            midpoint [readGeo "500359N0054253W"] `shouldBe` readGeo "500359N0054253W"
-        it "returns the mid point between given points" $
-            midpoint [readGeo "500359N0054253W", readGeo "583838N0030412W"] `geoShouldBe`
-            geo 54.3622868 (-4.5306725)
+    describe "initialBearing" $ do
+        it "returns the 0 if both point are the same" $
+            initialBearing (readGeo "500359N0054253W") (readGeo "500359N0054253W") `shouldBe`
+            Degrees 0
+        it "returns the initial bearing in compass degrees" $
+            initialBearing (readGeo "500359N0054253W") (readGeo "583838N0030412W") `degreesShouldBe`
+            Degrees 9.1198181
+        it "returns the initial bearing in compass degrees" $
+            initialBearing (readGeo "583838N0030412W") (readGeo "500359N0054253W") `degreesShouldBe`
+            Degrees 191.2752012
     describe "interpolate" $ do
         it "fails if t0 > t1" $
             evaluate
@@ -87,16 +89,16 @@ spec = do
                 (Millis 100)
                 (Millis 50) `geoShouldBe`
             geo 54.7835574 5.1949856
-    describe "initialBearing" $ do
-        it "returns the 0 if both point are the same" $
-            initialBearing (readGeo "500359N0054253W") (readGeo "500359N0054253W") `shouldBe`
-            Degrees 0
-        it "returns the initial bearing in compass degrees" $
-            initialBearing (readGeo "500359N0054253W") (readGeo "583838N0030412W") `degreesShouldBe`
-            Degrees 9.1198181
-        it "returns the initial bearing in compass degrees" $
-            initialBearing (readGeo "583838N0030412W") (readGeo "500359N0054253W") `degreesShouldBe`
-            Degrees 191.2752012
+    describe "intersections" $ do
+        it "returns nothing if both great circle are equals" $ do
+            let gc = greatCircleBearing (geo 51.885 0.235) (Degrees 108.63)
+            (intersections gc gc :: Maybe (GeoPos, GeoPos)) `shouldBe` Nothing
+        it "returns the two points where the two great circles intersects" $ do
+            let gc1 = greatCircleBearing (geo 51.885 0.235) (Degrees 108.63)
+            let gc2 = greatCircleBearing (geo 49.008 2.549) (Degrees 32.72)
+            let (i1, i2) = fromJust (intersections gc1 gc2)
+            i1 `geoShouldBe` geo 50.9017226 4.4942782
+            i2 `geoShouldBe` antipode i1
     describe "finalBearing" $ do
         it "returns the 180.0 if both point are the same" $
             finalBearing (readGeo "500359N0054253W") (readGeo "500359N0054253W") `shouldBe`
@@ -107,5 +109,14 @@ spec = do
         it "returns the final bearing in compass degrees" $
             finalBearing (readGeo "583838N0030412W") (readGeo "500359N0054253W") `degreesShouldBe`
             Degrees 189.1198181
+    describe "midpoint" $ do
+        it "fails if no point is given" $
+            evaluate (midpoint [] :: GeoPos) `shouldThrow`
+            errorCall "midpoint expects a non-empty list"
+        it "returns the unique given point" $
+            midpoint [readGeo "500359N0054253W"] `shouldBe` readGeo "500359N0054253W"
+        it "returns the mid point between given points" $
+            midpoint [readGeo "500359N0054253W", readGeo "583838N0030412W"] `geoShouldBe`
+            geo 54.3622868 (-4.5306725)
     describe "north pole" $ it "returns (90, 0)" $ (northPole :: GeoPos) `shouldBe` geo 90.0 0.0
     describe "south pole" $ it "returns (-90, 0)" $ (southPole :: GeoPos) `shouldBe` geo (-90.0) 0.0

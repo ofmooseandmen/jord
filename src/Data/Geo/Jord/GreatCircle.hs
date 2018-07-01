@@ -19,8 +19,6 @@
 --
 --     * alongTrackDistance :: Position -> GreatArc -> Meters
 --
---     * intersection :: GreatCircle -> GreatCircle -> Position
---
 --     * isWithin :: [Position] -> Bool
 --
 --     * nearestPointOnGreatCircle :: Position -> GreatArc -> Position
@@ -30,7 +28,8 @@
 --     * closestApproach
 --
 module Data.Geo.Jord.GreatCircle
-    ( Meters(..)
+    ( GreatCircle
+    , Meters(..)
     , MetersPerSecond(..)
     , Millis(..)
     , Position
@@ -38,8 +37,11 @@ module Data.Geo.Jord.GreatCircle
     , destination
     , distance
     , finalBearing
-    , interpolate
+    , greatCircle
+    , greatCircleBearing
     , initialBearing
+    , interpolate
+    , intersections
     , meanEarthRadius
     , midpoint
     , northPole
@@ -50,6 +52,18 @@ import Data.Fixed
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.NVector
 import Prelude hiding (subtract)
+
+-- | A circle on the surface of the Earth which lies in a plane passing through
+-- the Earth's centre.
+--
+-- It is internally represented as its normal vector - i.e. the normal vector
+-- to the plane containing the great circle.
+--
+-- Use either 'greatCircle' or 'greatCircleBearing' constructors.
+--
+newtype GreatCircle = GreatCircle
+    { normal :: NVector
+    }
 
 -- | A distance in meters.
 newtype Meters = Meters
@@ -122,6 +136,24 @@ distance p1 p2 = Meters (meters meanEarthRadius * angle v1 v2 Nothing)
     v1 = toNVector p1
     v2 = toNVector p2
 
+-- | Returns a 'GreateCircle' passing by both given 'Position's.
+greatCircle :: (Position a) => a -> a -> GreatCircle
+greatCircle p1 p2 = GreatCircle (cross v1 v2)
+  where
+    v1 = toNVector p1
+    v2 = toNVector p2
+
+-- | Returns a 'GreatCircle' passing by the given 'Position' and heading on given bearing.
+greatCircleBearing :: (Position a) => a -> Degrees -> GreatCircle
+greatCircleBearing p b = GreatCircle (subtract n' e')
+  where
+    rad = toRadians b
+    v = toNVector p
+    e = cross northPole v -- easting
+    n = cross v e -- northing
+    e' = scale e (cos rad / norm e)
+    n' = scale n (sin rad / norm n)
+
 -- | Computes the final bearing arriving at given destination  @p2@ 'Position' from given 'Position' @p1@.
 --  the final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
 -- Returns 180 if both position are equals.
@@ -129,6 +161,16 @@ finalBearing :: (Position a) => a -> a -> Degrees
 finalBearing p1 p2 = Degrees (mod' (d + 180.0) 360.0)
   where
     d = degrees (initialBearing p2 p1)
+
+-- | Computes the initial bearing from given @p1@ 'Position' to given @p2@ 'Position', in compass degrees.
+-- Returns 0 if both position are equals.
+initialBearing :: (Position a) => a -> a -> Degrees
+initialBearing p1 p2 = normaliseDegrees (toDegrees (angle gc1 gc2 (Just v1)))
+  where
+    v1 = toNVector p1
+    v2 = toNVector p2
+    gc1 = cross v1 v2 -- great circle through p1 & p2
+    gc2 = cross v1 northPole -- great circle through p1 & north pole
 
 -- | Computes the interpolated 'Position' at time @ti@,
 -- knowing the 'Position' @p0@ at time @t0@ and the 'Position' @p1@ at time @t1@.
@@ -145,15 +187,15 @@ interpolate p0 t0 p1 t1 ti
     v1 = toNVector p1
     s = fromIntegral (millis ti - millis t0) / fromIntegral (millis t1 - millis t0)
 
--- | Computes the initial bearing from given @p1@ 'Position' to given @p2@ 'Position', in compass degrees.
--- Returns 0 if both position are equals.
-initialBearing :: (Position a) => a -> a -> Degrees
-initialBearing p1 p2 = normaliseDegrees (toDegrees (angle gc1 gc2 (Just v1)))
+-- | Computes the intersections between the two given 'GreatCircle's.
+-- Two 'GreatCircle's intersect exactly twice unless there are equal, in which case 'Nothing' is returned.
+intersections :: (Position a) => GreatCircle -> GreatCircle -> Maybe (a, a)
+intersections gc1 gc2
+    | norm i == 0.0 = Nothing
+    | otherwise
+    , let ni = normalise i = Just (fromNVector ni, fromNVector (antipode ni))
   where
-    v1 = toNVector p1
-    v2 = toNVector p2
-    gc1 = cross v1 v2 -- great circle through p1 & p2
-    gc2 = cross v1 northPole -- great circle through p1 & north pole
+    i = cross (normal gc1) (normal gc2)
 
 -- | Mean Earth radius in meters.
 meanEarthRadius :: Meters

@@ -21,7 +21,7 @@
 --
 --     * isWithin :: [Position] -> Bool
 --
---     * nearestPointOnGreatCircle :: Position -> GreatArc -> Position
+--     * nearestPoint :: Position -> GreatArc -> Position
 --
 --     * area :: [Position] -> SquareMeters
 --
@@ -30,7 +30,6 @@
 module Data.Geo.Jord.GreatCircle
     ( GreatCircle
     , Meters(..)
-    , MetersPerSecond(..)
     , Millis(..)
     , Position
     , antipode
@@ -68,11 +67,6 @@ newtype GreatCircle = GreatCircle
 -- | A distance in meters.
 newtype Meters = Meters
     { meters :: Double
-    } deriving (Eq, Show)
-
--- | A speed in meters per second.
-newtype MetersPerSecond = MetersPerSecond
-    { metersPerSecond :: Double
     } deriving (Eq, Show)
 
 -- | An instant or duration in milliseconds.

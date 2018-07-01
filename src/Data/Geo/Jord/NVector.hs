@@ -28,7 +28,7 @@ data NVector = NVector
     { x :: Double
     , y :: Double
     , z :: Double
-    } deriving (Eq, Show)
+    }
 
 -- | Smart 'NVector' constructor. The returned 'NVector' is normalised.
 nvector :: Double -> Double -> Double -> NVector

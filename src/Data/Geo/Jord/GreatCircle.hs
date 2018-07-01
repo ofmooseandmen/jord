@@ -21,11 +21,9 @@
 --
 --     * intersection :: GreatCircle -> GreatCircle -> Position
 --
---     * finalBearing :: Position -> Position -> Degrees
---
 --     * isWithin :: [Position] -> Bool
 --
---     * nearestPointOnGreatCircle
+--     * nearestPointOnGreatCircle :: Position -> GreatArc -> Position
 --
 --     * area :: [Position] -> SquareMeters
 --
@@ -91,6 +89,7 @@ instance Position GeoPos where
         y' = cl * sin lon
         z' = sin lat
 
+-- | Identity.
 instance Position NVector where
     fromNVector v = v
     toNVector v = v

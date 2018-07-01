@@ -30,5 +30,7 @@ assertDoubleEquals delta expected actual =
   where
     msg = "expected: " ++ show expected ++ " +/- " ++ show delta ++ "\n but got: " ++ show actual
 
+-- | tolerance to assert meters and degrees. At the equator 1 degree of latitude
+-- is 111 000 meters.
 tolerance :: Double
-tolerance = 0.00001
+tolerance = 1e-7

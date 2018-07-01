@@ -15,49 +15,43 @@
 --
 -- TODO:
 --
---     * crossTrackDistance
+--     * crossTrackDistance :: Position -> GreatCircle -> Meters
 --
---     * alongTrackDistance
+--     * alongTrackDistance :: Position -> GreatArc -> Meters
 --
---     * initialBearing
+--     * intersection :: GreatCircle -> GreatCircle -> Position
 --
---     * intersection
+--     * finalBearing :: Position -> Position -> Degrees
 --
---     * finalBearing
---
---     * isWithin
+--     * isWithin :: [Position] -> Bool
 --
 --     * nearestPointOnGreatCircle
 --
---     * area
+--     * area :: [Position] -> SquareMeters
 --
 --     * closestApproach
 --
 module Data.Geo.Jord.GreatCircle
-    ( Arc(start, end)
-    , Meters(..)
+    ( Meters(..)
     , MetersPerSecond(..)
     , Millis(..)
     , Position
     , antipode
-    , arc
     , destination
     , distance
+    , finalBearing
     , interpolate
+    , initialBearing
     , meanEarthRadius
     , midpoint
     , northPole
     , southPole
     ) where
 
+import Data.Fixed
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.NVector
 import Prelude hiding (subtract)
-
-data Arc = Arc
-    { start :: NVector
-    , end :: NVector
-    } deriving (Eq, Show)
 
 -- | A distance in meters.
 newtype Meters = Meters
@@ -106,9 +100,6 @@ instance Position NVector where
 antipode :: (Position a) => a -> a
 antipode p = fromNVector (scale (toNVector p) (-1.0))
 
-arc :: (Position a) => a -> a -> Arc
-arc p1 p2 = Arc (toNVector p1) (toNVector p2)
-
 -- | Computes the destination 'Position' from the given 'Position' having travelled the given distance on the
 -- given initial bearing (bearing will normally vary before destination is reached).
 --
@@ -127,10 +118,18 @@ destination p b d = fromNVector (add (scale v (cos ta)) (scale de (sin ta)))
 -- | Computes the surface distance (length of geodesic) in 'Meters' assuming a
 -- spherical Earth between the two given 'Position's.
 distance :: (Position a) => a -> a -> Meters
-distance p1 p2 = Meters (meters meanEarthRadius * atan2 (norm (cross v1 v2)) (dot v1 v2))
+distance p1 p2 = Meters (meters meanEarthRadius * angle v1 v2 Nothing)
   where
     v1 = toNVector p1
     v2 = toNVector p2
+
+-- | Computes the final bearing arriving at given destination  @p2@ 'Position' from given 'Position' @p1@.
+--  the final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
+-- Returns 180 if both position are equals.
+finalBearing :: (Position a) => a -> a -> Degrees
+finalBearing p1 p2 = Degrees (mod' (d + 180.0) 360.0)
+  where
+    d = degrees (initialBearing p2 p1)
 
 -- | Computes the interpolated 'Position' at time @ti@,
 -- knowing the 'Position' @p0@ at time @t0@ and the 'Position' @p1@ at time @t1@.
@@ -146,6 +145,16 @@ interpolate p0 t0 p1 t1 ti
     v0 = toNVector p0
     v1 = toNVector p1
     s = fromIntegral (millis ti - millis t0) / fromIntegral (millis t1 - millis t0)
+
+-- | Computes the initial bearing from given @p1@ 'Position' to given @p2@ 'Position', in compass degrees.
+-- Returns 0 if both position are equals.
+initialBearing :: (Position a) => a -> a -> Degrees
+initialBearing p1 p2 = normaliseDegrees (toDegrees (angle gc1 gc2 (Just v1)))
+  where
+    v1 = toNVector p1
+    v2 = toNVector p2
+    gc1 = cross v1 v2 -- great circle through p1 & p2
+    gc2 = cross v1 northPole -- great circle through p1 & north pole
 
 -- | Mean Earth radius in meters.
 meanEarthRadius :: Meters
@@ -166,6 +175,20 @@ northPole = fromNVector (nvector 0.0 0.0 1.0)
 -- | 'Position' of the South Pole.
 southPole :: (Position a) => a
 southPole = fromNVector (nvector 0.0 0.0 (-1.0))
+
+-- | Angle bteween the tow given 'NVector's.
+-- If @n@ is 'Nothing', the angle is always in [0..PI], otherwise it is in [-PI, +PI],
+-- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
+angle :: NVector -> NVector -> Maybe NVector -> Double
+angle v1 v2 n = atan2 sinO cosO
+  where
+    sign = maybe 1 (signum . dot (cross v1 v2)) n
+    sinO = sign * norm (cross v1 v2)
+    cosO = dot v1 v2
+
+-- | normalise to [0, 360].
+normaliseDegrees :: Double -> Degrees
+normaliseDegrees d = Degrees (mod' (d + 360.0) 360.0)
 
 -- | degrees to radians.
 toRadians :: Degrees -> Double

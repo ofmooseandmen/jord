@@ -9,22 +9,25 @@ import Test.Hspec
 spec :: Spec
 spec = do
     describe "Reading valid DMS text" $ do
-        it "reads 553621N0130002E" $ readGeo "553621N0130002E" `geoShouldBe` geo 55.60583 13.00055
+        it "reads 553621N0130002E" $
+            readGeo "553621N0130002E" `geoShouldBe` geo 55.6058333 13.0005555
         it "reads 55°36'21''N 013°00'02''E" $
-            readGeo "55°36'21''N 013°00'02''E" `geoShouldBe` geo 55.60583 13.00055
+            readGeo "55°36'21''N 013°00'02''E" `geoShouldBe` geo 55.6058333 13.0005555
         it "reads 5536N01300E" $ readGeo "5536N01300E" `geoShouldBe` geo 55.6 13.0
         it "reads 55N013E" $ readGeo "55N013E" `geoShouldBe` geo 55.0 13.0
-        it "reads 011659S0364900E" $ readGeo "011659S0364900E" `geoShouldBe` geo (-1.28305) 36.81666
-        it "reads 0116S03649E" $ readGeo "0116S03649E" `geoShouldBe` geo (-1.26666) 36.81666
-        it "reads 1°16'S 36°49'E" $ readGeo "1°16'S 36°49'E" `geoShouldBe` geo (-1.26666) 36.81666
+        it "reads 011659S0364900E" $
+            readGeo "011659S0364900E" `geoShouldBe` geo (-1.2830555) 36.8166666
+        it "reads 0116S03649E" $ readGeo "0116S03649E" `geoShouldBe` geo (-1.2666666) 36.8166666
+        it "reads 1°16'S 36°49'E" $
+            readGeo "1°16'S 36°49'E" `geoShouldBe` geo (-1.2666666) 36.8166666
         it "reads 01S036E" $ readGeo "01S036E" `geoShouldBe` geo (-1.0) 36.0
         it "reads 473622N1221955W" $
-            readGeo "473622N1221955W" `geoShouldBe` geo 47.60611 (-122.33194)
-        it "reads 4736N12219W" $ readGeo "4736N12219W" `geoShouldBe` geo 47.6 (-122.31666)
+            readGeo "473622N1221955W" `geoShouldBe` geo 47.6061111 (-122.3319444)
+        it "reads 4736N12219W" $ readGeo "4736N12219W" `geoShouldBe` geo 47.6 (-122.3166666)
         it "reads 47N122W" $ readGeo "47N122W" `geoShouldBe` geo 47.0 (-122.0)
         it "reads 47°N 122°W" $ readGeo "47°N 122°W" `geoShouldBe` geo 47.0 (-122.0)
         it "reads 544807S0681811W" $
-            readGeo "544807S0681811W" `geoShouldBe` geo (-54.80194) (-68.30305)
+            readGeo "544807S0681811W" `geoShouldBe` geo (-54.8019444) (-68.3030555)
         it "reads 5448S06818W" $ readGeo "5448S06818W" `geoShouldBe` geo (-54.8) (-68.3)
         it "reads 54S068W" $ readGeo "54S068W" `geoShouldBe` geo (-54.0) (-68.0)
     describe "Reading invalid DMS text" $ do

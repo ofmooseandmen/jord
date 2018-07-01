@@ -80,5 +80,6 @@ subtract a b = NVector x' y' z'
     y' = y a - y b
     z' = z a - z b
 
+-- | [0, 0, 0] - not a valid 'NVector', but can be used as the identity value during reduction.
 zero :: NVector
 zero = NVector 0.0 0.0 0.0

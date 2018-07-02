@@ -11,17 +11,15 @@
 module Data.Geo.Jord.NVector
     ( NVector(x, y, z)
     , nvector
-    , add
     , cross
     , dot
     , norm
-    , normalise
     , scale
-    , subtract
+    , unit
     , zero
     ) where
 
-import Prelude hiding (subtract)
+import Data.Geo.Jord.Quantity
 
 -- | Represents a position as the normal vector to the Earth model.
 data NVector = NVector
@@ -30,17 +28,22 @@ data NVector = NVector
     , z :: Double
     }
 
--- | Smart 'NVector' constructor. The returned 'NVector' is normalised.
-nvector :: Double -> Double -> Double -> NVector
-nvector x' y' z' = normalise (NVector x' y' z')
+-- | Add and subtract 'NVector's.
+instance Quantity NVector where
+    add a b = NVector x' y' z'
+      where
+        x' = x a + x b
+        y' = y a + y b
+        z' = z a + z b
+    sub a b = NVector x' y' z'
+      where
+        x' = x a - x b
+        y' = y a - y b
+        z' = z a - z b
 
--- | Adds the two given 'NVector's.
-add :: NVector -> NVector -> NVector
-add a b = NVector x' y' z'
-  where
-    x' = x a + x b
-    y' = y a + y b
-    z' = z a + z b
+-- | Smart 'NVector' constructor. The returned 'NVector' is a 'unit' vector.
+nvector :: Double -> Double -> Double -> NVector
+nvector x' y' z' = unit (NVector x' y' z')
 
 -- | Computes the cross product of the two given 'NVector's.
 cross :: NVector -> NVector -> NVector
@@ -58,12 +61,6 @@ dot a b = x a * x b + y a * y b + z a * z b
 norm :: NVector -> Double
 norm a = sqrt ((x a * x a) + (y a * y a) + (z a * z a))
 
--- | Normalises the given 'NVector'.
-normalise :: NVector -> NVector
-normalise a = scale a s
-  where
-    s = 1.0 / norm a
-
 -- | Multiplies each component of the given 'NVector' by the given value.
 scale :: NVector -> Double -> NVector
 scale a s = NVector x' y' z'
@@ -72,13 +69,11 @@ scale a s = NVector x' y' z'
     y' = y a * s
     z' = z a * s
 
--- | Subtracts the two given 'NVector's.
-subtract :: NVector -> NVector -> NVector
-subtract a b = NVector x' y' z'
+-- | Normalises the given 'NVector'.
+unit :: NVector -> NVector
+unit a = scale a s
   where
-    x' = x a - x b
-    y' = y a - y b
-    z' = z a - z b
+    s = 1.0 / norm a
 
 -- | [0, 0, 0] - not a valid 'NVector', but can be used as the identity value during reduction.
 zero :: NVector

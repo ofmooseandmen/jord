@@ -9,9 +9,9 @@
 -- Types to represent a geographic position by its latitude and longitude.
 --
 module Data.Geo.Jord.GeoPos
-    ( Degrees(..)
-    , GeoPos(latitude, longitude)
-    , geo
+    ( GeoPos(latitude, longitude)
+    , geoPos
+    , geoPosF
     , readGeo
     , readGeoF
     , readGeoM
@@ -20,43 +20,50 @@ module Data.Geo.Jord.GeoPos
 import Control.Applicative hiding (many)
 import Control.Monad.Fail
 import Data.Char
+import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Parser
+import Data.Maybe
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
--- | Degrees.
-newtype Degrees = Degrees
-    { degrees :: Double
-    } deriving (Eq, Show)
-
--- | A geographic position (latitude and longitude in decimal degrees).
+-- | A geographic position (latitude and longitude).
 data GeoPos = GeoPos
-    { latitude :: Degrees
-    , longitude :: Degrees
+    { latitude :: Angle
+    , longitude :: Angle
     } deriving (Eq)
 
 -- | See 'readGeo'.
 instance Read GeoPos where
-    readsPrec _ = readP_to_S geo'
+    readsPrec _ = readP_to_S geo
 
 -- | Produced string format: d°(m')(s'')[N|S] d°(m')(s'')[E|W] - e.g. 55°36'21''N 13°0'02''E.
 instance Show GeoPos where
-    show (GeoPos lat lon) = showLat (degrees lat) ++ " " ++ showLon (degrees lon)
+    show (GeoPos lat lon) = showLat lat ++ " " ++ showLon lon
 
 -- | 'GeoPos' smart constructor.
--- Calls 'error' if given latitude is outisde [-90, 90]° and/or
+-- 'error's if given latitude is outisde [-90, 90]° and/or
 -- given longitude is outisde [-180, 180]°.
-geo :: Double -> Double -> GeoPos
-geo lat lon
-    | not (isValidLatitude lat) = error ("invalid latitude=" ++ show lat)
-    | not (isValidLongitude lon) = error ("invalid longitude=" ++ show lon)
-    | otherwise = GeoPos (Degrees lat) (Degrees lon)
+geoPos :: Double -> Double -> GeoPos
+geoPos lat lon =
+    fromMaybe
+        (error ("Invalid latitude=" ++ show lat ++ " or longitude=" ++ show lon))
+        (geoPosF lat lon)
+
+-- | 'GeoPos' smart constructor.
+-- 'fail's if given latitude is outisde [-90, 90]° and/or
+-- given longitude is outisde [-180, 180]°.
+geoPosF :: (MonadFail m) => Double -> Double -> m GeoPos
+geoPosF lat lon
+    | not (isValidLatitude lat) = fail ("Invalid latitude=" ++ show lat)
+    | not (isValidLongitude lon) = fail ("Invalid longitude=" ++ show lon)
+    | otherwise = return (GeoPos (ofDegrees lat) (ofDegrees lon))
 
 -- | Obtains a 'GeoPos' from the given string formatted as either:
 --
 --     * DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - e.g. 553621N0130002E or 0116S03649E or 47N122W
 --
---     * d°(m')(s'')[N|S] d°(m')(s'')[E|W] - e.g. 55°36'21''N 13°0'02''E or 11°16'S 36°49'E or 47°N 122°W
+--     * 'Angle'[N|S] 'Angle'[E|W] - e.g. 55°36'21''N 13°0'02''E or 11°16'S 36°49'E or 47°N 122°W
 --
 -- This simply calls:
 -- @
@@ -88,163 +95,91 @@ isValidLongitude :: (Ord a, Num a) => a -> Bool
 isValidLongitude lon = lon >= -180 && lon <= 180
 
 -- | Parses and returns a 'GeoPos'.
-geo' :: ReadP GeoPos
-geo' = geoSymbol <|> geoNoSymbol
+geo :: ReadP GeoPos
+geo = block <|> human
 
--- | Parses and returns a 'GeoPos', d°m's'' expected.
-geoSymbol :: ReadP GeoPos
-geoSymbol = do
-    lat <- latSymbol
-    skipSpaces
-    lon <- lonSymbol
-    return (geo lat lon)
-
--- | Parses and returns a 'GeoPos', DDMMSS expected.
-geoNoSymbol :: ReadP GeoPos
-geoNoSymbol = do
-    lat <- latNoSymbol
-    lon <- lonNoSymbol
-    return (geo lat lon)
-
--- | Parses and returns a latitude, d°m's'' expected.
-latSymbol :: ReadP Double
-latSymbol = do
-    d <- number'
-    _ <- string degSymbol
-    ms <- option (0, 0) (minSecSymbol <|> minuteSymbol)
-    h <- hemisphere
-    decLat d ms h
+-- | Parses and returns a 'GeoPos' - DD(D)MMSS.
+block :: ReadP GeoPos
+block = do
+    lat <- blat
+    lon <- blon
+    geoPosF lat lon
 
 -- | Parses and returns a latitude, DDMMSS expected.
-latNoSymbol :: ReadP Double
-latNoSymbol = do
-    d <- number 2
-    ms <- option (0, 0) (minSecNoSymbol <|> minuteNoSymbol)
+blat :: ReadP Double
+blat = do
+    d' <- digits 2
+    (m', s') <- option (0, 0.0) (ms <|> m)
     h <- hemisphere
-    decLat d ms h
+    if h == 'N'
+        then fromDMS d' m' s'
+        else fmap negate (fromDMS d' m' s')
+
+-- | Parses and returns a longitude, DDDMMSS expected.
+blon :: ReadP Double
+blon = do
+    d' <- digits 3
+    (m', s') <- option (0, 0.0) (ms <|> m)
+    m'' <- meridian
+    if m'' == 'E'
+        then fromDMS d' m' s'
+        else fmap negate (fromDMS d' m' s')
 
 -- | Parses N or S char.
 hemisphere :: ReadP Char
 hemisphere = char 'N' <|> char 'S'
 
--- | Parses and returns a longitude, d°m's'' expected.
-lonSymbol :: ReadP Double
-lonSymbol = do
-    d <- number'
-    _ <- string degSymbol
-    ms <- option (0, 0) (minSecSymbol <|> minuteSymbol)
-    m <- meridian
-    decLon d ms m
-
--- | Parses and returns a longitude, DDDMMSS expected.
-lonNoSymbol :: ReadP Double
-lonNoSymbol = do
-    d <- number 3
-    ms <- option (0, 0) (minSecNoSymbol <|> minuteNoSymbol)
-    m <- meridian
-    decLon d ms m
-
 -- | Parses E or W char.
 meridian :: ReadP Char
 meridian = char 'E' <|> char 'W'
 
--- | Parses minute and second, m's'' expected.
-minSecSymbol :: ReadP (Int, Int)
-minSecSymbol = do
-    m <- number'
-    _ <- string minSymbol
-    s <- number'
-    _ <- string secSymbol
-    return (m, s)
+-- | Parses minutes and seconds.
+ms :: ReadP (Int, Double)
+ms = do
+    m' <- digits 2
+    s' <- fmap fromIntegral (digits 2)
+    return (m', s')
 
--- | Parses minute and second, MMSS expected.
-minSecNoSymbol :: ReadP (Int, Int)
-minSecNoSymbol = do
-    m <- number 2
-    s <- number 2
-    return (m, s)
+-- | Parses minutes.
+m :: ReadP (Int, Double)
+m = do
+    m' <- digits 2
+    return (m', 0.0)
 
--- | Parses minute, m' expected.
-minuteSymbol :: ReadP (Int, Int)
-minuteSymbol = do
-    m <- number'
-    _ <- string minSymbol
-    return (m, 0)
+-- | Parses and returns a 'GeoPos' from a human friendly text - see 'Angle'.
+human :: ReadP GeoPos
+human = do
+    lat <- hlat
+    skipSpaces
+    lon <- hlon
+    geoPosF lat lon
 
--- | Parses minute, MM expected.
-minuteNoSymbol :: ReadP (Int, Int)
-minuteNoSymbol = do
-    m <- number 2
-    return (m, 0)
+-- | Parses and returns a latitude, 'Angle'N|S expected.
+hlat :: ReadP Double
+hlat = do
+    lat <- fmap degrees angle
+    h <- hemisphere
+    if h == 'N'
+        then return lat
+        else return (-lat)
 
-degSymbol :: String
-degSymbol = "°"
-
-minSymbol :: String
-minSymbol = "'"
-
-secSymbol :: String
-secSymbol = "''"
-
--- | Parses the given number of digits and returns the read number.
-number :: Int -> ReadP Int
-number n = fmap read (count n digit)
-
--- | Parses 0 or digits and returns the read number.
-number' :: ReadP Int
-number' = fmap read (many digit)
-
--- | Parses a digit.
-digit :: ReadP Char
-digit = satisfy isDigit
-
--- | Converts latitude in degrees minutes and seconds to a decimal latitude.
--- fails if any component is invalid.
-decLat :: Int -> (Int, Int) -> Char -> ReadP Double
-decLat de (mi, se) h =
-    if not (isValidLatitude de)
-        then pfail
-        else decimal de mi se (h == 'N')
-
--- | Converts longitude in degrees minutes and seconds to a decimal longitude.
--- fails if any component is invalid.
-decLon :: Int -> (Int, Int) -> Char -> ReadP Double
-decLon de (mi, se) m =
-    if not (isValidLongitude de)
-        then pfail
-        else decimal de mi se (m == 'E')
-
--- | Converts degrees minutes and seconds to a decimal degrees.
--- fails if minute or second is invalid
-decimal :: Int -> Int -> Int -> Bool -> ReadP Double
-decimal d m s p
-    | m < 0 || m > 59 || s < 0 || s > 59 = pfail
-    | p = return v
-    | otherwise = return (-v)
-  where
-    v = fromIntegral d + fromIntegral m / 60.0 + fromIntegral s / 3600.0
+-- | Parses and returns a longitude, 'Angle'E|W expected.
+hlon :: ReadP Double
+hlon = do
+    lon <- fmap degrees angle
+    m' <- meridian
+    if m' == 'E'
+        then return lon
+        else return (-lon)
 
 -- | Latitude to string.
-showLat :: Double -> String
+showLat :: Angle -> String
 showLat lat
-    | lat >= 0.0 = dms ++ "N"
-    | otherwise = dms ++ "S"
-  where
-    dms = showDms (abs lat)
+    | degrees lat >= 0.0 = show lat ++ "N"
+    | otherwise = show (opposite lat) ++ "S"
 
 -- | Longitude to string.
-showLon :: Double -> String
+showLon :: Angle -> String
 showLon lon
-    | lon >= 0.0 = dms ++ "E"
-    | otherwise = dms ++ "W"
-  where
-    dms = showDms (abs lon)
-
--- | Decima degrees (absolute value expected) to string.
-showDms :: Double -> String
-showDms dms = show di ++ degSymbol ++ show mi ++ minSymbol ++ show si ++ secSymbol
-  where
-    di = truncate dms :: Int
-    ms = (dms - fromIntegral di) * 60.0
-    mi = truncate ms :: Int
-    si = truncate ((ms - fromIntegral mi) * 60.0) :: Int
+    | degrees lon >= 0.0 = show lon ++ "E"
+    | otherwise = show (opposite lon) ++ "W"

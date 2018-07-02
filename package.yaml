@@ -24,9 +24,14 @@ library:
   source-dirs: src
   exposed-modules:
     - Data.Geo.Jord
+    - Data.Geo.Jord.Angle
+    - Data.Geo.Jord.Length
     - Data.Geo.Jord.GeoPos
     - Data.Geo.Jord.GreatCircle
+    - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.NVector
+  other-modules:
+    - Data.Geo.Jord.Parser
 
 executables:
   jord-exe:
@@ -41,5 +46,5 @@ tests:
     source-dirs:         test
     dependencies:
     - jord
-    - hspec == 2.* 
+    - hspec == 2.*
     - HUnit == 1.6.*

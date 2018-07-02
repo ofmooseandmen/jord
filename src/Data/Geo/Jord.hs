@@ -14,11 +14,17 @@
 -- See <http://www.movable-type.co.uk/scripts/latlong-vectors.html Vector-based geodesy>
 --
 module Data.Geo.Jord
-    ( module Data.Geo.Jord.GeoPos
+    ( module Data.Geo.Jord.Angle
+    , module Data.Geo.Jord.GeoPos
     , module Data.Geo.Jord.GreatCircle
+    , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NVector
+    , module Data.Geo.Jord.Quantity
     ) where
 
+import Data.Geo.Jord.Angle
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Length
+import Data.Geo.Jord.Quantity

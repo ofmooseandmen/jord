@@ -1,7 +1,7 @@
 module Data.Geo.Jord.Expectations
-    ( geoShouldBe
-    , metersShouldBe
-    , degreesShouldBe
+    ( angleShouldBe
+    , geoShouldBe
+    , lengthShouldBe
     ) where
 
 import Control.Monad
@@ -9,16 +9,16 @@ import Data.Geo.Jord
 import Test.HUnit
 import Test.Hspec
 
+angleShouldBe :: (HasCallStack) => Angle -> Angle -> Expectation
+actual `angleShouldBe` expected = assertDoubleEquals tolerance (degrees expected) (degrees actual)
+
 geoShouldBe :: (HasCallStack) => GeoPos -> GeoPos -> Expectation
 actual `geoShouldBe` expected = do
-    latitude actual `degreesShouldBe` latitude expected
-    longitude actual `degreesShouldBe` longitude expected
+    latitude actual `angleShouldBe` latitude expected
+    longitude actual `angleShouldBe` longitude expected
 
-metersShouldBe :: (HasCallStack) => Meters -> Meters -> Expectation
-actual `metersShouldBe` expected = assertDoubleEquals tolerance (meters expected) (meters actual)
-
-degreesShouldBe :: (HasCallStack) => Degrees -> Degrees -> Expectation
-actual `degreesShouldBe` expected = assertDoubleEquals tolerance (degrees expected) (degrees actual)
+lengthShouldBe :: (HasCallStack) => Length -> Length -> Expectation
+actual `lengthShouldBe` expected = assertDoubleEquals tolerance (metres expected) (metres actual)
 
 assertDoubleEquals ::
        Double -- ^ The maximum difference between expected and actual

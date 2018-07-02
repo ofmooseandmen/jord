@@ -31,7 +31,7 @@ library:
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.NVector
   other-modules:
-    - Data.Geo.Jord.Parser
+    - Data.Geo.Jord.Parse
 
 executables:
   jord-exe:

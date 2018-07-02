@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 44472cc8699d0b7a0b1fe2d024c480e5f12ef193cca72de3c89fb5e4c4b06680
+-- hash: b491628c84d23dd6b600fc710b85725021b3aa726a911f3bad0d25731146009f
 
 name:           jord
 version:        0.1.0.0
@@ -37,7 +37,7 @@ library
       Data.Geo.Jord.Quantity
       Data.Geo.Jord.NVector
   other-modules:
-      Data.Geo.Jord.Parser
+      Data.Geo.Jord.Parse
   hs-source-dirs:
       src
   ghc-options: -Wall

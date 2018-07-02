@@ -28,7 +28,7 @@ import Control.Applicative
 import Control.Monad.Fail
 import Data.Char
 import Data.Fixed
-import Data.Geo.Jord.Parser
+import Data.Geo.Jord.Parse
 import Data.Geo.Jord.Quantity
 import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP

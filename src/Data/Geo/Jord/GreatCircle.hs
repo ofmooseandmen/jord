@@ -73,11 +73,10 @@ newtype Millis = Millis
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
 -- to a 'Position'. This allows the call site to pass either 'NVector' or 'GeoPos' and to get back
 -- the same class instance.
-class Position a
-    -- | Converts a 'NVector' into another 'Position'.
-    where
+class Position a where
+    -- | Converts a 'NVector' into 'Position' instance.
     fromNVector :: NVector -> a
-    -- | Converts a 'Position' into a 'NVector'.
+    -- | Converts the 'Position' instance into a 'NVector'.
     toNVector :: a -> NVector
 
 -- | 'GeoPos' to/from 'NVector'.

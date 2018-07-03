@@ -17,4 +17,4 @@ script:
 
 after_script:
   - stack --no-terminal install hpc-coveralls
-  - hpc-coveralls jord-test --exclude-dir=test --display-report --print-response
+  - hpc-coveralls jord-test --exclude-dir=test --display-report

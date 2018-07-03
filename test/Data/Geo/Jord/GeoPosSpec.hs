@@ -19,8 +19,8 @@ spec = do
             readGeoPos "011659S0364900E" `geoShouldBe` geoPos (-1.2830555) 36.8166666
         it "reads 0116S03649E" $
             readGeoPos "0116S03649E" `geoShouldBe` geoPos (-1.2666666) 36.8166666
-        it "reads 1°16'S 36°49'E" $
-            readGeoPos "1°16'S 36°49'E" `geoShouldBe` geoPos (-1.2666666) 36.8166666
+        it "reads 1°16'S,36°49'E" $
+            readGeoPos "1°16'S,36°49'E" `geoShouldBe` geoPos (-1.2666666) 36.8166666
         it "reads 01S036E" $ readGeoPos "01S036E" `geoShouldBe` geoPos (-1.0) 36.0
         it "reads 473622N1221955W" $
             readGeoPos "473622N1221955W" `geoShouldBe` geoPos 47.6061111 (-122.3319444)
@@ -43,10 +43,10 @@ spec = do
         it "fails to read 545907S1801860W" $ readGeoPosM "545907S1801860W" `shouldBe` Nothing
     describe "Showing GeoPos" $ do
         it "return the N/E position formatted in DMS with symbols" $
-            show (geoPos 55.60583333 13.00055556) `shouldBe` "55°36'21.0\"N 13°0'2.0\"E"
+            show (geoPos 55.60583333 13.00055556) `shouldBe` "55°36'21.0\"N,13°0'2.0\"E"
         it "return the S/E position formatted in DMS with symbols" $
-            show (geoPos (-1.28305556) 36.81666) `shouldBe` "1°16'59.0\"S 36°48'59.976\"E"
+            show (geoPos (-1.28305556) 36.81666) `shouldBe` "1°16'59.0\"S,36°48'59.976\"E"
         it "return the N/W position formatted in DMS with symbols" $
-            show (geoPos 47.60611 (-122.33194)) `shouldBe` "47°36'21.996\"N 122°19'54.984\"W"
+            show (geoPos 47.60611 (-122.33194)) `shouldBe` "47°36'21.996\"N,122°19'54.984\"W"
         it "return the S/W position formatted in DMS with symbols" $
-            show (geoPos (-54.80194) (-68.30305)) `shouldBe` "54°48'6.984\"S 68°18'10.98\"W"
+            show (geoPos (-54.80194) (-68.30305)) `shouldBe` "54°48'6.984\"S,68°18'10.98\"W"

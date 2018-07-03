@@ -20,11 +20,16 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NVector
     , module Data.Geo.Jord.Quantity
+    , jordVersion
     ) where
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
+
+-- | version.
+jordVersion :: String
+jordVersion = "0.1.0.0"

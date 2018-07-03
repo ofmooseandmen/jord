@@ -1,3 +1,3 @@
-# Changelog for geodesy
+# Changelog for jord
 
 ## Unreleased changes

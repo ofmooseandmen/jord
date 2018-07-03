@@ -37,9 +37,9 @@ data GeoPos = GeoPos
 instance Read GeoPos where
     readsPrec _ = readP_to_S geo
 
--- | Produced string format: d°(m')(s'')[N|S] d°(m')(s'')[E|W] - e.g. 55°36'21''N 13°0'02''E.
+-- | Produced string format: d°(m')(s'')[N|S],d°(m')(s'')[E|W] - e.g. 55°36'21''N,13°0'2''E.
 instance Show GeoPos where
-    show (GeoPos lat lon) = showLat lat ++ " " ++ showLon lon
+    show (GeoPos lat lon) = showLat lat ++ "," ++ showLon lon
 
 -- | 'GeoPos' smart constructor.
 -- 'error's if given latitude is outisde [-90, 90]° and/or
@@ -150,7 +150,7 @@ m = do
 human :: ReadP GeoPos
 human = do
     lat <- hlat
-    skipSpaces
+    _ <- char ' ' <|> char ','
     lon <- hlon
     geoPosF lat lon
 

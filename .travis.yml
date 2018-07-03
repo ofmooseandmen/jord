@@ -14,3 +14,7 @@ before_install:
 script:
   - stack --no-terminal --skip-ghc-check clean
   - stack --no-terminal --skip-ghc-check test --coverage --haddock --no-haddock-deps
+
+after_script:
+  - stack --no-terminal install codecov-haskell
+  - codecov-haskell jord-test --exclude-dir=test --display-report --print-response

@@ -12,9 +12,9 @@ module Data.Geo.Jord.GeoPos
     ( GeoPos(latitude, longitude)
     , geoPos
     , geoPosF
-    , readGeo
-    , readGeoF
-    , readGeoM
+    , readGeoPos
+    , readGeoPosF
+    , readGeoPosM
     ) where
 
 import Control.Applicative hiding (many)
@@ -33,7 +33,7 @@ data GeoPos = GeoPos
     , longitude :: Angle
     } deriving (Eq)
 
--- | See 'readGeo'.
+-- | See 'readGeoPos'.
 instance Read GeoPos where
     readsPrec _ = readP_to_S geo
 
@@ -71,20 +71,20 @@ geoPosF lat lon
 -- @
 -- so 'error' should be handled at the call site.
 --
-readGeo :: String -> GeoPos
-readGeo s = read s :: GeoPos
+readGeoPos :: String -> GeoPos
+readGeoPos s = read s :: GeoPos
 
--- | Same as 'readGeo' but returns a 'MonadFail'.
-readGeoF :: (MonadFail m) => String -> m GeoPos
-readGeoF s =
+-- | Same as 'readGeoPos' but returns a 'MonadFail'.
+readGeoPosF :: (MonadFail m) => String -> m GeoPos
+readGeoPosF s =
     let pg = readEither s
      in case pg of
             Left e -> fail e
             Right g -> return g
 
--- | Same as 'readGeo' but returns a 'Maybe'.
-readGeoM :: String -> Maybe GeoPos
-readGeoM = readMaybe
+-- | Same as 'readGeoPos' but returns a 'Maybe'.
+readGeoPosM :: String -> Maybe GeoPos
+readGeoPosM = readMaybe
 
 -- | Is given latitude in range [-90, 90]?
 isValidLatitude :: (Ord a, Num a) => a -> Bool
@@ -176,10 +176,10 @@ hlon = do
 showLat :: Angle -> String
 showLat lat
     | degrees lat >= 0.0 = show lat ++ "N"
-    | otherwise = show (opposite lat) ++ "S"
+    | otherwise = show (neg lat) ++ "S"
 
 -- | Longitude to string.
 showLon :: Angle -> String
 showLon lon
     | degrees lon >= 0.0 = show lon ++ "E"
-    | otherwise = show (opposite lon) ++ "W"
+    | otherwise = show (neg lon) ++ "W"

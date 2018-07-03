@@ -23,7 +23,7 @@ import Text.ParserCombinators.ReadP
 digits :: Int -> ReadP Int
 digits n = fmap read (count n digit)
 
--- | Parses optionally a - followed by a 'positive'.'positive' returns the read 'Double'.
+-- | Parses optionally a @-@ followed by a 'positive'.'positive' and returns the read 'Double'.
 double :: ReadP Double
 double = do
     s <- option 1.0 (fmap (\_ -> -1.0) (char '-'))
@@ -31,14 +31,14 @@ double = do
     f <- char '.' >> natural
     return (s * (read (show i ++ "." ++ show f) :: Double))
 
--- | Parses optionally a - followed by a 'positive' and returns the read 'Int'.
+-- | Parses optionally a @-@ followed by a 'positive' and returns the read 'Int'.
 integer :: ReadP Int
 integer = do
     s <- option 1 (fmap (\_ -> -1) (char '-'))
     p <- natural
     return (s * p)
 
--- | Parses an 'integer' or 'double' and return the read 'Double'
+-- | Parses an 'integer' or 'double' and returns the read 'Double'.
 number :: ReadP Double
 number = double <|> fmap fromIntegral integer
 
@@ -46,6 +46,6 @@ number = double <|> fmap fromIntegral integer
 natural :: ReadP Int
 natural = fmap read (munch1 isDigit)
 
--- | Parses a digit.
+-- | Parses and returns a digit.
 digit :: ReadP Char
 digit = satisfy isDigit

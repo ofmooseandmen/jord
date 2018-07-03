@@ -14,7 +14,7 @@ module Data.Geo.Jord.Angle
     , fromDMS
     , ofDegrees
     , ofRadians
-    , opposite
+    , neg
     , normalise
     , radians
     , readAngle
@@ -53,7 +53,7 @@ instance Show Angle where
         s' = (ms' - fromIntegral m') * 60.0
         sd' = fromInteger (round (s' * 1000)) / 1000 :: Double -- keep 3 digits for the milliseconds
 
--- | Add/Subtract Length.
+-- | Add/Subtract 'Angle'.
 instance Quantity Angle where
     add a b = Angle (degrees a + degrees b)
     sub a b = Angle (degrees a - degrees b)
@@ -77,9 +77,9 @@ ofDegrees = Angle
 ofRadians :: Double -> Angle
 ofRadians r = Angle (toDegrees r)
 
--- | Returns the opposite 'Angle' of the given 'Angle'
-opposite :: Angle -> Angle
-opposite (Angle d) = Angle (-d)
+-- | Returns the given 'Angle' negated.
+neg :: Angle -> Angle
+neg (Angle d) = Angle (-d)
 
 -- | normalise given 'Angle' to [0, @n@].
 normalise :: Angle -> Double -> Angle
@@ -150,7 +150,7 @@ m = do
     _ <- symbol
     return (m', 0.0)
 
--- | Parses decimal degrees
+-- | Parses decimal degrees.
 decimal :: ReadP Angle
 decimal = do
     d <- double

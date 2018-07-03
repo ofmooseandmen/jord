@@ -12,80 +12,91 @@ spec :: Spec
 spec = do
     describe "antipode" $ do
         it "returns the antipodal point" $
-            antipode (readGeo "484137N0061105E") `geoShouldBe` geoPos (-48.6936111) (-173.8152777)
+            antipode (readGeoPos "484137N0061105E") `geoShouldBe`
+            geoPos (-48.6936111) (-173.8152777)
         it "returns the south pole when called with the north pole" $
             antipode (northPole :: GeoPos) `shouldBe` geoPos (-90.0) (-180.0)
         it "returns the north pole when called with the south pole" $
             antipode (southPole :: GeoPos) `shouldBe` geoPos 90.0 (-180.0)
     describe "distance" $ do
         it "returns 0 if both points are equal" $
-            distance (readGeo "500359N1795959W") (readGeo "500359N1795959W") `lengthShouldBe`
+            distance (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959W") `lengthShouldBe`
             ofMetres 0.0
         it "returns the distance between 2 points" $
-            distance (readGeo "500359N0054253W") (readGeo "583838N0030412W") `lengthShouldBe`
+            distance (readGeoPos "500359N0054253W") (readGeoPos "583838N0030412W") `lengthShouldBe`
             ofMetres 968854.8849506
         it "handles singularity at the pole" $
             distance (northPole :: GeoPos) (southPole :: GeoPos) `lengthShouldBe`
             ofMetres 2.00151144420359e7
         it "handles the discontinuity at the Date Line" $
-            distance (readGeo "500359N1795959W") (readGeo "500359N1795959E") `lengthShouldBe`
+            distance (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959E") `lengthShouldBe`
             ofMetres 39.6533738
     describe "destination" $ do
         it "return the given point if distance is 0 meter" $
-            destination (readGeo "531914N0014347W") (ofDegrees 96.0217) (ofMetres 0) `shouldBe`
-            readGeo "531914N0014347W"
+            destination (readGeoPos "531914N0014347W") (ofDegrees 96.0217) (ofMetres 0) `shouldBe`
+            readGeoPos "531914N0014347W"
         it "return the destination point along great-circle at distance and bearing" $
-            destination (readGeo "531914N0014347W") (ofDegrees 96.0217) (ofMetres 124800) `geoShouldBe`
+            destination (readGeoPos "531914N0014347W") (ofDegrees 96.0217) (ofMetres 124800) `geoShouldBe`
             geoPos 53.1882691 0.1332742
     describe "initialBearing" $ do
         it "returns the 0 if both point are the same" $
-            initialBearing (readGeo "500359N0054253W") (readGeo "500359N0054253W") `shouldBe`
+            initialBearing (readGeoPos "500359N0054253W") (readGeoPos "500359N0054253W") `shouldBe`
             ofDegrees 0
         it "returns the initial bearing in compass degrees" $
-            initialBearing (readGeo "500359N0054253W") (readGeo "583838N0030412W") `angleShouldBe`
+            initialBearing (readGeoPos "500359N0054253W") (readGeoPos "583838N0030412W") `angleShouldBe`
             ofDegrees 9.1198181
         it "returns the initial bearing in compass degrees" $
-            initialBearing (readGeo "583838N0030412W") (readGeo "500359N0054253W") `angleShouldBe`
+            initialBearing (readGeoPos "583838N0030412W") (readGeoPos "500359N0054253W") `angleShouldBe`
             ofDegrees 191.2752012
     describe "interpolate" $ do
         it "fails if t0 > t1" $
             evaluate
                 (interpolate
-                     (readGeo "44N044E")
+                     (readGeoPos "44N044E")
                      (Millis 1)
-                     (readGeo "46N046E")
+                     (readGeoPos "46N046E")
                      (Millis 0)
                      (Millis 2)) `shouldThrow`
             errorCall "expected t0 <= ti <= t1"
         it "fails if ti < t0" $
             evaluate
                 (interpolate
-                     (readGeo "44N044E")
+                     (readGeoPos "44N044E")
                      (Millis 1)
-                     (readGeo "46N046E")
+                     (readGeoPos "46N046E")
                      (Millis 2)
                      (Millis 0)) `shouldThrow`
             errorCall "expected t0 <= ti <= t1"
         it "fails if ti > t1" $
             evaluate
                 (interpolate
-                     (readGeo "44N044E")
+                     (readGeoPos "44N044E")
                      (Millis 1)
-                     (readGeo "46N046E")
+                     (readGeoPos "46N046E")
                      (Millis 2)
                      (Millis 3)) `shouldThrow`
             errorCall "expected t0 <= ti <= t1"
         it "returns p0 if ti == t0" $
-            interpolate (readGeo "44N044E") (Millis 1) (readGeo "46N046E") (Millis 2) (Millis 1) `shouldBe`
-            readGeo "44N044E"
+            interpolate
+                (readGeoPos "44N044E")
+                (Millis 1)
+                (readGeoPos "46N046E")
+                (Millis 2)
+                (Millis 1) `shouldBe`
+            readGeoPos "44N044E"
         it "returns p1 if ti == t1" $
-            interpolate (readGeo "44N044E") (Millis 1) (readGeo "46N046E") (Millis 2) (Millis 2) `shouldBe`
-            readGeo "46N046E"
+            interpolate
+                (readGeoPos "44N044E")
+                (Millis 1)
+                (readGeoPos "46N046E")
+                (Millis 2)
+                (Millis 2) `shouldBe`
+            readGeoPos "46N046E"
         it "returns the interpolated position" $
             interpolate
-                (readGeo "53°28'46''N 2°14'43''W")
+                (readGeoPos "53°28'46''N 2°14'43''W")
                 (Millis 0)
-                (readGeo "55°36'21''N 13°02'09''E")
+                (readGeoPos "55°36'21''N 13°02'09''E")
                 (Millis 100)
                 (Millis 50) `geoShouldBe`
             geoPos 54.7835574 5.1949856
@@ -101,22 +112,22 @@ spec = do
             i2 `geoShouldBe` antipode i1
     describe "finalBearing" $ do
         it "returns the 180.0 if both point are the same" $
-            finalBearing (readGeo "500359N0054253W") (readGeo "500359N0054253W") `shouldBe`
+            finalBearing (readGeoPos "500359N0054253W") (readGeoPos "500359N0054253W") `shouldBe`
             ofDegrees 180
         it "returns the final bearing in compass degrees" $
-            finalBearing (readGeo "500359N0054253W") (readGeo "583838N0030412W") `angleShouldBe`
+            finalBearing (readGeoPos "500359N0054253W") (readGeoPos "583838N0030412W") `angleShouldBe`
             ofDegrees 11.2752012
         it "returns the final bearing in compass degrees" $
-            finalBearing (readGeo "583838N0030412W") (readGeo "500359N0054253W") `angleShouldBe`
+            finalBearing (readGeoPos "583838N0030412W") (readGeoPos "500359N0054253W") `angleShouldBe`
             ofDegrees 189.1198181
     describe "midpoint" $ do
         it "fails if no point is given" $
             evaluate (midpoint [] :: GeoPos) `shouldThrow`
             errorCall "midpoint expects a non-empty list"
         it "returns the unique given point" $
-            midpoint [readGeo "500359N0054253W"] `shouldBe` readGeo "500359N0054253W"
+            midpoint [readGeoPos "500359N0054253W"] `shouldBe` readGeoPos "500359N0054253W"
         it "returns the mid point between given points" $
-            midpoint [readGeo "500359N0054253W", readGeo "583838N0030412W"] `geoShouldBe`
+            midpoint [readGeoPos "500359N0054253W", readGeoPos "583838N0030412W"] `geoShouldBe`
             geoPos 54.3622868 (-4.5306725)
     describe "north pole" $ it "returns (90, 0)" $ (northPole :: GeoPos) `shouldBe` geoPos 90.0 0.0
     describe "south pole" $

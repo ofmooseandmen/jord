@@ -5,8 +5,8 @@ cache:
   directories:
   - $HOME/.stack
 
-before_install:
 # Download and unpack the stack executable
+before_install:
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
@@ -15,6 +15,23 @@ script:
   - stack --no-terminal --skip-ghc-check clean
   - stack --no-terminal --skip-ghc-check test --coverage --haddock --no-haddock-deps
 
+#  copy haddock to docs
+before_deploy:
+  - cp -rp `stack path --local-doc-root`/jord* docs
+
+# publish docs to gh-page
+deploy:
+  provider: pages
+  local_dir: docs
+  skip_cleanup: true
+  github_token: $GITHUB_TOKEN
+  on:
+    branch: master
+
+after_deploy:
+  - rm -rf docs
+  
+# report coverage to coveralls.
 after_script:
-  - stack --no-terminal install hpc-coveralls
-  - hpc-coveralls jord-test --exclude-dir=test --display-report
+  - travis_retry curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.4.0/shc-linux-x64-$GHCVER.tar.bz2 | tar -xj
+  - ./shc jord jord-test

@@ -45,13 +45,15 @@ instance Read Angle where
 
 -- | Angle is shown degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
-    show (Angle deg) = show d' ++ "°" ++ show m' ++ "'" ++ show sd' ++ "\""
+    show (Angle dec) =
+        show degs ++ "°" ++ show mins ++ "'" ++ show secs ++ "." ++ show millis ++ "\""
       where
-        d' = truncate deg :: Int
-        ms' = (deg - fromIntegral d') * 60.0
-        m' = truncate ms' :: Int
-        s' = (ms' - fromIntegral m') * 60.0
-        sd' = fromInteger (round (s' * 1000)) / 1000 :: Double -- keep 3 digits for the milliseconds
+        degs = truncate dec :: Int -- whole degrees
+        decM = (dec - fromIntegral degs) * 60.0 -- decimal minutes
+        mins = truncate decM :: Int -- whole minutes
+        decS = (decM - fromIntegral mins) * 60.0 -- decimal seconds
+        secs = truncate decS :: Int -- whole seconds
+        millis = truncate ((decS - fromIntegral secs) * 1000.0) :: Int -- whole milliseconds
 
 -- | Add/Subtract 'Angle'.
 instance Quantity Angle where

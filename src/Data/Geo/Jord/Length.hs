@@ -94,7 +94,7 @@ nauticalMiles l = metres l / 1852.0
 -- | Parses and returns a 'Length'.
 length :: ReadP Length
 length = do
-    v <- double
+    v <- number
     skipSpaces
     u <- string "m" <|> string "km" <|> string "Nm"
     case u of

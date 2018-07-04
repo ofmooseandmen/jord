@@ -26,12 +26,15 @@ data Result
 data Var
     = VarAng Angle
     | VarLen Length
-    | VarPos GeoPos deriving Show
+    | VarPos GeoPos
+    deriving (Show)
 
-data Vars = Vars [(String, Var)]
+data Vars =
+    Vars [(String, Var)]
 
 main :: IO ()
 main = do
+    hSetEncoding stdout utf8
     printS
         ("jord, version " ++ jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
     loop (Vars [])
@@ -40,6 +43,7 @@ main = do
         input <- readI
         case input of
             ":quit" -> return ()
+            ":q" -> return ()
             _ -> do
                 let (result, newState) = evaluate input state
                 printS result
@@ -110,8 +114,7 @@ evalMidpoint s vs =
 evalShow :: Maybe String -> Vars -> Result
 evalShow (Just n) vs =
     maybe (Error ("Unbound variable: " ++ n)) (\v -> ShowVars [(n, v)]) (lookup n vs)
-evalShow Nothing (Vars e) =
-    ShowVars e
+evalShow Nothing (Vars e) = ShowVars e
 
 evalDel :: Maybe String -> Vars -> Result
 evalDel _ _ = Error "Unsupported"
@@ -121,7 +124,7 @@ help =
     Help
         ("\n Commands available from the prompt:\n\n" ++
          "    :help, :?              display this list of commands\n" ++
-         "    :quit                  quit jord\n" ++
+         "    :quit, :q              quit jord\n" ++
          "    :show {var}            shows {var} or all variable(s) if no arg\n" ++
          "    :delete {var}          deletes {var}\n" ++
          "    :clear                 deletes all variable(s)\n" ++
@@ -166,7 +169,10 @@ showR (OkPos g) = "jord> \x1b[32mposition:\x1b[30m " ++ show g
 showR (OkLen l) = "jord> \x1b[32mlength:\x1b[30m " ++ show l
 showR (OkAng a) = "jord> \x1b[32mangle:\x1b[30m " ++ show a
 showR (ShowVars [e]) = "jord> \x1b[32mvar:\x1b[30m " ++ fst e ++ " = " ++ show (snd e)
-showR (ShowVars vs) = L.intercalate "\n" (map (\e -> "jord> \x1b[32mvar:\x1b[30m " ++ fst e ++ " = " ++ show (snd e)) vs)
+showR (ShowVars vs) =
+    L.intercalate
+        "\n"
+        (map (\e -> "jord> \x1b[32mvar:\x1b[30m " ++ fst e ++ " = " ++ show (snd e)) vs)
 showR (Help h) = h
 
 -- | Does given list of results contain 'Error'?
@@ -178,11 +184,10 @@ err :: [Result] -> Result
 err rs = Error (L.intercalate "; " [e | Error e <- rs])
 
 -- variables
-
 bind :: String -> Var -> Vars -> Vars
 bind k v m = Vars (e ++ [(k, v)])
-    where
-        Vars e = (unbind k m)
+  where
+    Vars e = (unbind k m)
 
 lookup :: String -> Vars -> Maybe Var
 lookup k (Vars es) = fmap snd (L.find (\e -> fst e == k) es)

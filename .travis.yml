@@ -1,18 +1,9 @@
 sudo: false
 
-env:
-  - GHCVER=8.0.1 STACK_YAML=stack-travis.yaml
-
 # Caching so the next build will be fast too.
 cache:
   directories:
   - $HOME/.stack
-
-# GHC depends on GMP.
-addons:
-  apt:
-    packages:
-    - libgmp-dev
 
 # Download and unpack the stack executable
 before_install:
@@ -20,14 +11,6 @@ before_install:
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 
-install:
-  - stack setup --no-terminal
-
 script:
   - stack --no-terminal --skip-ghc-check clean
   - stack --no-terminal --skip-ghc-check test --coverage --haddock --no-haddock-deps
-
-# report coverage to coveralls.
-after_script:
-  - travis_retry curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.4.0/shc-linux-x64-$GHCVER.tar.bz2 | tar -xj
-  - ./shc jord jord-test

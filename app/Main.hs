@@ -29,7 +29,7 @@ data Var
     | VarPos GeoPos
     deriving (Show)
 
-data Vars =
+newtype Vars =
     Vars [(String, Var)]
 
 main :: IO ()
@@ -187,7 +187,7 @@ err rs = Error (L.intercalate "; " [e | Error e <- rs])
 bind :: String -> Var -> Vars -> Vars
 bind k v m = Vars (e ++ [(k, v)])
   where
-    Vars e = (unbind k m)
+    Vars e = unbind k m
 
 lookup :: String -> Vars -> Maybe Var
 lookup k (Vars es) = fmap snd (L.find (\e -> fst e == k) es)

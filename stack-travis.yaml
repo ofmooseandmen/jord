@@ -1,0 +1,4 @@
+# use 7.24 (GHC 8.0.1 to use stack-hpc-coveralls)
+resolver: lts-7.24
+packages:
+- '.'

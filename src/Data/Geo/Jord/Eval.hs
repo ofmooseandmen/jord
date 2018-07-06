@@ -31,7 +31,7 @@ import Data.Geo.Jord.NVector
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 
--- | A value representing all data types used by "Jord".
+-- | A value representing all data types used by "Data.Geo.Jord".
 data Value
     = Ang Angle -- ^ 'Angle'
     | Len Length -- ^ 'Length'

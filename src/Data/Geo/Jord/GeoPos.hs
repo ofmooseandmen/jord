@@ -65,11 +65,7 @@ geoPosF lat lon
 --
 --     * 'Angle'[N|S] 'Angle'[E|W] - e.g. 55°36'21''N 13°0'02''E or 11°16'S 36°49'E or 47°N 122°W
 --
--- This simply calls:
--- @
---     read s :: GeoPos
--- @
--- so 'error' should be handled at the call site.
+-- This simply calls @read s :: GeoPos@ so 'error' should be handled at the call site.
 --
 readGeoPos :: String -> GeoPos
 readGeoPos s = read s :: GeoPos

@@ -25,14 +25,12 @@ library:
   exposed-modules:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
+    - Data.Geo.Jord.Eval
     - Data.Geo.Jord.Length
     - Data.Geo.Jord.GeoPos
     - Data.Geo.Jord.GreatCircle
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.NVector
-    - Data.Geo.Jord.Expr.AST
-    - Data.Geo.Jord.Expr.Eval
-    - Data.Geo.Jord.Expr.Token
   other-modules:
     - Data.Geo.Jord.Parse
 

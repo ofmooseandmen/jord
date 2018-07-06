@@ -166,6 +166,7 @@ initialBearing p1 p2 = normalise (ofRadians (angleBetween gc1 gc2 (Just v1))) 36
 -- knowing the 'Position' @p0@ at time @t0@ and the 'Position' @p1@ at time @t1@.
 --
 -- Expects @t0@ <= @ti@ <= @t1@
+-- TODO remove Millis and replace by a fraction [0..1]
 interpolate :: (Position a) => a -> Millis -> a -> Millis -> Millis -> a
 interpolate p0 t0 p1 t1 ti
     | ti < t0 || ti > t1 || t0 > t1 = error "expected t0 <= ti <= t1"

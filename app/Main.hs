@@ -10,7 +10,7 @@
 --
 module Main where
 
-import Data.Geo.Jord
+import Data.Geo.Jord hiding (Result(..))
 import qualified Data.List as L
 import Prelude hiding (lookup)
 import System.IO

@@ -21,7 +21,7 @@ module Data.Geo.Jord.NVector
 
 import Data.Geo.Jord.Quantity
 
--- | Represents a position as the normal vector to the Earth model.
+-- | Represents a position as the normal vector to the sphere.
 data NVector = NVector
     { x :: Double
     , y :: Double

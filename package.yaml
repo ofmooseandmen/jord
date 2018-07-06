@@ -30,6 +30,9 @@ library:
     - Data.Geo.Jord.GreatCircle
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.NVector
+    - Data.Geo.Jord.Expr.AST
+    - Data.Geo.Jord.Expr.Eval
+    - Data.Geo.Jord.Expr.Token
   other-modules:
     - Data.Geo.Jord.Parse
 

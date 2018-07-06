@@ -12,8 +12,10 @@
 -- Types and functions for evaluating expressions in textual form.
 --
 module Data.Geo.Jord.Eval
-    ( Result(..)
+    ( Result
+    , Value(..)
     , eval
+    , eval'
     , functions
     ) where
 
@@ -24,23 +26,28 @@ import Data.Geo.Jord.Angle
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.NVector
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 
--- | Result of an evaluation
-data Result
-    = Error String -- ^ Error with message
-    | Ang Angle -- ^ 'Angle'
+-- | A value representing all data types used by "Jord".
+data Value
+    = Ang Angle -- ^ 'Angle'
     | Len Length -- ^ 'Length'
     | Geo GeoPos -- ^ 'GeoPos'
+    | Vec NVector -- ^ 'NVector'
     deriving (Eq, Show)
+
+-- | 'Either' an error or a 'Value'.
+type Result = Either String Value
 
 instance MonadFail (Either String) where
     fail = Left
 
--- | Evaluates an expression @"(f x y ..)"@ where @f@ is one of the
--- supported 'functions' and @x@, @y@, .. , are either another function call
--- or a 'String' that can be read into an 'Angle', a 'Length' or a 'GeoPos'.
+-- | Evaluates @s@, an expression of the form @"(f x y ..)"@ where @f@ is one of the
+-- supported 'functions' and each parameter @x@, @y@, .. , is either another function call
+-- or a 'String' that can be 'read' into an 'Angle', a 'Length' or a 'GeoPos'.
+-- Returns 'Either' the resulting 'Value' ('Right') or the description of the error ('Left')
 --
 -- @
 --     angle = eval "finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)"
@@ -49,17 +56,34 @@ instance MonadFail (Either String) where
 -- Every function call must be wrapped between parentheses, however they can be ommitted for the top level call.
 --
 -- @
---     angle = eval "finalBearing 54N154E 54S154W" -- OK
---     angle = eval "(finalBearing 54N154E 54S154W)" -- OK
---     length = eval "distance (antipode 54N154E) 54S154W" -- OK
---     length = eval "distance antipode 54N154E 54S154W" -- NOK
+--     angle = eval "finalBearing 54N154E 54S154W" -- Right Ang
+--     angle = eval "(finalBearing 54N154E 54S154W)" -- Right Ang
+--     length = eval "distance (antipode 54N154E) 54S154W" -- Right Len
+--     length = eval "distance antipode 54N154E 54S154W" -- Left String
 -- @
 --
 eval :: String -> Result
 eval s = do
     case expr s of
-        Left m -> Error m
-        Right e -> evalExpr e
+        Left err -> Left err
+        Right ex ->
+            case evalExpr ex of
+                (Right (Vec v)) -> (Right (Geo (fromNVector v)))
+                r -> r
+
+-- | Same as 'eval' but accepts a function @r@ that is used to resolve
+-- parameters by name. If the function returns 'Nothing', the parameter is 'read'
+-- as described in 'eval'.
+--
+-- @
+--     m = Map.empty -- assuming use of Data.Map
+--     a1 = eval "finalBearing 54N154E 54S154W"
+--     m = insert "a1" a
+--     a2 = eval' (\k -> lookup k m) "(finalBearing a1 54S154W)"
+-- @
+--
+eval' :: String -> (String -> Maybe Value) -> Result
+eval' = Left "TODO"
 
 -- | All supported functions:
 --
@@ -125,36 +149,40 @@ transform (Lit s) = return (Param s)
 evalExpr :: Expr -> Result
 evalExpr (Param p) =
     case r of
-        [(Ang a), _, _] -> Ang a
-        [_, (Len l), _] -> Len l
-        [_, _, (Geo g)] -> Geo g
-        _ -> Error ("Parameter error: couldn't resolve " ++ p)
+        [(Right (Ang a)), _, _] -> Right (Ang a)
+        [_, (Right (Len l)), _] -> Right (Len l)
+        [_, _, (Right (Geo g))] -> Right (Vec (toNVector g))
+        _ -> Left ("Parameter error: couldn't resolve " ++ p)
   where
     r = map ($ p) [(readM readAngleM Ang), (readM readLengthM Len), (readM readGeoPosM Geo)]
 evalExpr (Antipode a) =
     case evalExpr a of
-        (Geo p) -> Geo (antipode p)
-        r -> Error ("Call error: antipode " ++ show r)
+        (Right (Vec p)) -> Right (Vec (antipode p))
+        r -> Left ("Call error: antipode " ++ show r)
 evalExpr (Destination a b c) =
     case [evalExpr a, evalExpr b, evalExpr c] of
-        [(Geo p), (Ang a'), (Len l)] -> Geo (destination p a' l)
-        r -> Error ("Call error: destination " ++ show r)
+        [(Right (Vec p)), (Right (Ang a')), (Right (Len l))] -> Right (Vec (destination p a' l))
+        r -> Left ("Call error: destination " ++ show r)
 evalExpr (Distance a b) =
     case [evalExpr a, evalExpr b] of
-        [(Geo p1), (Geo p2)] -> Len (distance p1 p2)
-        r -> Error ("Call error: distance " ++ show r)
+        [(Right (Vec p1)), (Right (Vec p2))] -> Right (Len (distance p1 p2))
+        r -> Left ("Call error: distance " ++ show r)
 evalExpr (FinalBearing a b) =
     case [evalExpr a, evalExpr b] of
-        [(Geo p1), (Geo p2)] -> Ang (finalBearing p1 p2)
-        r -> Error ("Call error: finalBearing " ++ show r)
+        [(Right (Vec p1)), (Right (Vec p2))] -> Right (Ang (finalBearing p1 p2))
+        r -> Left ("Call error: finalBearing " ++ show r)
 evalExpr (InitialBearing a b) =
     case [evalExpr a, evalExpr b] of
-        [(Geo p1), (Geo p2)] -> Ang (initialBearing p1 p2)
-        r -> Error ("Call error: initialBearing " ++ show r)
-evalExpr (ReadGeoPos s) = maybe (Error ("Call error: readGeoPos : " ++ s)) Geo (readGeoPosM s)
+        [(Right (Vec p1)), (Right (Vec p2))] -> Right (Ang (initialBearing p1 p2))
+        r -> Left ("Call error: initialBearing " ++ show r)
+evalExpr (ReadGeoPos s) =
+    maybe
+        (Left ("Call error: readGeoPos : " ++ s))
+        (\g -> Right (Vec (toNVector g)))
+        (readGeoPosM s)
 
-readM :: (String -> Maybe a) -> (a -> Result) -> String -> Result
-readM p r s = maybe (Error ("Invalid text: " ++ s)) r (p s)
+readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
+readM p r s = maybe (Left ("Invalid text: " ++ s)) (\v -> Right (r v)) (p s)
 
 -- Lexical Analysis: String -> [Token]
 data Token

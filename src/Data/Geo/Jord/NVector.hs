@@ -26,7 +26,7 @@ data NVector = NVector
     { x :: Double
     , y :: Double
     , z :: Double
-    }
+    } deriving (Eq, Show)
 
 -- | Add and subtract 'NVector's.
 instance Quantity NVector where

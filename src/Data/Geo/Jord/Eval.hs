@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- |
 -- Module:      Data.Geo.Jord.Eval
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -25,22 +26,6 @@ import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Length
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
-
-data Expr
-    = Param String
-    | Antipode Expr
-    | Destination Expr
-                  Expr
-                  Expr
-    | Distance Expr
-               Expr
-    | FinalBearing Expr
-                   Expr
-    | InitialBearing Expr
-                     Expr
-    | ReadGeoPos String
-    deriving (Show)
-
 
 -- | Result of an evaluation
 data Result
@@ -92,6 +77,21 @@ eval s = do
 --
 functions :: [String]
 functions = ["antipode", "destination", "distance", "finalBearing", "initialBearing", "readGeoPos"]
+
+data Expr
+    = Param String
+    | Antipode Expr
+    | Destination Expr
+                  Expr
+                  Expr
+    | Distance Expr
+               Expr
+    | FinalBearing Expr
+                   Expr
+    | InitialBearing Expr
+                     Expr
+    | ReadGeoPos String
+    deriving (Show)
 
 expr :: (MonadFail m) => String -> m Expr
 expr s = do

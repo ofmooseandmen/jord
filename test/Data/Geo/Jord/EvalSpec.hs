@@ -16,7 +16,7 @@ spec = do
         it "evaluates expression with nested function calls" $
             case eval
                      "finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)" of
-                (Right (Ang a)) -> a `angleShouldBe` ofDegrees 126
+                (Right (Ang a)) -> a `angleShouldBe` ofDegrees 126 -- TODO this should be 125.6839436
                 r -> fail (show r)
         it "rejects expression with lexical error" $
             case eval "finalBearing (destination [" of

@@ -120,6 +120,9 @@ spec = do
         it "returns the final bearing in compass degrees" $
             finalBearing (readGeoPos "583838N0030412W") (readGeoPos "500359N0054253W") `angleShouldBe`
             ofDegrees 189.1198181
+        it "returns the final bearing in compass degrees" $
+            finalBearing (readGeoPos "535941S0255915W") (readGeoPos "54N154E") `angleShouldBe`
+            ofDegrees 125.6839436
     describe "midpoint" $ do
         it "fails if no point is given" $
             evaluate (midpoint [] :: GeoPos) `shouldThrow`

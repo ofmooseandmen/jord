@@ -12,7 +12,8 @@
 -- Types and functions for evaluating expressions in textual form.
 --
 module Data.Geo.Jord.Eval
-    ( Result
+    ( Resolve
+    , Result
     , Value(..)
     , eval
     , eval'
@@ -41,6 +42,9 @@ data Value
 -- | 'Either' an error or a 'Value'.
 type Result = Either String Value
 
+-- | Resolves a value by its name if it exists.
+type Resolve = String -> Maybe Value
+
 instance MonadFail (Either String) where
     fail = Left
 
@@ -63,17 +67,16 @@ instance MonadFail (Either String) where
 -- @
 --
 eval :: String -> Result
-eval s = do
+eval s =
     case expr s of
         Left err -> Left err
         Right ex ->
             case evalExpr ex of
-                (Right (Vec v)) -> (Right (Geo (fromNVector v)))
+                (Right (Vec v)) -> Right (Geo (fromNVector v))
                 r -> r
 
--- | Same as 'eval' but accepts a function @r@ that is used to resolve
--- parameters by name. If the function returns 'Nothing', the parameter is 'read'
--- as described in 'eval'.
+-- | Same as 'eval' but uses a 'Resolve' function @r@ resolve parameters by name.
+-- If the function returns 'Nothing', the parameter is 'read' as described in 'eval'.
 --
 -- @
 --     m = Map.empty -- assuming use of Data.Map
@@ -82,8 +85,8 @@ eval s = do
 --     a2 = eval' (\k -> lookup k m) "(finalBearing a1 54S154W)"
 -- @
 --
-eval' :: String -> (String -> Maybe Value) -> Result
-eval' = Left "TODO"
+eval' :: String -> Resolve -> Result
+eval' _ _ = Left "TODO"
 
 -- | All supported functions:
 --
@@ -125,64 +128,64 @@ expr s = do
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
-transform (Call "destination" (e1:e2:e3:[])) = do
+transform (Call "destination" [e1,e2,e3]) = do
     p1 <- transform e1
     p2 <- transform e2
     p3 <- transform e3
     return (Destination p1 p2 p3)
-transform (Call "distance" (e1:e2:[])) = do
+transform (Call "distance" [e1,e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (Distance p1 p2)
-transform (Call "finalBearing" (e1:e2:[])) = do
+transform (Call "finalBearing" [e1,e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (FinalBearing p1 p2)
-transform (Call "initialBearing" (e1:e2:[])) = do
+transform (Call "initialBearing" [e1,e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (InitialBearing p1 p2)
-transform (Call "readGeoPos" [(Lit s)]) = return (ReadGeoPos s)
+transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
 transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)
 transform (Lit s) = return (Param s)
 
 evalExpr :: Expr -> Result
 evalExpr (Param p) =
     case r of
-        [(Right (Ang a)), _, _] -> Right (Ang a)
-        [_, (Right (Len l)), _] -> Right (Len l)
-        [_, _, (Right (Geo g))] -> Right (Vec (toNVector g))
+        [Right (Ang a), _, _] -> Right (Ang a)
+        [_, Right (Len l), _] -> Right (Len l)
+        [_, _, Right (Geo g)] -> Right (Vec (toNVector g))
         _ -> Left ("Parameter error: couldn't resolve " ++ p)
   where
-    r = map ($ p) [(readM readAngleM Ang), (readM readLengthM Len), (readM readGeoPosM Geo)]
+    r = map ($ p) [readM readAngleM Ang, readM readLengthM Len, readM readGeoPosM Geo]
 evalExpr (Antipode a) =
     case evalExpr a of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ show r)
 evalExpr (Destination a b c) =
     case [evalExpr a, evalExpr b, evalExpr c] of
-        [(Right (Vec p)), (Right (Ang a')), (Right (Len l))] -> Right (Vec (destination p a' l))
+        [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
         r -> Left ("Call error: destination " ++ show r)
 evalExpr (Distance a b) =
     case [evalExpr a, evalExpr b] of
-        [(Right (Vec p1)), (Right (Vec p2))] -> Right (Len (distance p1 p2))
+        [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance p1 p2))
         r -> Left ("Call error: distance " ++ show r)
 evalExpr (FinalBearing a b) =
     case [evalExpr a, evalExpr b] of
-        [(Right (Vec p1)), (Right (Vec p2))] -> Right (Ang (finalBearing p1 p2))
+        [Right (Vec p1), Right (Vec p2)] -> Right (Ang (finalBearing p1 p2))
         r -> Left ("Call error: finalBearing " ++ show r)
 evalExpr (InitialBearing a b) =
     case [evalExpr a, evalExpr b] of
-        [(Right (Vec p1)), (Right (Vec p2))] -> Right (Ang (initialBearing p1 p2))
+        [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ show r)
 evalExpr (ReadGeoPos s) =
     maybe
         (Left ("Call error: readGeoPos : " ++ s))
-        (\g -> Right (Vec (toNVector g)))
+        (Right . Vec . toNVector)
         (readGeoPosM s)
 
 readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
-readM p r s = maybe (Left ("Invalid text: " ++ s)) (\v -> Right (r v)) (p s)
+readM p r s = maybe (Left ("Invalid text: " ++ s)) (Right .r) (p s)
 
 -- Lexical Analysis: String -> [Token]
 data Token
@@ -243,13 +246,13 @@ walk [] = fail "Syntax error: empty"
 walk (h:t)
     | (Str s) <- h = return (Lit s, t)
     | (Paren '(') <- h = walkFunc t
-    | otherwise = fail ("Syntax error: expected String or '(' but got " ++ (show h))
+    | otherwise = fail ("Syntax error: expected String or '(' but got " ++ show h)
 
 walkFunc :: (MonadFail m) => [Token] -> m (Ast, [Token])
 walkFunc [] = fail "Syntax error: '(' unexpected"
 walkFunc (h:t)
     | (Func n) <- h = walkParams n t []
-    | otherwise = fail ("Syntax error: expected Function but got " ++ (show h))
+    | otherwise = fail ("Syntax error: expected Function but got " ++ show h)
 
 walkParams :: (MonadFail m) => String -> [Token] -> [Ast] -> m (Ast, [Token])
 walkParams _ [] _ = fail "Syntax error: ')' not found"

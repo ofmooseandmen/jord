@@ -8,6 +8,7 @@
 --
 -- REPL around "Jord".
 --
+-- TODO: use Data.Geo.Jord.Eval
 module Main where
 
 import Data.Geo.Jord hiding (Result)

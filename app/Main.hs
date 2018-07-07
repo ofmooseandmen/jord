@@ -66,8 +66,8 @@ evalC [":?"] vs = (Right help, vs)
 evalC c vs = (Left ("Unsupported command " ++ unwords c ++ "; :? for help"), vs)
 
 evalShow :: Maybe String -> Vars -> Either String String
-evalShow (Just n) vs = maybe (Left ("Unbound variable: " ++ n)) (Right . show) (lookup n vs)
-evalShow Nothing (Vars es) = Right ("vars:\n" ++ L.intercalate "\n" (map show es))
+evalShow (Just n) vs = maybe (Left ("Unbound variable: " ++ n)) (Right . showVar n) (lookup n vs)
+evalShow Nothing (Vars es) = Right ("vars:\n  " ++ L.intercalate "\n  " (map (uncurry showVar) es))
 
 evalDel :: Maybe String -> Vars -> (Either String String, Vars)
 evalDel _ vs = (Left "Unsupported", vs)
@@ -127,11 +127,17 @@ save _ _ vs = vs
 
 showR :: J.Result -> Either String String
 showR (Left err) = Left err
-showR (Right (J.Ang a)) = Right ("angle: " ++ show a)
-showR (Right (J.Len l)) = Right ("length: " ++ show l)
-showR (Right (J.Geo g)) = Right ("geo pos: " ++ show g)
-showR (Right (J.Vec v)) = Right ("n-vector: " ++ show v)
-showR (Right (J.Ll ll)) = Right ("latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll))
+showR (Right v) = Right (showV v)
+
+showV :: J.Value -> String
+showV (J.Ang a) = "angle: " ++ show a
+showV (J.Len l) = "length: " ++ show l
+showV (J.Geo g) = "geo pos: " ++ show g
+showV (J.Vec v) = "n-vector: " ++ show v
+showV (J.Ll ll) = "latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll)
+
+showVar :: String -> J.Value -> String
+showVar n v = n ++ "=" ++ showV v
 
 -- variables
 bind :: String -> J.Value -> Vars -> Vars

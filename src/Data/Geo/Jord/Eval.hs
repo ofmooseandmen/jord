@@ -89,16 +89,16 @@ instance MonadFail (Either String) where
 -- @
 --
 eval :: String -> Resolve -> Result
-eval s _ =
+eval s r =
     case expr s of
         Left err -> Left err
-        Right (vec, ex) ->
-            case evalExpr ex of
-                rv@(Right (Vec v)) ->
-                    if vec
-                        then rv
+        Right (rvec, ex) ->
+            case evalExpr ex r of
+                vec@(Right (Vec v)) ->
+                    if rvec
+                        then vec
                         else Right (Geo (fromNVector v))
-                r -> r
+                oth -> oth
 
 -- | Same as 'eval' but never resolves parameters by name.
 eval' :: String -> Result
@@ -147,56 +147,63 @@ expectVec :: [Token] -> Bool
 expectVec (_:Func "toNVector":_) = True
 expectVec _ = False
 
-evalExpr :: Expr -> Result
-evalExpr (Param p) =
-    case r of
-        [a@(Right (Ang _)), _, _] -> a
-        [_, l@(Right (Len _)), _] -> l
-        [_, _, Right (Geo g)] -> Right (Vec (toNVector g))
-        _ -> Left ("couldn't resolve " ++ p)
-  where
-    r = map ($ p) [readM readAngleM Ang, readM readLengthM Len, readM readGeoPosM Geo]
-evalExpr (Antipode a) =
-    case evalExpr a of
+evalExpr :: Expr -> Resolve -> Result
+evalExpr (Param p) f =
+    case f p of
+        Just (Geo g) -> Right (Vec (toNVector g))
+        Just v -> Right v
+        Nothing -> tryRead p
+evalExpr (Antipode a) f =
+    case evalExpr a f of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
-evalExpr (Destination a b c) =
-    case [evalExpr a, evalExpr b, evalExpr c] of
+evalExpr (Destination a b c) f =
+    case [evalExpr a f, evalExpr b f, evalExpr c f] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
         r -> Left ("Call error: destination " ++ showErr r)
-evalExpr (Distance a b) =
-    case [evalExpr a, evalExpr b] of
+evalExpr (Distance a b) f =
+    case [evalExpr a f, evalExpr b f] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance p1 p2))
         r -> Left ("Call error: distance " ++ showErr r)
-evalExpr (FinalBearing a b) =
-    case [evalExpr a, evalExpr b] of
+evalExpr (FinalBearing a b) f =
+    case [evalExpr a f, evalExpr b f] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (finalBearing p1 p2))
         r -> Left ("Call error: finalBearing " ++ showErr r)
-evalExpr (InitialBearing a b) =
-    case [evalExpr a, evalExpr b] of
+evalExpr (InitialBearing a b) f =
+    case [evalExpr a f, evalExpr b f] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ showErr r)
-evalExpr (LatLong a) =
-    case evalExpr a of
+evalExpr (LatLong a) f =
+    case evalExpr a f of
         (Right (Vec p)) ->
             let g = fromNVector p
              in Right (Ll (degrees (latitude g), degrees (longitude g)))
         r -> Left ("Call error: latlong " ++ showErr [r])
-evalExpr (Midpoint as) =
-    let m = map evalExpr as
+evalExpr (Midpoint as) f =
+    let m = map (`evalExpr` f) as
         ps = [p | Right (Vec p) <- m]
      in if length m == length ps
             then Right (Vec (midpoint ps))
             else Left ("Call error: midpoint " ++ showErr m)
-evalExpr (ReadGeoPos s) =
+evalExpr (ReadGeoPos s) _ =
     maybe (Left ("Call error: readGeoPos : " ++ s)) (Right . Vec . toNVector) (readGeoPosM s)
-evalExpr (ToNVector a) =
-    case evalExpr a of
+evalExpr (ToNVector a) f =
+    case evalExpr a f of
         r@(Right (Vec _)) -> r
         r -> Left ("Call error: toNVector " ++ showErr [r])
 
 showErr :: [Result] -> String
 showErr rs = " > " ++ intercalate " & " (map (either id show) rs)
+
+tryRead :: String -> Result
+tryRead s =
+    case r of
+        [a@(Right (Ang _)), _, _] -> a
+        [_, l@(Right (Len _)), _] -> l
+        [_, _, Right (Geo g)] -> Right (Vec (toNVector g))
+        _ -> Left ("couldn't resolve " ++ s)
+  where
+    r = map ($ s) [readM readAngleM Ang, readM readLengthM Len, readM readGeoPosM Geo]
 
 readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
 readM p r s = maybe (Left ("Invalid text [" ++ s ++ "]")) (Right . r) (p s)

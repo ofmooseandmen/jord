@@ -18,6 +18,10 @@ spec = do
                      "finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)" of
                 (Right (Ang a)) -> a `angleShouldBe` ofDegrees 126
                 r -> fail (show r)
+        it "resolves variables" $
+            case eval "antipode a" (\_ -> Just (Geo (geoPos 54.0 154.0))) of
+                (Right (Geo g)) -> g `geoShouldBe` geoPos (-54.0) (-26.0)
+                r -> fail (show r)
         it "rejects expression with lexical error" $
             case eval' "finalBearing(destination" of
                 (Left e) -> e `shouldBe` "Lexical error: finalBearing(destination)"

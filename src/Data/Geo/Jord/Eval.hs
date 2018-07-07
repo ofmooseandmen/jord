@@ -48,13 +48,34 @@ type Resolve = String -> Maybe Value
 instance MonadFail (Either String) where
     fail = Left
 
--- | Evaluates @s@, an expression of the form @"(f x y ..)"@ where @f@ is one of the
--- supported 'functions' and each parameter @x@, @y@, .. , is either another function call
--- or a 'String' that can be 'read' into an 'Angle', a 'Length' or a 'GeoPos'.
--- Returns 'Either' the resulting 'Value' ('Right') or the description of the error ('Left')
+-- | Evaluates @s@, an expression of the form @"(f x y ..)"@.
+--
+-- >>> eval "finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)"
+-- 126°
+--
+-- @f@ must be one of the supported 'functions' and each parameter @x@, @y@, .. , is either another function call
+-- or a 'String' parameter. Parameters are either resolved by name using the 'Resolve'
+-- function @r@ or if it returns 'Nothing', 'read' to an 'Angle', a 'Length' or a 'GeoPos'.
+--
+-- If the evaluation is successful, returns the resulting 'Value' ('Right') otherwise
+-- a description of the error ('Left').
 --
 -- @
---     angle = eval "finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)"
+--     angle = eval "finalBearing 54N154E 54S154W" -- Right Ang
+--     length = eval "distance (antipode 54N154E) 54S154W" -- Right Len
+--     -- parameter resolution by name
+--     m = Map.empty -- assuming use of Data.Map
+--     a1 = eval "finalBearing 54N154E 54S154W"
+--     m = insert "a1" a
+--     a2 = eval' (\\k -> lookup k m) "(finalBearing a1 54S154W)"
+-- @
+--
+-- By default, all returned positions are 'Geo' ('GeoPos'), to get back a 'Vec' ('NVector'), the
+-- expression must be wrapped by 'toNVector'.
+--
+-- @
+--     dest = eval "destination 54°N,154°E 54° 1000m" -- Right Geo
+--     dest = eval "toNVector (destination 54°N,154°E 54° 1000m)" -- Right Vec
 -- @
 --
 -- Every function call must be wrapped between parentheses, however they can be ommitted for the top level call.
@@ -66,27 +87,21 @@ instance MonadFail (Either String) where
 --     length = eval "distance antipode 54N154E 54S154W" -- Left String
 -- @
 --
-eval :: String -> Result
-eval s =
+eval :: String -> Resolve -> Result
+eval s _ =
     case expr s of
         Left err -> Left err
-        Right ex ->
+        Right (vec, ex) ->
             case evalExpr ex of
-                (Right (Vec v)) -> Right (Geo (fromNVector v))
+                rv@(Right (Vec v)) ->
+                    if vec
+                        then rv
+                        else Right (Geo (fromNVector v))
                 r -> r
 
--- | Same as 'eval' but uses a 'Resolve' function @r@ resolve parameters by name.
--- If the function returns 'Nothing', the parameter is 'read' as described in 'eval'.
---
--- @
---     m = Map.empty -- assuming use of Data.Map
---     a1 = eval "finalBearing 54N154E 54S154W"
---     m = insert "a1" a
---     a2 = eval' (\k -> lookup k m) "(finalBearing a1 54S154W)"
--- @
---
-eval' :: String -> Resolve -> Result
-eval' _ _ = Left "TODO"
+-- | Same as 'eval' but never resolves parameters by name.
+eval' :: String -> Result
+eval' s = eval s (\_ -> Nothing)
 
 -- | All supported functions:
 --
@@ -103,7 +118,15 @@ eval' _ _ = Left "TODO"
 --     * 'readGeoPos'
 --
 functions :: [String]
-functions = ["antipode", "destination", "distance", "finalBearing", "initialBearing", "readGeoPos"]
+functions =
+    [ "antipode"
+    , "destination"
+    , "distance"
+    , "finalBearing"
+    , "initialBearing"
+    , "readGeoPos"
+    , "toNVector"
+    ]
 
 data Expr
     = Param String
@@ -118,42 +141,48 @@ data Expr
     | InitialBearing Expr
                      Expr
     | ReadGeoPos String
+    | ToNVector Expr
     deriving (Show)
 
-expr :: (MonadFail m) => String -> m Expr
+expr :: (MonadFail m) => String -> m (Bool, Expr)
 expr s = do
     ts <- tokenise s
     ast <- parse ts
-    transform ast
+    fmap (\a -> (expectVec ts, a)) (transform ast)
+
+expectVec :: [Token] -> Bool
+expectVec (_:(Func "toNVector"):_) = True
+expectVec _ = False
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
-transform (Call "destination" [e1,e2,e3]) = do
+transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
     p3 <- transform e3
     return (Destination p1 p2 p3)
-transform (Call "distance" [e1,e2]) = do
+transform (Call "distance" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (Distance p1 p2)
-transform (Call "finalBearing" [e1,e2]) = do
+transform (Call "finalBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (FinalBearing p1 p2)
-transform (Call "initialBearing" [e1,e2]) = do
+transform (Call "initialBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (InitialBearing p1 p2)
 transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
+transform (Call "toNVector" [e]) = fmap ToNVector (transform e)
 transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)
 transform (Lit s) = return (Param s)
 
 evalExpr :: Expr -> Result
 evalExpr (Param p) =
     case r of
-        [Right (Ang a), _, _] -> Right (Ang a)
-        [_, Right (Len l), _] -> Right (Len l)
+        [a@(Right (Ang _)), _, _] -> a
+        [_, l@(Right (Len _)), _] -> l
         [_, _, Right (Geo g)] -> Right (Vec (toNVector g))
         _ -> Left ("Parameter error: couldn't resolve " ++ p)
   where
@@ -179,13 +208,14 @@ evalExpr (InitialBearing a b) =
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ show r)
 evalExpr (ReadGeoPos s) =
-    maybe
-        (Left ("Call error: readGeoPos : " ++ s))
-        (Right . Vec . toNVector)
-        (readGeoPosM s)
+    maybe (Left ("Call error: readGeoPos : " ++ s)) (Right . Vec . toNVector) (readGeoPosM s)
+evalExpr (ToNVector a) =
+    case evalExpr a of
+        r@(Right (Vec _)) -> r
+        r -> Left ("Call error: toNVector " ++ show r)
 
 readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
-readM p r s = maybe (Left ("Invalid text: " ++ s)) (Right .r) (p s)
+readM p r s = maybe (Left ("Invalid text: " ++ s)) (Right . r) (p s)
 
 -- Lexical Analysis: String -> [Token]
 data Token

@@ -36,7 +36,7 @@ data Value
     | Len Length -- ^ 'Length'
     | Geo GeoPos -- ^ 'GeoPos'
     | Vec NVector -- ^ 'NVector'
-    | LL (Angle, Angle) -- ^ tuple of latitude and longitude
+    | Ll (Double, Double) -- ^ tuple of latitude and longitude
     deriving (Eq, Show)
 
 -- | 'Either' an error or a 'Value'.
@@ -117,6 +117,8 @@ eval' s = eval s (\_ -> Nothing)
 --
 --     * 'latlong'
 --
+--     * 'midpoint'
+--
 --     * 'readGeoPos'
 --
 --     * 'toNVector'
@@ -129,10 +131,10 @@ functions =
     , "finalBearing"
     , "initialBearing"
     , "latlong"
+    , "midpoint"
     , "readGeoPos"
     , "toNVector"
     ]
-
 
 expr :: (MonadFail m) => String -> m (Bool, Expr)
 expr s = do
@@ -175,9 +177,16 @@ evalExpr (InitialBearing a b) =
         r -> Left ("Call error: initialBearing " ++ show r)
 evalExpr (LatLong a) =
     case evalExpr a of
-        (Right (Vec p)) -> let g = fromNVector p
-                            in Right (LL (latitude g, longitude g))
+        (Right (Vec p)) ->
+            let g = fromNVector p
+             in Right (Ll (degrees (latitude g), degrees (longitude g)))
         r -> Left ("Call error: latlong " ++ show r)
+evalExpr (Midpoint as) =
+    let m = map evalExpr as
+        ps = [p | Right (Vec p) <- m]
+     in if length m == length ps
+            then Right (Vec (midpoint ps))
+            else Left ("Call error: Midpoint " ++ show m)
 evalExpr (ReadGeoPos s) =
     maybe (Left ("Call error: readGeoPos : " ++ s)) (Right . Vec . toNVector) (readGeoPosM s)
 evalExpr (ToNVector a) =
@@ -188,11 +197,9 @@ evalExpr (ToNVector a) =
 readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
 readM p r s = maybe (Left ("Invalid text: " ++ s)) (Right . r) (p s)
 
-
 ------------------------------------------
 --  Lexical Analysis: String -> [Token] --
 ------------------------------------------
-
 data Token
     = Paren Char
     | Func String
@@ -241,13 +248,12 @@ str = do
     optional (char ' ')
     v <- munch1 (\c -> c /= '(' && c /= ')' && c /= ' ')
     if elem v functions
-      then pfail
-      else return (Str v)
+        then pfail
+        else return (Str v)
 
 -----------------------------------------
 --  Syntactic Analysis: [Token] -> Ast --
 -----------------------------------------
-
 data Ast
     = Call String
            [Ast]
@@ -282,7 +288,6 @@ walkParams n ts@(h:t) acc
 -------------------------------------
 --  Semantic Analysis: Ast -> Expr --
 -------------------------------------
-
 data Expr
     = Param String
     | Antipode Expr
@@ -296,10 +301,10 @@ data Expr
     | InitialBearing Expr
                      Expr
     | LatLong Expr
+    | Midpoint [Expr]
     | ReadGeoPos String
     | ToNVector Expr
     deriving (Show)
-
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
@@ -321,6 +326,9 @@ transform (Call "initialBearing" [e1, e2]) = do
     p2 <- transform e2
     return (InitialBearing p1 p2)
 transform (Call "latlong" [e]) = fmap LatLong (transform e)
+transform (Call "midpoint" e) = do
+    ps <- mapM transform e
+    return (Midpoint ps)
 transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
 transform (Call "toNVector" [e]) = fmap ToNVector (transform e)
 transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)

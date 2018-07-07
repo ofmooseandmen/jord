@@ -99,11 +99,7 @@ radians a = toRadians (degrees a)
 --
 -- Symbols used as separator can be any combination of non alphanumeric characters (expect .).
 --
--- This simply calls:
--- @
---     read s :: Angle
--- @
--- so 'error' should be handled at the call site.
+-- This simply calls @read s :: Angle@ so 'error' should be handled at the call site.
 --
 readAngle :: String -> Angle
 readAngle s = read s :: Angle

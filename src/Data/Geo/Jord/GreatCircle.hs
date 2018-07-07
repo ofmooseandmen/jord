@@ -29,7 +29,6 @@
 --
 module Data.Geo.Jord.GreatCircle
     ( GreatCircle
-    , Millis(..)
     , Position(..)
     , antipode
     , destination
@@ -63,11 +62,6 @@ import Data.Geo.Jord.Quantity
 newtype GreatCircle = GreatCircle
     { normal :: NVector
     }
-
--- | An instant or duration in milliseconds.
-newtype Millis = Millis
-    { millis :: Int
-    } deriving (Eq, Ord, Show)
 
 -- | The 'Position' class defines 2 functions to convert a position to and from a 'NVector'.
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
@@ -162,20 +156,26 @@ initialBearing p1 p2 = normalise (ofRadians (angleBetween gc1 gc2 (Just v1))) 36
     gc1 = cross v1 v2 -- great circle through p1 & p2
     gc2 = cross v1 northPole -- great circle through p1 & north pole
 
--- | Computes the interpolated 'Position' at time @ti@,
--- knowing the 'Position' @p0@ at time @t0@ and the 'Position' @p1@ at time @t1@.
+-- | Computes the 'Position' at given fraction @f@ between the two given 'Position's @p0@ and @p1@.
 --
--- Expects @t0@ <= @ti@ <= @t1@
-interpolate :: (Position a) => a -> Millis -> a -> Millis -> Millis -> a
-interpolate p0 t0 p1 t1 ti
-    | ti < t0 || ti > t1 || t0 > t1 = error "expected t0 <= ti <= t1"
-    | ti == t0 = p0
-    | ti == t1 = p1
-    | otherwise = fromNVector (unit (add v0 (scale (sub v1 v0) s)))
+-- Special cases:
+--
+-- @
+--     interpolate p0 p1 0.0 => p0
+--     interpolate p0 p1 1.0 => p1
+-- @
+--
+-- 'error's if @f < 0 || f > 1.0@
+--
+interpolate :: (Position a) => a -> a -> Double -> a
+interpolate p0 p1 f
+    | f < 0 || f > 1 = error ("fraction must be in range [0..1], was " ++ show f)
+    | f == 0 = p0
+    | f == 1 = p1
+    | otherwise = fromNVector (unit (add v0 (scale (sub v1 v0) f)))
   where
     v0 = toNVector p0
     v1 = toNVector p1
-    s = fromIntegral (millis ti - millis t0) / fromIntegral (millis t1 - millis t0)
 
 -- | Computes the intersections between the two given 'GreatCircle's.
 -- Two 'GreatCircle's intersect exactly twice unless there are equal, in which case 'Nothing' is returned.

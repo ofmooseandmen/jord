@@ -10,33 +10,20 @@
 --
 module Main where
 
-import Data.Geo.Jord
+import qualified Data.Geo.Jord as J
 import qualified Data.List as L
 import Prelude hiding (lookup)
 import System.IO
 
-data Result
-    = Error String
-    | Help String
-    | OkAng Angle
-    | OkLen Length
-    | OkPos GeoPos
-    | ShowVars [(String, Var)]
-
-data Var
-    = VarAng Angle
-    | VarLen Length
-    | VarPos GeoPos
-    deriving (Show)
-
 newtype Vars =
-    Vars [(String, Var)]
+    Vars [(String, J.Value)]
 
 main :: IO ()
 main = do
     hSetEncoding stdout utf8
-    printS
-        ("jord, version " ++ jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
+    putStrLn
+        ("jord interpreter, version " ++
+         J.jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
     loop (Vars [])
   where
     loop state = do
@@ -45,151 +32,120 @@ main = do
             ":quit" -> return ()
             ":q" -> return ()
             _ -> do
-                let (result, newState) = evaluate input state
+                let (result, newState) = evalS input state
                 printS result
                 loop newState
 
 readI :: IO String
-readI = putStr "jord> " >> hFlush stdout >> getLine
+readI = putStr "\9783 " >> hFlush stdout >> getLine
 
-printS :: String -> IO ()
-printS = putStrLn
+printS :: Either String String -> IO ()
+printS (Left err) = putStrLn ("\x1b[31m\9783 \x1b[30m" ++ err)
+printS (Right "") = return ()
+printS (Right r) = putStrLn ("\x1b[32m\9783 \x1b[30m" ++ r)
 
-evaluate :: String -> Vars -> (String, Vars)
-evaluate input vs =
-    case w of
-        (v:"=":_) ->
-            let (r, vs') = save (run (drop 2 w) vs) v vs
-             in (showR r, vs')
-        _ -> (showR (run w vs), vs)
+evalS :: String -> Vars -> (Either String String, Vars)
+evalS s vs
+    | null s = (Right "", vs)
+    | head s == ':' = evalC w vs
+    | (v:"=":e) <- w =
+        let r = evalE (unwords e) vs
+            vs' = save r v vs
+         in (showR r, vs')
+    | otherwise = (showR (evalE s vs), vs)
   where
-    w = words input
+    w = words s
 
-run :: [String] -> Vars -> Result
-run ["antipode", p] vs = evalAntipode p vs
-run ["distance", p1, p2] vs = evalDistance p1 p2 vs
-run ["initialBearing", p1, p2] vs = evalInitialBearing p1 p2 vs
-run ["finalBearing", p1, p2] vs = evalFinalBearing p1 p2 vs
-run ("midpoint":ps) vs = evalMidpoint ps vs
-run [":show", v] vs = evalShow (Just v) vs
-run [":show"] vs = evalShow Nothing vs
-run [":delete", v] vs = evalDel (Just v) vs
-run [":clear"] vs = evalDel Nothing vs
-run [":help"] _ = help
-run [":?"] _ = help
-run cmd _ = Error ("Unsupported command: " ++ unwords cmd)
+evalC :: [String] -> Vars -> (Either String String, Vars)
+evalC [":show", v] vs = (evalShow (Just v) vs, vs)
+evalC [":show"] vs = (evalShow Nothing vs, vs)
+evalC [":delete", v] vs = evalDel (Just v) vs
+evalC [":clear"] vs = evalDel Nothing vs
+evalC [":help"] vs = (Right help, vs)
+evalC [":?"] vs = (Right help, vs)
+evalC c vs = (Left ("Unsupported command " ++ unwords c ++ "; :? for help"), vs)
 
-evalAntipode :: String -> Vars -> Result
-evalAntipode s vs =
-    case resolveAllPos [s] vs of
-        [OkPos p] -> OkPos (antipode p)
-        ps -> err ps
+evalShow :: Maybe String -> Vars -> Either String String
+evalShow (Just n) vs = maybe (Left ("Unbound variable: " ++ n)) (Right . showVar n) (lookup n vs)
+evalShow Nothing (Vars es) = Right ("vars:\n  " ++ L.intercalate "\n  " (map (uncurry showVar) es))
 
-evalDistance :: String -> String -> Vars -> Result
-evalDistance s1 s2 vs =
-    case resolveAllPos [s1, s2] vs of
-        [OkPos p1, OkPos p2] -> OkLen (distance p1 p2)
-        ps -> err ps
+evalDel :: Maybe String -> Vars -> (Either String String, Vars)
+evalDel _ vs = (Left "Unsupported", vs)
 
-evalInitialBearing :: String -> String -> Vars -> Result
-evalInitialBearing s1 s2 vs =
-    case resolveAllPos [s1, s2] vs of
-        [OkPos p1, OkPos p2] -> OkAng (initialBearing p1 p2)
-        ps -> err ps
-
-evalFinalBearing :: String -> String -> Vars -> Result
-evalFinalBearing s1 s2 vs =
-    case resolveAllPos [s1, s2] vs of
-        [OkPos p1, OkPos p2] -> OkAng (finalBearing p1 p2)
-        ps -> err ps
-
-evalMidpoint :: [String] -> Vars -> Result
-evalMidpoint s vs =
-    if hasErr ps
-        then err ps
-        else OkPos (midpoint [p | OkPos p <- ps])
-  where
-    ps = resolveAllPos s vs
-
-evalShow :: Maybe String -> Vars -> Result
-evalShow (Just n) vs =
-    maybe (Error ("Unbound variable: " ++ n)) (\v -> ShowVars [(n, v)]) (lookup n vs)
-evalShow Nothing (Vars e) = ShowVars e
-
-evalDel :: Maybe String -> Vars -> Result
-evalDel _ _ = Error "Unsupported"
-
-help :: Result
+help :: String
 help =
-    Help
-        ("\n Commands available from the prompt:\n\n" ++
-         "    :help, :?              display this list of commands\n" ++
-         "    :quit, :q              quit jord\n" ++
-         "    :show {var}            shows {var} or all variable(s) if no arg\n" ++
-         "    :delete {var}          deletes {var}\n" ++
-         "    :clear                 deletes all variable(s)\n" ++
-         "\n -- Position calculations:\n\n" ++
-         "    antipode :: Position -> Position\n" ++
-         "    distance :: Position -> Position -> Length\n" ++
-         "    initialBearing :: Position -> Position -> Angle\n" ++
-         "    finalBearing :: Position -> Position -> Angle\n" ++
-         "    midpoint :: [Position] -> Position\n" ++
-         "\n  Supported Position formats:\n" ++
-         "        DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
-         "        d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
-         "          ^ zeroes can be ommitted and separtors can be any string\n" ++
-         "        decimal°[N|S],decimal°[E|W]     - 51.885°N,13,1°E\n" ++
-         "\n  Supported Angle formats:\n" ++
-         "        d°m's    - 55°36'21.154\n" ++
-         "        decimal° - 51.885°\n" ++
-         "\n  Supported Length formats: {l}m, {l}km, {l}Nm\n" ++
-         "\n  The result of every function can be saved by prefixing the function with \"{var} = \"\n" ++
-         "  Saved results can subsequently be used when calling a function\n" ++
-         "    jord> a = antipode 54N028E\n" ++ "    jord> antipode a\n")
+    "\njord interpreter, version " ++
+    J.jordVersion ++
+    "\n" ++
+    "\n Commands available from the prompt:\n\n" ++
+    "    :help, :?              display this list of commands\n" ++
+    "    :quit, :q              quit jord\n" ++
+    "    :show {var}            shows {var} or all variable(s) if no arg\n" ++
+    "    :delete {var}          deletes {var}\n" ++
+    "    :clear                 deletes all variable(s)\n" ++
+    "\n Jord expressions:\n\n" ++
+    "    (f x y) where f is one of function described below and x and y\n" ++
+    "    are either parameters in one of the format described below or\n" ++
+    "    a call to another function\n" ++
+    "\n" ++
+    "    (finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E))\n" ++
+    "\n" ++
+    "    Top level () can be ommitted: antipode 54N028E\n" ++
+    "\n  Position calculations:\n\n" ++
+    "       antipode pos               antipodal point of pos\n" ++
+    "       distance pos1 pos2         surface distance between pos1 and pos2\n" ++
+    "       destination pos len ang    destination position from pos having travelled len\n" ++
+    "                                  on initial bearing ang\n" ++
+    "       initialBearing pos1 pos2   bearing arriving at pos2 from pos1\n" ++
+    "       finalBearing pos1 pos2     initial bearing from pos1 to pos2\n" ++
+    "       latlong pos                decimal latitude and longitude of pos\n" ++
+    "       midpoint [pos]             mid position between [pos]\n" ++
+    "       toNVector pos              n-vector corresponding to pos\n" ++
+    "\n  Supported Position formats:\n\n" ++
+    "       DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
+    "       d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
+    "         ^ zeroes can be ommitted and separtors can be any string\n" ++
+    "       decimal°[N|S],decimal°[E|W]     - 51.885°N,13,1°E\n" ++
+    "\n  Supported Angle formats:\n\n" ++
+    "       d°m's    - 55°36'21.154\n" ++
+    "       decimal° - 51.885°\n" ++
+    "\n  Supported Length formats: {l}m, {l}km, {l}Nm\n\n" ++
+    "\n  Every evaluated result can be saved by prefixing the expression with \"{var} = \"\n" ++
+    "  Saved results can subsequently be used when calling a function\n" ++
+    "    \9783 a = antipode 54N028E\n" ++ "    \9783 antipode a\n"
 
-resolveAllPos :: [String] -> Vars -> [Result]
-resolveAllPos xs vs = map (`resolvePos` vs) xs
+evalE :: String -> Vars -> J.Result
+evalE e vs = J.eval e (`lookup` vs)
 
-resolvePos :: String -> Vars -> Result
-resolvePos s vs =
-    case lookup s vs of
-        Just (VarPos pos) -> OkPos pos
-        Just _ -> Error ("Variable [" ++ s ++ "] is not a position")
-        Nothing -> maybe (Error ("Invalid position: " ++ s)) OkPos (readGeoPosM s)
+save :: J.Result -> String -> Vars -> Vars
+save (Right a@(J.Ang _)) k vs = bind k a vs
+save (Right l@(J.Len _)) k vs = bind k l vs
+save (Right g@(J.Geo _)) k vs = bind k g vs
+save (Right v@(J.Vec _)) k vs = bind k v vs
+save (Right ll@(J.Ll _)) k vs = bind k ll vs
+save _ _ vs = vs
 
-save :: Result -> String -> Vars -> (Result, Vars)
-save (OkAng a) v vs = (OkAng a, bind v (VarAng a) vs)
-save (OkLen l) v vs = (OkLen l, bind v (VarLen l) vs)
-save (OkPos g) v vs = (OkPos g, bind v (VarPos g) vs)
-save r _ vs = (r, vs)
+showR :: J.Result -> Either String String
+showR (Left err) = Left err
+showR (Right v) = Right (showV v)
 
-showR :: Result -> String
-showR (Error s) = "jord> \x1b[31merror:\x1b[30m " ++ s
-showR (OkPos g) = "jord> \x1b[32mposition:\x1b[30m " ++ show g
-showR (OkLen l) = "jord> \x1b[32mlength:\x1b[30m " ++ show l
-showR (OkAng a) = "jord> \x1b[32mangle:\x1b[30m " ++ show a
-showR (ShowVars [e]) = "jord> \x1b[32mvar:\x1b[30m " ++ fst e ++ " = " ++ show (snd e)
-showR (ShowVars vs) =
-    L.intercalate
-        "\n"
-        (map (\e -> "jord> \x1b[32mvar:\x1b[30m " ++ fst e ++ " = " ++ show (snd e)) vs)
-showR (Help h) = h
+showV :: J.Value -> String
+showV (J.Ang a) = "angle: " ++ show a
+showV (J.Len l) = "length: " ++ show l
+showV (J.Geo g) = "geo pos: " ++ show g
+showV (J.Vec v) = "n-vector: " ++ show v
+showV (J.Ll ll) = "latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll)
 
--- | Does given list of results contain 'Error'?
-hasErr :: [Result] -> Bool
-hasErr rs = not (null [e | Error e <- rs])
-
--- | Reduces all 'Error' results.
-err :: [Result] -> Result
-err rs = Error (L.intercalate "; " [e | Error e <- rs])
+showVar :: String -> J.Value -> String
+showVar n v = n ++ "=" ++ showV v
 
 -- variables
-bind :: String -> Var -> Vars -> Vars
+bind :: String -> J.Value -> Vars -> Vars
 bind k v m = Vars (e ++ [(k, v)])
   where
     Vars e = unbind k m
 
-lookup :: String -> Vars -> Maybe Var
+lookup :: String -> Vars -> Maybe J.Value
 lookup k (Vars es) = fmap snd (L.find (\e -> fst e == k) es)
 
 unbind :: String -> Vars -> Vars

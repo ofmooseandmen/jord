@@ -62,11 +62,7 @@ ofNauticalMiles nm = Length (nm * 1852.0)
 
 -- | Obtains a 'Length' from the given string formatted as (-)float[m|km|nm] - e.g. 3000m, 2.5km or -154nm.
 --
--- This simply calls:
--- @
---     read s :: Length
--- @
--- so 'error' should be handled at the call site.
+-- This simply calls @read s :: Length@ so 'error' should be handled at the call site.
 --
 readLength :: String -> Length
 readLength s = read s :: Length

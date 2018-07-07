@@ -49,56 +49,23 @@ spec = do
             initialBearing (readGeoPos "583838N0030412W") (readGeoPos "500359N0054253W") `angleShouldBe`
             ofDegrees 191.2752012
     describe "interpolate" $ do
-        it "fails if t0 > t1" $
-            evaluate
-                (interpolate
-                     (readGeoPos "44N044E")
-                     (Millis 1)
-                     (readGeoPos "46N046E")
-                     (Millis 0)
-                     (Millis 2)) `shouldThrow`
-            errorCall "expected t0 <= ti <= t1"
-        it "fails if ti < t0" $
-            evaluate
-                (interpolate
-                     (readGeoPos "44N044E")
-                     (Millis 1)
-                     (readGeoPos "46N046E")
-                     (Millis 2)
-                     (Millis 0)) `shouldThrow`
-            errorCall "expected t0 <= ti <= t1"
-        it "fails if ti > t1" $
-            evaluate
-                (interpolate
-                     (readGeoPos "44N044E")
-                     (Millis 1)
-                     (readGeoPos "46N046E")
-                     (Millis 2)
-                     (Millis 3)) `shouldThrow`
-            errorCall "expected t0 <= ti <= t1"
-        it "returns p0 if ti == t0" $
-            interpolate
-                (readGeoPos "44N044E")
-                (Millis 1)
-                (readGeoPos "46N046E")
-                (Millis 2)
-                (Millis 1) `shouldBe`
+        it "fails if f < 0.0" $
+            evaluate (interpolate (readGeoPos "44N044E") (readGeoPos "46N046E") (-0.5)) `shouldThrow`
+            errorCall "fraction must be in range [0..1], was -0.5"
+        it "fails if f > 1.0" $
+            evaluate (interpolate (readGeoPos "44N044E") (readGeoPos "46N046E") 1.1) `shouldThrow`
+            errorCall "fraction must be in range [0..1], was 1.1"
+        it "returns p0 if f == 0" $
+            interpolate (readGeoPos "44N044E") (readGeoPos "46N046E") 0.0 `shouldBe`
             readGeoPos "44N044E"
-        it "returns p1 if ti == t1" $
-            interpolate
-                (readGeoPos "44N044E")
-                (Millis 1)
-                (readGeoPos "46N046E")
-                (Millis 2)
-                (Millis 2) `shouldBe`
+        it "returns p1 if f == 1" $
+            interpolate (readGeoPos "44N044E") (readGeoPos "46N046E") 1.0 `shouldBe`
             readGeoPos "46N046E"
         it "returns the interpolated position" $
             interpolate
                 (readGeoPos "53°28'46''N 2°14'43''W")
-                (Millis 0)
                 (readGeoPos "55°36'21''N 13°02'09''E")
-                (Millis 100)
-                (Millis 50) `geoShouldBe`
+                0.5 `geoShouldBe`
             geoPos 54.7835574 5.1949856
     describe "intersections" $ do
         it "returns nothing if both great circle are equals" $ do
@@ -120,6 +87,9 @@ spec = do
         it "returns the final bearing in compass degrees" $
             finalBearing (readGeoPos "583838N0030412W") (readGeoPos "500359N0054253W") `angleShouldBe`
             ofDegrees 189.1198181
+        it "returns the final bearing in compass degrees" $
+            finalBearing (readGeoPos "535941S0255915W") (readGeoPos "54N154E") `angleShouldBe`
+            ofDegrees 125.6839436
     describe "midpoint" $ do
         it "fails if no point is given" $
             evaluate (midpoint [] :: GeoPos) `shouldThrow`

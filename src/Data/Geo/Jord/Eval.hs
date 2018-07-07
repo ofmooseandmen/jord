@@ -27,6 +27,7 @@ import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
+import Data.List
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 
@@ -101,7 +102,7 @@ eval s _ =
 
 -- | Same as 'eval' but never resolves parameters by name.
 eval' :: String -> Result
-eval' s = eval s (\_ -> Nothing)
+eval' s = eval s (const Nothing)
 
 -- | All supported functions:
 --
@@ -143,7 +144,7 @@ expr s = do
     fmap (\a -> (expectVec ts, a)) (transform ast)
 
 expectVec :: [Token] -> Bool
-expectVec (_:(Func "toNVector"):_) = True
+expectVec (_:Func "toNVector":_) = True
 expectVec _ = False
 
 evalExpr :: Expr -> Result
@@ -152,50 +153,53 @@ evalExpr (Param p) =
         [a@(Right (Ang _)), _, _] -> a
         [_, l@(Right (Len _)), _] -> l
         [_, _, Right (Geo g)] -> Right (Vec (toNVector g))
-        _ -> Left ("Parameter error: couldn't resolve " ++ p)
+        _ -> Left ("couldn't resolve " ++ p)
   where
     r = map ($ p) [readM readAngleM Ang, readM readLengthM Len, readM readGeoPosM Geo]
 evalExpr (Antipode a) =
     case evalExpr a of
         (Right (Vec p)) -> Right (Vec (antipode p))
-        r -> Left ("Call error: antipode " ++ show r)
+        r -> Left ("Call error: antipode " ++ showErr [r])
 evalExpr (Destination a b c) =
     case [evalExpr a, evalExpr b, evalExpr c] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
-        r -> Left ("Call error: destination " ++ show r)
+        r -> Left ("Call error: destination " ++ showErr r)
 evalExpr (Distance a b) =
     case [evalExpr a, evalExpr b] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance p1 p2))
-        r -> Left ("Call error: distance " ++ show r)
+        r -> Left ("Call error: distance " ++ showErr r)
 evalExpr (FinalBearing a b) =
     case [evalExpr a, evalExpr b] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (finalBearing p1 p2))
-        r -> Left ("Call error: finalBearing " ++ show r)
+        r -> Left ("Call error: finalBearing " ++ showErr r)
 evalExpr (InitialBearing a b) =
     case [evalExpr a, evalExpr b] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
-        r -> Left ("Call error: initialBearing " ++ show r)
+        r -> Left ("Call error: initialBearing " ++ showErr r)
 evalExpr (LatLong a) =
     case evalExpr a of
         (Right (Vec p)) ->
             let g = fromNVector p
              in Right (Ll (degrees (latitude g), degrees (longitude g)))
-        r -> Left ("Call error: latlong " ++ show r)
+        r -> Left ("Call error: latlong " ++ showErr [r])
 evalExpr (Midpoint as) =
     let m = map evalExpr as
         ps = [p | Right (Vec p) <- m]
      in if length m == length ps
             then Right (Vec (midpoint ps))
-            else Left ("Call error: Midpoint " ++ show m)
+            else Left ("Call error: midpoint " ++ showErr m)
 evalExpr (ReadGeoPos s) =
     maybe (Left ("Call error: readGeoPos : " ++ s)) (Right . Vec . toNVector) (readGeoPosM s)
 evalExpr (ToNVector a) =
     case evalExpr a of
         r@(Right (Vec _)) -> r
-        r -> Left ("Call error: toNVector " ++ show r)
+        r -> Left ("Call error: toNVector " ++ showErr [r])
+
+showErr :: [Result] -> String
+showErr rs = " > " ++ intercalate " & " (map (either id show) rs)
 
 readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
-readM p r s = maybe (Left ("Invalid text: " ++ s)) (Right . r) (p s)
+readM p r s = maybe (Left ("Invalid text [" ++ s ++ "]")) (Right . r) (p s)
 
 ------------------------------------------
 --  Lexical Analysis: String -> [Token] --
@@ -247,7 +251,7 @@ str :: ReadP Token
 str = do
     optional (char ' ')
     v <- munch1 (\c -> c /= '(' && c /= ')' && c /= ' ')
-    if elem v functions
+    if v `elem` functions
         then pfail
         else return (Str v)
 

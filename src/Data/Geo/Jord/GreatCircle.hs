@@ -67,9 +67,8 @@ newtype GreatCircle = GreatCircle
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
 -- to a 'Position'. This allows the call site to pass either 'NVector' or 'GeoPos' and to get back
 -- the same class instance.
-class Position a
+class Position a where
     -- | Converts a 'NVector' into 'Position' instance.
-    where
     fromNVector :: NVector -> a
     -- | Converts the 'Position' instance into a 'NVector'.
     toNVector :: a -> NVector

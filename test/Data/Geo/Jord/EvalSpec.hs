@@ -19,8 +19,8 @@ spec = do
                 (Right (Ang a)) -> a `angleShouldBe` ofDegrees 126 -- TODO this should be 125.6839436
                 r -> fail (show r)
         it "rejects expression with lexical error" $
-            case eval' "finalBearing (destination [" of
-                (Left e) -> e `shouldBe` "Lexical error: [)"
+            case eval' "finalBearing(destination" of
+                (Left e) -> e `shouldBe` "Lexical error: finalBearing(destination)"
                 r -> fail (show r)
         it "rejects expression with syntaxic error" $
             case eval' "finalBearing (destination a" of

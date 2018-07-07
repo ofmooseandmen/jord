@@ -22,7 +22,6 @@ module Data.Geo.Jord.Eval
 
 import Control.Applicative ((<|>))
 import Control.Monad.Fail
-import Data.Char (isAlphaNum)
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
@@ -31,12 +30,13 @@ import Data.Geo.Jord.NVector
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 
--- | A value representing all data types used by "Data.Geo.Jord".
+-- | A value accepted and returned by 'eval'.
 data Value
     = Ang Angle -- ^ 'Angle'
     | Len Length -- ^ 'Length'
     | Geo GeoPos -- ^ 'GeoPos'
     | Vec NVector -- ^ 'NVector'
+    | LL (Angle, Angle) -- ^ tuple of latitude and longitude
     deriving (Eq, Show)
 
 -- | 'Either' an error or a 'Value'.
@@ -115,7 +115,11 @@ eval' s = eval s (\_ -> Nothing)
 --
 --     * 'initialBearing'
 --
+--     * 'latlong'
+--
 --     * 'readGeoPos'
+--
+--     * 'toNVector'
 --
 functions :: [String]
 functions =
@@ -124,25 +128,11 @@ functions =
     , "distance"
     , "finalBearing"
     , "initialBearing"
+    , "latlong"
     , "readGeoPos"
     , "toNVector"
     ]
 
-data Expr
-    = Param String
-    | Antipode Expr
-    | Destination Expr
-                  Expr
-                  Expr
-    | Distance Expr
-               Expr
-    | FinalBearing Expr
-                   Expr
-    | InitialBearing Expr
-                     Expr
-    | ReadGeoPos String
-    | ToNVector Expr
-    deriving (Show)
 
 expr :: (MonadFail m) => String -> m (Bool, Expr)
 expr s = do
@@ -153,30 +143,6 @@ expr s = do
 expectVec :: [Token] -> Bool
 expectVec (_:(Func "toNVector"):_) = True
 expectVec _ = False
-
-transform :: (MonadFail m) => Ast -> m Expr
-transform (Call "antipode" [e]) = fmap Antipode (transform e)
-transform (Call "destination" [e1, e2, e3]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    p3 <- transform e3
-    return (Destination p1 p2 p3)
-transform (Call "distance" [e1, e2]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    return (Distance p1 p2)
-transform (Call "finalBearing" [e1, e2]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    return (FinalBearing p1 p2)
-transform (Call "initialBearing" [e1, e2]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    return (InitialBearing p1 p2)
-transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
-transform (Call "toNVector" [e]) = fmap ToNVector (transform e)
-transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)
-transform (Lit s) = return (Param s)
 
 evalExpr :: Expr -> Result
 evalExpr (Param p) =
@@ -207,6 +173,11 @@ evalExpr (InitialBearing a b) =
     case [evalExpr a, evalExpr b] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ show r)
+evalExpr (LatLong a) =
+    case evalExpr a of
+        (Right (Vec p)) -> let g = fromNVector p
+                            in Right (LL (latitude g, longitude g))
+        r -> Left ("Call error: latlong " ++ show r)
 evalExpr (ReadGeoPos s) =
     maybe (Left ("Call error: readGeoPos : " ++ s)) (Right . Vec . toNVector) (readGeoPosM s)
 evalExpr (ToNVector a) =
@@ -217,7 +188,11 @@ evalExpr (ToNVector a) =
 readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
 readM p r s = maybe (Left ("Invalid text: " ++ s)) (Right . r) (p s)
 
--- Lexical Analysis: String -> [Token]
+
+------------------------------------------
+--  Lexical Analysis: String -> [Token] --
+------------------------------------------
+
 data Token
     = Paren Char
     | Func String
@@ -242,10 +217,17 @@ token :: ReadP Token
 token = (<++) ((<++) paren func) str
 
 paren :: ReadP Token
-paren = do
-    skipSpaces
-    c <- char '(' <|> char ')'
-    skipSpaces
+paren = parenO <|> parenC
+
+parenO :: ReadP Token
+parenO = do
+    c <- char '('
+    return (Paren c)
+
+parenC :: ReadP Token
+parenC = do
+    c <- char ')'
+    optional (char ' ')
     return (Paren c)
 
 func :: ReadP Token
@@ -256,11 +238,16 @@ func = do
 
 str :: ReadP Token
 str = do
-    v <- munch1 (\c -> isAlphaNum c || c == '°' || c == '\'' || c == '"' || c == ',')
-    skipSpaces
-    return (Str v)
+    optional (char ' ')
+    v <- munch1 (\c -> c /= '(' && c /= ')' && c /= ' ')
+    if elem v functions
+      then pfail
+      else return (Str v)
 
--- | Syntactic Analysis: [Token] -> Ast
+-----------------------------------------
+--  Syntactic Analysis: [Token] -> Ast --
+-----------------------------------------
+
 data Ast
     = Call String
            [Ast]
@@ -291,3 +278,50 @@ walkParams n ts@(h:t) acc
     | otherwise = do
         (el, t') <- walk ts
         walkParams n t' (el : acc)
+
+-------------------------------------
+--  Semantic Analysis: Ast -> Expr --
+-------------------------------------
+
+data Expr
+    = Param String
+    | Antipode Expr
+    | Destination Expr
+                  Expr
+                  Expr
+    | Distance Expr
+               Expr
+    | FinalBearing Expr
+                   Expr
+    | InitialBearing Expr
+                     Expr
+    | LatLong Expr
+    | ReadGeoPos String
+    | ToNVector Expr
+    deriving (Show)
+
+
+transform :: (MonadFail m) => Ast -> m Expr
+transform (Call "antipode" [e]) = fmap Antipode (transform e)
+transform (Call "destination" [e1, e2, e3]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    p3 <- transform e3
+    return (Destination p1 p2 p3)
+transform (Call "distance" [e1, e2]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (Distance p1 p2)
+transform (Call "finalBearing" [e1, e2]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (FinalBearing p1 p2)
+transform (Call "initialBearing" [e1, e2]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (InitialBearing p1 p2)
+transform (Call "latlong" [e]) = fmap LatLong (transform e)
+transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
+transform (Call "toNVector" [e]) = fmap ToNVector (transform e)
+transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)
+transform (Lit s) = return (Param s)

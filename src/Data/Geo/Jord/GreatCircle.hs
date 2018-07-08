@@ -11,13 +11,13 @@
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
--- This module assumes a spherical earth with a radius of 6371008.8 meters.
+-- This module assumes a spherical earth.
 --
 -- TODO:
 --
---     * crossTrackDistance :: Position -> GreatCircle -> Distance
+--     * crossTrackDistance :: Position -> GreatCircle -> Length
 --
---     * alongTrackDistance :: Position -> GreatArc -> Distance
+--     * alongTrackDistance :: Position -> GreatArc -> Length
 --
 --     * isWithin :: [Position] -> Bool
 --
@@ -32,7 +32,9 @@ module Data.Geo.Jord.GreatCircle
     , Position(..)
     , antipode
     , destination
+    , destination'
     , distance
+    , distance'
     , finalBearing
     , greatCircle
     , greatCircleBearing
@@ -99,11 +101,11 @@ antipode :: (Position a) => a -> a
 antipode p = fromNVector (scale (toNVector p) (-1.0))
 
 -- | Computes the destination 'Position' from the given 'Position' having travelled the given distance on the
--- given initial bearing (bearing will normally vary before destination is reached).
+-- given initial bearing (bearing will normally vary before destination is reached) and using the given earth radius.
 --
 -- This is known as the direct geodetic problem.
-destination :: (Position a) => a -> Angle -> Length -> a
-destination p b d
+destination :: (Position a) => a -> Angle -> Length -> Length -> a
+destination p b d r
     | metres d == 0.0 = p
     | otherwise = fromNVector (add (scale v (cos ta)) (scale de (sin ta)))
   where
@@ -111,18 +113,27 @@ destination p b d
     ed = unit (cross northPole v) -- east direction vector at v
     nd = cross v ed -- north direction vector at v
     a = radians b -- azimuth in radians
-    ta = metres d / metres meanEarthRadius -- angle travelled in radians
+    ta = metres d / metres r -- angle travelled in radians
     de = add (scale nd (cos a)) (scale ed (sin a)) -- unit vector in the direction of the azimuth
 
+-- | 'destination' assuming a radius of 'meanEarthRadius'.
+destination' :: (Position a) => a -> Angle -> Length -> a
+destination' p b d = destination p b d meanEarthRadius
+
 -- | Computes the surface distance (length of geodesic) in 'Meters' assuming a
--- spherical Earth between the two given 'Position's.
-distance :: (Position a) => a -> a -> Length
-distance p1 p2 = ofMetres (metres meanEarthRadius * angleBetween v1 v2 Nothing)
+-- spherical Earth between the two given 'Position's and using the given earth radius.
+distance :: (Position a) => a -> a -> Length -> Length
+distance p1 p2 r = ofMetres (metres r * angleBetween v1 v2 Nothing)
   where
     v1 = toNVector p1
     v2 = toNVector p2
 
+-- | 'distance' assuming a radius of 'meanEarthRadius'.
+distance' :: (Position a) => a -> a -> Length
+distance' p1 p2 = distance p1 p2 meanEarthRadius
+
 -- | Returns a 'GreateCircle' passing by both given 'Position's.
+-- TODO: should fail if a == a or a == antipode a
 greatCircle :: (Position a) => a -> a -> GreatCircle
 greatCircle p1 p2 = GreatCircle (cross v1 v2)
   where
@@ -130,6 +141,7 @@ greatCircle p1 p2 = GreatCircle (cross v1 v2)
     v2 = toNVector p2
 
 -- | Returns a 'GreatCircle' passing by the given 'Position' and heading on given bearing.
+-- TODO: should fail if a == a or a == antipode a
 greatCircleBearing :: (Position a) => a -> Angle -> GreatCircle
 greatCircleBearing p b = GreatCircle (sub n' e')
   where
@@ -187,7 +199,7 @@ intersections gc1 gc2
   where
     i = cross (normal gc1) (normal gc2)
 
--- | Mean Earth radius.
+-- | Mean Earth radius: 6,371,008.8 metres.
 meanEarthRadius :: Length
 meanEarthRadius = ofMetres 6371008.8
 

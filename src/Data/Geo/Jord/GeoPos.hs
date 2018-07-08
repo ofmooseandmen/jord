@@ -13,8 +13,8 @@ module Data.Geo.Jord.GeoPos
     , geoPos
     , geoPosF
     , readGeoPos
+    , readGeoPosE
     , readGeoPosF
-    , readGeoPosM
     ) where
 
 import Control.Applicative hiding (many)
@@ -51,13 +51,22 @@ geoPos lat lon =
         (geoPosF lat lon)
 
 -- | 'GeoPos' smart constructor.
--- 'fail's if given latitude is outisde [-90, 90]° and/or
+-- A 'Left' indicates that the given latitude is outisde [-90, 90]° and/or
 -- given longitude is outisde [-180, 180]°.
+geoPosE :: Double -> Double -> Either String GeoPos
+geoPosE lat lon
+    | not (isValidLatitude lat) = Left ("Invalid latitude=" ++ show lat)
+    | not (isValidLongitude lon) = Left ("Invalid longitude=" ++ show lon)
+    | otherwise = Right (GeoPos (ofDegrees lat) (ofDegrees lon))
+
+-- | 'GeoPos' smart constructor. Same as 'geoPosE' but returns a 'MonadFail'.
 geoPosF :: (MonadFail m) => Double -> Double -> m GeoPos
-geoPosF lat lon
-    | not (isValidLatitude lat) = fail ("Invalid latitude=" ++ show lat)
-    | not (isValidLongitude lon) = fail ("Invalid longitude=" ++ show lon)
-    | otherwise = return (GeoPos (ofDegrees lat) (ofDegrees lon))
+geoPosF lat lon =
+    case e of
+        Left err -> fail err
+        Right g -> return g
+  where
+    e = geoPosE lat lon
 
 -- | Obtains a 'GeoPos' from the given string formatted as either:
 --
@@ -70,17 +79,20 @@ geoPosF lat lon
 readGeoPos :: String -> GeoPos
 readGeoPos s = read s :: GeoPos
 
+-- | Same as 'readGeoPos' but returns a 'Either'.
+readGeoPosE :: String -> Either String GeoPos
+readGeoPosE s =
+    case readMaybe s of
+        Nothing -> Left ("couldn't read geo pos " ++ s)
+        Just g -> Right g
+
 -- | Same as 'readGeoPos' but returns a 'MonadFail'.
 readGeoPosF :: (MonadFail m) => String -> m GeoPos
 readGeoPosF s =
-    let pg = readEither s
+    let pg = readGeoPosE s
      in case pg of
             Left e -> fail e
             Right g -> return g
-
--- | Same as 'readGeoPos' but returns a 'Maybe'.
-readGeoPosM :: String -> Maybe GeoPos
-readGeoPosM = readMaybe
 
 -- | Is given latitude in range [-90, 90]?
 isValidLatitude :: (Ord a, Num a) => a -> Bool

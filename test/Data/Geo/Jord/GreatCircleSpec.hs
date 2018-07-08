@@ -20,23 +20,23 @@ spec = do
             antipode (southPole :: GeoPos) `shouldBe` geoPos 90.0 (-180.0)
     describe "distance" $ do
         it "returns 0 if both points are equal" $
-            distance (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959W") `lengthShouldBe`
+            distance' (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959W") `lengthShouldBe`
             ofMetres 0.0
         it "returns the distance between 2 points" $
-            distance (readGeoPos "500359N0054253W") (readGeoPos "583838N0030412W") `lengthShouldBe`
+            distance' (readGeoPos "500359N0054253W") (readGeoPos "583838N0030412W") `lengthShouldBe`
             ofMetres 968854.8849506
         it "handles singularity at the pole" $
-            distance (northPole :: GeoPos) (southPole :: GeoPos) `lengthShouldBe`
+            distance' (northPole :: GeoPos) (southPole :: GeoPos) `lengthShouldBe`
             ofMetres 2.00151144420359e7
         it "handles the discontinuity at the Date Line" $
-            distance (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959E") `lengthShouldBe`
+            distance' (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959E") `lengthShouldBe`
             ofMetres 39.6533738
     describe "destination" $ do
         it "return the given point if distance is 0 meter" $
-            destination (readGeoPos "531914N0014347W") (ofDegrees 96.0217) (ofMetres 0) `shouldBe`
+            destination' (readGeoPos "531914N0014347W") (ofDegrees 96.0217) (ofMetres 0) `shouldBe`
             readGeoPos "531914N0014347W"
         it "return the destination point along great-circle at distance and bearing" $
-            destination (readGeoPos "531914N0014347W") (ofDegrees 96.0217) (ofMetres 124800) `geoShouldBe`
+            destination' (readGeoPos "531914N0014347W") (ofDegrees 96.0217) (ofMetres 124800) `geoShouldBe`
             geoPos 53.1882691 0.1332742
     describe "initialBearing" $ do
         it "returns the 0 if both point are the same" $

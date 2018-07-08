@@ -18,8 +18,8 @@ module Data.Geo.Jord.Angle
     , normalise
     , radians
     , readAngle
+    , readAngleE
     , readAngleF
-    , readAngleM
     , toDegrees
     , toRadians
     ) where
@@ -104,17 +104,20 @@ radians a = toRadians (degrees a)
 readAngle :: String -> Angle
 readAngle s = read s :: Angle
 
+-- | Same as 'readAngle' but returns an 'Either'.
+readAngleE :: String -> Either String Angle
+readAngleE s =
+    case readMaybe s of
+        Nothing -> Left ("couldn't read angle " ++ s)
+        Just a -> Right a
+
 -- | Same as 'readAngle' but returns a 'MonadFail'.
 readAngleF :: (MonadFail m) => String -> m Angle
 readAngleF s =
-    let p = readEither s
+    let p = readAngleE s
      in case p of
             Left e -> fail e
             Right l -> return l
-
--- | Same as 'readAngle' but returns a 'Maybe'.
-readAngleM :: String -> Maybe Angle
-readAngleM = readMaybe
 
 -- | radians to degrees.
 toDegrees :: Double -> Double

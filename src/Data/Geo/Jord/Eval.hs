@@ -22,6 +22,7 @@ module Data.Geo.Jord.Eval
 
 import Control.Applicative ((<|>))
 import Control.Monad.Fail
+import Data.Bifunctor
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
@@ -159,11 +160,11 @@ evalExpr (Antipode a) f =
         r -> Left ("Call error: antipode " ++ showErr [r])
 evalExpr (Destination a b c) f =
     case [evalExpr a f, evalExpr b f, evalExpr c f] of
-        [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
+        [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination' p a' l))
         r -> Left ("Call error: destination " ++ showErr r)
 evalExpr (Distance a b) f =
     case [evalExpr a f, evalExpr b f] of
-        [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance p1 p2))
+        [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance' p1 p2))
         r -> Left ("Call error: distance " ++ showErr r)
 evalExpr (FinalBearing a b) f =
     case [evalExpr a f, evalExpr b f] of
@@ -186,7 +187,7 @@ evalExpr (Midpoint as) f =
             then Right (Vec (midpoint ps))
             else Left ("Call error: midpoint " ++ showErr m)
 evalExpr (ReadGeoPos s) _ =
-    maybe (Left ("Call error: readGeoPos : " ++ s)) (Right . Vec . toNVector) (readGeoPosM s)
+    bimap (\e -> "Call error: readGeoPos : " ++ e) (Vec . toNVector) (readGeoPosE s)
 evalExpr (ToNVector a) f =
     case evalExpr a f of
         r@(Right (Vec _)) -> r
@@ -201,12 +202,12 @@ tryRead s =
         [a@(Right (Ang _)), _, _] -> a
         [_, l@(Right (Len _)), _] -> l
         [_, _, Right (Geo g)] -> Right (Vec (toNVector g))
-        _ -> Left ("couldn't resolve " ++ s)
+        _ -> Left ("couldn't read " ++ s)
   where
-    r = map ($ s) [readM readAngleM Ang, readM readLengthM Len, readM readGeoPosM Geo]
+    r = map ($ s) [readE readAngleE Ang, readE readLengthE Len, readE readGeoPosE Geo]
 
-readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
-readM p r s = maybe (Left ("Invalid text [" ++ s ++ "]")) (Right . r) (p s)
+readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
+readE p v s = bimap id v (p s)
 
 ------------------------------------------
 --  Lexical Analysis: String -> [Token] --

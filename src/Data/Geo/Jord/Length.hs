@@ -14,8 +14,8 @@ module Data.Geo.Jord.Length
     , ofKilometres
     , ofNauticalMiles
     , readLength
+    , readLengthE
     , readLengthF
-    , readLengthM
     , kilometres
     , nauticalMiles
     ) where
@@ -67,6 +67,13 @@ ofNauticalMiles nm = Length (nm * 1852.0)
 readLength :: String -> Length
 readLength s = read s :: Length
 
+-- | Same as 'readLength' but returns a 'Either'.
+readLengthE :: String -> Either String Length
+readLengthE s =
+    case readMaybe s of
+        Nothing -> Left ("couldn't read length " ++ s)
+        Just l -> Right l
+
 -- | Same as 'readLength' but returns a 'MonadFail'.
 readLengthF :: (MonadFail m) => String -> m Length
 readLengthF s =
@@ -74,10 +81,6 @@ readLengthF s =
      in case p of
             Left e -> fail e
             Right l -> return l
-
--- | Same as 'readLength' but returns a 'Maybe'.
-readLengthM :: String -> Maybe Length
-readLengthM = readMaybe
 
 -- | Returns amount of kilometres that the given 'Length' represents.
 kilometres :: Length -> Double

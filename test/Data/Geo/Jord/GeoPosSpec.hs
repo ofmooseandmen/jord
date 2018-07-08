@@ -32,15 +32,24 @@ spec = do
         it "reads 5448S06818W" $ readGeoPos "5448S06818W" `geoShouldBe` geoPos (-54.8) (-68.3)
         it "reads 54S068W" $ readGeoPos "54S068W" `geoShouldBe` geoPos (-54.0) (-68.0)
     describe "Reading invalid DMS text" $ do
-        it "fails to read 553621K0130002E" $ readGeoPosM "553621K0130002E" `shouldBe` Nothing
-        it "fails to read 011659S0364900Z" $ readGeoPosM "011659S0364900Z" `shouldBe` Nothing
-        it "fails to read 4736221221955W" $ readGeoPosM "4736221221955W" `shouldBe` Nothing
-        it "fails to read 54480S0681811W" $ readGeoPosM "54480S0681811W" `shouldBe` Nothing
-        it "fails to read 553621N013000E" $ readGeoPosM "553621N013000E" `shouldBe` Nothing
-        it "fails to read 914807S0681811W" $ readGeoPosM "914807S0681811W" `shouldBe` Nothing
-        it "fails to read 544807S1811811W" $ readGeoPosM "544807S1811811W" `shouldBe` Nothing
-        it "fails to read 546007S1801811W" $ readGeoPosM "546007S1801811W" `shouldBe` Nothing
-        it "fails to read 545907S1801860W" $ readGeoPosM "545907S1801860W" `shouldBe` Nothing
+        it "fails to read 553621K0130002E" $
+            readGeoPosE "553621K0130002E" `shouldBe` Left "couldn't read geo pos 553621K0130002E"
+        it "fails to read 011659S0364900Z" $
+            readGeoPosE "011659S0364900Z" `shouldBe` Left "couldn't read geo pos 011659S0364900Z"
+        it "fails to read 4736221221955W" $
+            readGeoPosE "4736221221955W" `shouldBe` Left "couldn't read geo pos 4736221221955W"
+        it "fails to read 54480S0681811W" $
+            readGeoPosE "54480S0681811W" `shouldBe` Left "couldn't read geo pos 54480S0681811W"
+        it "fails to read 553621N013000E" $
+            readGeoPosE "553621N013000E" `shouldBe` Left "couldn't read geo pos 553621N013000E"
+        it "fails to read 914807S0681811W" $
+            readGeoPosE "914807S0681811W" `shouldBe` Left "couldn't read geo pos 914807S0681811W"
+        it "fails to read 544807S1811811W" $
+            readGeoPosE "544807S1811811W" `shouldBe` Left "couldn't read geo pos 544807S1811811W"
+        it "fails to read 546007S1801811W" $
+            readGeoPosE "546007S1801811W" `shouldBe` Left "couldn't read geo pos 546007S1801811W"
+        it "fails to read 545907S1801860W" $
+            readGeoPosE "545907S1801860W" `shouldBe` Left "couldn't read geo pos 545907S1801860W"
     describe "Showing geographic positions" $ do
         it "shows the N/E position formatted in DMS with symbols" $
             show (geoPos 55.60583333 13.00055556) `shouldBe` "55°36'20.999\"N,13°0'2.0\"E"

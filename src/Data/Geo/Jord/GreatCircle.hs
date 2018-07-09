@@ -77,18 +77,18 @@ class Position a where
 
 -- | 'GeoPos' to/from 'NVector'.
 instance Position GeoPos where
-    fromNVector v = geoPos (toDegrees lat) (toDegrees lon)
+    fromNVector v = geoPos lat lon
       where
-        lat = atan2 (z v) (sqrt (x v * x v + y v * y v))
-        lon = atan2 (y v) (x v)
+        lat = atan2' (z v) (sqrt (x v * x v + y v * y v))
+        lon = atan2' (y v) (x v)
     toNVector g = nvector x' y' z'
       where
-        lat = radians (latitude g)
-        lon = radians (longitude g)
-        cl = cos lat
-        x' = cl * cos lon
-        y' = cl * sin lon
-        z' = sin lat
+        lat = latitude g
+        lon = longitude g
+        cl = cos' lat
+        x' = cl * cos' lon
+        y' = cl * sin' lon
+        z' = sin' lat
 
 -- | Identity.
 instance Position NVector where
@@ -106,15 +106,14 @@ antipode p = fromNVector (scale (toNVector p) (-1.0))
 -- This is known as the direct geodetic problem.
 destination :: (Position a) => a -> Angle -> Length -> Length -> a
 destination p b d r
-    | metres d == 0.0 = p
-    | otherwise = fromNVector (add (scale v (cos ta)) (scale de (sin ta)))
+    | isZero d = p
+    | otherwise = fromNVector (add (scale v (cos' ta)) (scale de (sin' ta)))
   where
     v = toNVector p
     ed = unit (cross northPole v) -- east direction vector at v
     nd = cross v ed -- north direction vector at v
-    a = radians b -- azimuth in radians
-    ta = metres d / metres r -- angle travelled in radians
-    de = add (scale nd (cos a)) (scale ed (sin a)) -- unit vector in the direction of the azimuth
+    ta = central d r -- central angle
+    de = add (scale nd (cos' b)) (scale ed (sin' b)) -- unit vector in the direction of the azimuth
 
 -- | 'destination' assuming a radius of 'meanEarthRadius'.
 destination' :: (Position a) => a -> Angle -> Length -> a
@@ -123,7 +122,7 @@ destination' p b d = destination p b d meanEarthRadius
 -- | Computes the surface distance (length of geodesic) in 'Meters' assuming a
 -- spherical Earth between the two given 'Position's and using the given earth radius.
 distance :: (Position a) => a -> a -> Length -> Length
-distance p1 p2 r = ofMetres (metres r * angleBetween v1 v2 Nothing)
+distance p1 p2 = arcLength (angleBetween v1 v2 Nothing)
   where
     v1 = toNVector p1
     v2 = toNVector p2
@@ -145,23 +144,22 @@ greatCircle p1 p2 = GreatCircle (cross v1 v2)
 greatCircleBearing :: (Position a) => a -> Angle -> GreatCircle
 greatCircleBearing p b = GreatCircle (sub n' e')
   where
-    rad = radians b
     v = toNVector p
     e = cross northPole v -- easting
     n = cross v e -- northing
-    e' = scale e (cos rad / norm e)
-    n' = scale n (sin rad / norm n)
+    e' = scale e (cos' b / norm e)
+    n' = scale n (sin' b / norm n)
 
 -- | Computes the final bearing arriving at given destination  @p2@ 'Position' from given 'Position' @p1@.
 --  the final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
 -- Returns 180 if both position are equals.
 finalBearing :: (Position a) => a -> a -> Angle
-finalBearing p1 p2 = normalise (initialBearing p2 p1) 180.0
+finalBearing p1 p2 = normalise (initialBearing p2 p1) 180
 
 -- | Computes the initial bearing from given @p1@ 'Position' to given @p2@ 'Position', in compass degrees.
 -- Returns 0 if both position are equals.
 initialBearing :: (Position a) => a -> a -> Angle
-initialBearing p1 p2 = normalise (ofRadians (angleBetween gc1 gc2 (Just v1))) 360.0
+initialBearing p1 p2 = normalise (angleBetween gc1 gc2 (Just v1)) 360
   where
     v1 = toNVector p1
     v2 = toNVector p2
@@ -201,7 +199,7 @@ intersections gc1 gc2
 
 -- | Mean Earth radius: 6,371,008.8 metres.
 meanEarthRadius :: Length
-meanEarthRadius = ofMetres 6371008.8
+meanEarthRadius = metres 6371008.8
 
 -- | Computes the mid 'Position' between the given list of 'Position's which must be non-empty.
 midpoint :: (Position a) => [a] -> a
@@ -220,10 +218,10 @@ southPole :: (Position a) => a
 southPole = fromNVector (nvector 0.0 0.0 (-1.0))
 
 -- | Angle bteween the tow given 'NVector's.
--- If @n@ is 'Nothing', the angle is always in [0..PI], otherwise it is in [-PI, +PI],
+-- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
 -- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
-angleBetween :: NVector -> NVector -> Maybe NVector -> Double
-angleBetween v1 v2 n = atan2 sinO cosO
+angleBetween :: NVector -> NVector -> Maybe NVector -> Angle
+angleBetween v1 v2 n = atan2' sinO cosO
   where
     sign = maybe 1 (signum . dot (cross v1 v2)) n
     sinO = sign * norm (cross v1 v2)

@@ -98,7 +98,7 @@ help =
     "                                  on initial bearing ang\n" ++
     "       initialBearing pos1 pos2   bearing arriving at pos2 from pos1\n" ++
     "       finalBearing pos1 pos2     initial bearing from pos1 to pos2\n" ++
-    "       latlong pos                decimal latitude and longitude of pos\n" ++
+    "       decimalLatLong pos         decimal latitude and longitude of pos\n" ++
     "       midpoint [pos]             mid position between [pos]\n" ++
     "       toNVector pos              n-vector corresponding to pos\n" ++
     "\n  Supported Position formats:\n\n" ++
@@ -122,7 +122,7 @@ save (Right a@(J.Ang _)) k vs = bind k a vs
 save (Right l@(J.Len _)) k vs = bind k l vs
 save (Right g@(J.Geo _)) k vs = bind k g vs
 save (Right v@(J.Vec _)) k vs = bind k v vs
-save (Right ll@(J.Ll _)) k vs = bind k ll vs
+save (Right ll@(J.GeoDec _)) k vs = bind k ll vs
 save _ _ vs = vs
 
 showR :: J.Result -> Either String String
@@ -134,7 +134,7 @@ showV (J.Ang a) = "angle: " ++ show a
 showV (J.Len l) = "length: " ++ show l
 showV (J.Geo g) = "geo pos: " ++ show g
 showV (J.Vec v) = "n-vector: " ++ show v
-showV (J.Ll ll) = "latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll)
+showV (J.GeoDec ll) = "latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll)
 
 showVar :: String -> J.Value -> String
 showVar n v = n ++ "=" ++ showV v

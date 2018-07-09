@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 01aec1cf4d7f1156582a32a33ff8d539662f7584678b1d23e0d6c6805e7730eb
+-- hash: 46c9ee11d0293ded54f9b14b861de347913bf3319b98fd4b6c8cbf308df1dcba
 
 name:           jord
 version:        0.1.0.0
@@ -64,7 +64,6 @@ test-suite jord-test
   other-modules:
       Data.Geo.Jord.AngleSpec
       Data.Geo.Jord.EvalSpec
-      Data.Geo.Jord.Expectations
       Data.Geo.Jord.GeoPosSpec
       Data.Geo.Jord.GreatCircleSpec
       Data.Geo.Jord.LengthSpec

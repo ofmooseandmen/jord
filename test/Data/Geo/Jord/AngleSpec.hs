@@ -3,28 +3,24 @@ module Data.Geo.Jord.AngleSpec
     ) where
 
 import Data.Geo.Jord
-import Data.Geo.Jord.Expectations
 import Test.Hspec
 
 spec :: Spec
 spec = do
     describe "Reading valid angles" $ do
-        it "reads 55°36'21''" $ readAngle "55°36'21''" `angleShouldBe` ofDegrees 55.6058333
-        it "reads 55.6058333°" $ readAngle "55.6058333°" `angleShouldBe` ofDegrees 55.6058333
-        it "reads -55.6058333°" $ readAngle "-55.6058333°" `angleShouldBe` ofDegrees (-55.6058333)
+        it "reads 55°36'21''" $ readAngle "55°36'21''" `shouldBe` decimalDegrees 55.6058333
+        it "reads 55.6058333°" $ readAngle "55.6058333°" `shouldBe` decimalDegrees 55.6058333
+        it "reads -55.6058333°" $ readAngle "-55.6058333°" `shouldBe` decimalDegrees (-55.6058333)
     describe "Adding/Subtracting angles" $ do
-        it "adds angles" $
-            add (ofDegrees 55.6058333) (ofDegrees 5.0) `angleShouldBe` ofDegrees 60.6058333
+        it "adds angles" $ add (decimalDegrees 55.6058333) (decimalDegrees 5.0) `shouldBe` decimalDegrees 60.6058333
         it "subtracts angles" $
-            sub (ofDegrees 5.0) (ofDegrees 55.6058333) `angleShouldBe` ofDegrees (-50.6058333)
-    describe "degrees/radians conversion" $ do
-        it "converts degrees to radians" $ toRadians 55.6058333 `shouldBe` 0.9705048744001038
-        it "converts radians to degrees" $ toDegrees 2.6436343 `shouldBe` 151.46908796602173
+            sub (decimalDegrees 5.0) (decimalDegrees 55.6058333) `shouldBe` decimalDegrees (-50.6058333)
     describe "angle normalisation" $ do
-        it "normalises radians in given range" $
-            normalise (ofRadians (3.0 * pi / 2.0)) 180.0 `angleShouldBe` ofDegrees 90.0
         it "normalises degrees in given range" $
-            normalise (ofDegrees 371.1) 360.0 `angleShouldBe` ofDegrees 11.1
+            normalise (decimalDegrees 371.1) 360 `shouldBe` decimalDegrees 11.1
+    describe "angle equality" $ do
+        it "considers 59.99999995° == 60.0°" $ decimalDegrees 59.99999995 `shouldBe` decimalDegrees 60
+        it "considers 59.99999994° /= 60.0°" $ decimalDegrees 59.99999994 `shouldNotBe` decimalDegrees 60
     describe "Showing angles" $ do
-        it "shows 59.99999999999999 as 59°59'59.999\"" $
-            show (ofDegrees 59.99999999999999) `shouldBe` "59°59'59.999\""
+        it "shows 59.99999999999999 as 60°0'0.0\"" $
+            show (decimalDegrees 59.99999999999999) `shouldBe` "60°0'0.0\""

@@ -6,90 +6,132 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working with angles in degrees.
+-- Types and functions for working with angles representing latitudes, longitude and bearings.
+-- Angles are internally stored as degrees, minutes, seconds and whole milliseconds.
+-- When used as a latitude/longitude this roughly translate to a precision
+-- of 30 millimetres at the equator (which should be good enough for geodesic calculations).
 --
 module Data.Geo.Jord.Angle
-    ( Angle(degrees)
+    ( Angle(degrees, minutes, seconds, milliseconds)
     , angle
-    , fromDMS
-    , ofDegrees
-    , ofRadians
+    , angleParser
+    , arcLength
+    , atan2'
+    , central
+    , cos'
+    , decimalDegrees
+    , isNegative
+    , isWithin
     , neg
     , normalise
-    , radians
     , readAngle
     , readAngleE
     , readAngleF
-    , toDegrees
-    , toRadians
+    , sin'
+    , toDecimalDegrees
     ) where
 
 import Control.Applicative
 import Control.Monad.Fail
 import Data.Char
 import Data.Fixed
+import Data.Geo.Jord.Length
 import Data.Geo.Jord.Parse
 import Data.Geo.Jord.Quantity
 import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (get, look, pfail)
 
--- | An angle - the value is stored in degrees.
-newtype Angle = Angle
-    { degrees :: Double
+-- | An angle.
+data Angle = Angle
+    { degrees :: Int
+    , minutes :: Int
+    , seconds :: Int
+    , milliseconds :: Int
     } deriving (Eq)
 
 -- | See 'readAngle'.
 instance Read Angle where
-    readsPrec _ = readP_to_S angle
+    readsPrec _ = readP_to_S angleParser
 
 -- | Angle is shown degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
-    show (Angle dec) =
+    show (Angle degs mins secs millis) =
         show degs ++ "°" ++ show mins ++ "'" ++ show secs ++ "." ++ show millis ++ "\""
-      where
-        degs = truncate dec :: Int -- whole degrees
-        decM = (dec - fromIntegral degs) * 60.0 -- decimal minutes
-        mins = truncate decM :: Int -- whole minutes
-        decS = (decM - fromIntegral mins) * 60.0 -- decimal seconds
-        secs = truncate decS :: Int -- whole seconds
-        millis = truncate ((decS - fromIntegral secs) * 1000.0) :: Int -- whole milliseconds
 
 -- | Add/Subtract 'Angle'.
 instance Quantity Angle where
-    add a b = Angle (degrees a + degrees b)
-    sub a b = Angle (degrees a - degrees b)
+    add a b = decimalDegrees (toDecimalDegrees a + toDecimalDegrees b)
+    sub a b = decimalDegrees (toDecimalDegrees a - toDecimalDegrees b)
+
+-- | Returns an 'Angle' from the given given degrees, minutes, seconds and milliseconds.
+-- 'fail's if minutes, seconds and/or milliseconds are invalid.
+angle :: (MonadFail m) => Int -> Int -> Int -> Int -> m Angle
+angle degs mins secs millis
+    | mins < 0 || mins > 59 = fail ("Invalid minutes: " ++ show mins)
+    | secs < 0 || secs >= 60 = fail ("Invalid seconds: " ++ show secs)
+    | millis < 0 || millis >= 1000 = fail ("Invalid milliseconds: " ++ show millis)
+    | otherwise = return (Angle degs mins secs millis)
 
 -- | Parses and returns an 'Angle'.
-angle :: ReadP Angle
-angle = dms <|> decimal
+angleParser :: ReadP Angle
+angleParser = dms <|> decimal
 
--- | Computes the decimal degrees value from the given degrees, minutes and seconds, fails if minutes or seconds are invalid.
-fromDMS :: (MonadFail m) => Int -> Int -> Double -> m Double
-fromDMS d' m' s'
-    | m' < 0 || m' > 59 = fail ("Invalid minutes: " ++ show m')
-    | s' < 0 || s' >= 60.0 = fail ("Invalid seconds: " ++ show s')
-    | otherwise = return (fromIntegral d' + fromIntegral m' / 60.0 + s' / 3600.0)
+-- | Computes the length of the arc that subtends the given 'Angle' for the given radius.
+arcLength :: Angle -> Length -> Length
+arcLength a r = metres (toMetres r * toRadians a)
 
--- | Returns an 'Angle' from given degrees.
-ofDegrees :: Double -> Angle
-ofDegrees = Angle
+-- | @'atan2'' y x@ computes the 'Angle' (from the positive x-axis) of the vector from the origin to the point (x,y).
+atan2' :: Double -> Double -> Angle
+atan2' y x = fromRadians (atan2 y x)
 
--- | Returns an 'Angle' from given radians.
-ofRadians :: Double -> Angle
-ofRadians r = Angle (toDegrees r)
+-- | Computes the central 'Angle' from the given arc length and radius.
+central :: Length -> Length -> Angle
+central s r = fromRadians (toMetres s / toMetres r)
+
+-- | cosinus of the given 'Angle'.
+cos' :: Angle -> Double
+cos' a = cos (toRadians a)
+
+-- | Returns an 'Angle' from given decimal degrees.
+decimalDegrees :: Double -> Angle
+decimalDegrees dec =
+    case angle degs mins secs millis of
+        Nothing -> error ("degs: " ++ show degs ++ ", mins: " ++ show mins ++ ", secs: "
+                         ++ show secs ++ ", millis: " ++ show millis)
+        Just a -> a
+  where
+    sign = signum dec
+    aDec = abs dec
+    rDec = fromIntegral (round (aDec * 3600000) :: Int) / 3600000
+    aDegs = truncate rDec :: Int -- whole degrees
+    degs = if sign < 0
+        then (-aDegs)
+        else aDegs
+    decM = (rDec - fromIntegral aDegs) * 60.0 -- decimal minutes
+    mins = truncate decM :: Int -- whole minutes
+    decS = (decM - fromIntegral mins) * 60.0 -- decimal seconds
+    secs = truncate decS :: Int -- whole seconds
+    millis = truncate ((decS - fromIntegral secs) * 1000.0) :: Int -- whole milliseconds
 
 -- | Returns the given 'Angle' negated.
 neg :: Angle -> Angle
-neg (Angle d) = Angle (-d)
+neg (Angle degs mins secs millis) = Angle (-degs) mins secs millis
 
 -- | normalise given 'Angle' to [0, @n@].
-normalise :: Angle -> Double -> Angle
-normalise a n = Angle (mod' (degrees a + n) 360.0)
+normalise :: Angle -> Int -> Angle
+normalise (Angle degs mins secs millis) n = Angle ndegs mins secs millis
+   where ndegs = mod' (degs + n) 360
 
--- | Returns the value of the given 'Angle' in radians.
-radians :: Angle -> Double
-radians a = toRadians (degrees a)
+-- | Is given 'Angle' < 0?
+isNegative :: Angle -> Bool
+isNegative (Angle degs _ _ _) = degs < 0
+
+-- | Is given 'Angle' within range [@low@..@high@] inclusive?
+isWithin :: Angle -> Double -> Double -> Bool
+isWithin a low high = dec >= low && dec <= high
+  where
+    dec = toDecimalDegrees a
 
 -- | Obtains a 'Angle' from the given string formatted as either:
 --
@@ -119,45 +161,60 @@ readAngleF s =
             Left e -> fail e
             Right l -> return l
 
+-- | sinus of the given 'Angle'.
+sin' :: Angle -> Double
+sin' a = sin (toRadians a)
+
+-- | Converts the given 'Angle' into decimal degrees.
+toDecimalDegrees :: Angle -> Double
+toDecimalDegrees (Angle degs mins secs millis) =
+    sign * (fromIntegral (abs degs) + fromIntegral mins / 60.0 + fromIntegral secs / 3600.0 +
+    fromIntegral millis / 3600000.0)
+    where
+      sign = fromIntegral (signum degs)
+
+-- Private functions.
 -- | radians to degrees.
-toDegrees :: Double -> Double
-toDegrees r = r / pi * 180.0
+fromRadians :: Double -> Angle
+fromRadians r = decimalDegrees (r / pi * 180.0)
 
 -- | degrees to radians.
-toRadians :: Double -> Double
-toRadians d = d * pi / 180.0
+toRadians :: Angle -> Double
+toRadians a = toDecimalDegrees a * pi / 180.0
 
 -- | Parses DMS.MS and returns an 'Angle'.
 dms :: ReadP Angle
 dms = do
     d' <- fmap fromIntegral integer
     _ <- symbol
-    (m', s') <- option (0, 0.0) (ms <|> m)
-    fmap Angle (fromDMS d' m' s')
+    (m', s', ms') <- option (0, 0, 0) (ms <|> m)
+    angle d' m' s' ms'
 
--- | Parses minutes and seconds.
-ms :: ReadP (Int, Double)
+-- | Parses minutes, seconds with optionally milliseconds.
+ms :: ReadP (Int, Int, Int)
 ms = do
-    m' <- integer
+    m' <- natural
     _ <- symbol
-    s' <- number
+    s' <- natural
+    ms'  <- option 0 (char '.' >> natural)
     _ <- symbol
-    return (m', s')
+    return (m', s', ms')
 
 -- | Parses minutes.
-m :: ReadP (Int, Double)
+m :: ReadP (Int, Int, Int)
 m = do
-    m' <- integer
+    m' <- natural
     _ <- symbol
-    return (m', 0.0)
+    return (m', 0, 0)
 
 -- | Parses decimal degrees.
 decimal :: ReadP Angle
 decimal = do
     d <- double
     _ <- symbol
-    return (Angle d)
+    return (decimalDegrees d)
 
--- | Parses all non alphanumeric characters expect '.'.
+-- | Parses all characters expects upper case letters, digits and '.'.
+-- TODO
 symbol :: ReadP String
 symbol = munch1 (\c -> not (isAlphaNum c) && c /= '.')

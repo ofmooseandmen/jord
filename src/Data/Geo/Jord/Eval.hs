@@ -38,7 +38,7 @@ data Value
     | Len Length -- ^ 'Length'
     | Geo GeoPos -- ^ 'GeoPos'
     | Vec NVector -- ^ 'NVector'
-    | Ll (Double, Double) -- ^ tuple of latitude and longitude
+    | GeoDec (Double, Double) -- ^ tuple of decimal latitude and longitude
     deriving (Eq, Show)
 
 -- | 'Either' an error or a 'Value'.
@@ -109,6 +109,8 @@ eval' s = eval s (const Nothing)
 --
 --     * 'antipode'
 --
+--     * 'decimalLatLong'
+--
 --     * 'destination'
 --
 --     * 'distance'
@@ -116,8 +118,6 @@ eval' s = eval s (const Nothing)
 --     * 'finalBearing'
 --
 --     * 'initialBearing'
---
---     * 'latlong'
 --
 --     * 'midpoint'
 --
@@ -128,11 +128,11 @@ eval' s = eval s (const Nothing)
 functions :: [String]
 functions =
     [ "antipode"
+    , "decimalLatLong"
     , "destination"
     , "distance"
     , "finalBearing"
     , "initialBearing"
-    , "latlong"
     , "midpoint"
     , "readGeoPos"
     , "toNVector"
@@ -158,6 +158,12 @@ evalExpr (Antipode a) f =
     case evalExpr a f of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
+evalExpr (DecimalLatLong a) f =
+    case evalExpr a f of
+        (Right (Vec p)) ->
+            let g = fromNVector p
+             in Right (GeoDec (toDecimalDegrees (latitude g), toDecimalDegrees (longitude g)))
+        r -> Left ("Call error: decimalLatLong " ++ showErr [r])
 evalExpr (Destination a b c) f =
     case [evalExpr a f, evalExpr b f, evalExpr c f] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination' p a' l))
@@ -174,12 +180,6 @@ evalExpr (InitialBearing a b) f =
     case [evalExpr a f, evalExpr b f] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ showErr r)
-evalExpr (LatLong a) f =
-    case evalExpr a f of
-        (Right (Vec p)) ->
-            let g = fromNVector p
-             in Right (Ll (degrees (latitude g), degrees (longitude g)))
-        r -> Left ("Call error: latlong " ++ showErr [r])
 evalExpr (Midpoint as) f =
     let m = map (`evalExpr` f) as
         ps = [p | Right (Vec p) <- m]
@@ -303,6 +303,7 @@ walkParams n ts@(h:t) acc
 data Expr
     = Param String
     | Antipode Expr
+    | DecimalLatLong Expr
     | Destination Expr
                   Expr
                   Expr
@@ -312,7 +313,6 @@ data Expr
                    Expr
     | InitialBearing Expr
                      Expr
-    | LatLong Expr
     | Midpoint [Expr]
     | ReadGeoPos String
     | ToNVector Expr
@@ -320,6 +320,7 @@ data Expr
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
+transform (Call "decimalLatLong" [e]) = fmap DecimalLatLong (transform e)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
@@ -337,7 +338,6 @@ transform (Call "initialBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (InitialBearing p1 p2)
-transform (Call "latlong" [e]) = fmap LatLong (transform e)
 transform (Call "midpoint" e) = do
     ps <- mapM transform e
     return (Midpoint ps)

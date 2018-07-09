@@ -12,6 +12,7 @@ module Data.Geo.Jord.Parse
     ( digits
     , double
     , integer
+    , natural
     , number
     ) where
 
@@ -38,13 +39,13 @@ integer = do
     p <- natural
     return (s * p)
 
--- | Parses an 'integer' or 'double' and returns the read 'Double'.
-number :: ReadP Double
-number = double <|> fmap fromIntegral integer
-
 -- | Parses 1 or more 'digit's and returns the read 'Int'.
 natural :: ReadP Int
 natural = fmap read (munch1 isDigit)
+
+-- | Parses an 'integer' or 'double' and returns the read 'Double'.
+number :: ReadP Double
+number = double <|> fmap fromIntegral integer
 
 -- | Parses and returns a digit.
 digit :: ReadP Char

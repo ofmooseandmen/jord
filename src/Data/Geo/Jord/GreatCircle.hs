@@ -19,6 +19,8 @@
 --
 --     * alongTrackDistance :: Position -> GreatArc -> Length
 --
+--     * intersection :: GreatArc -> GreatArc -> Maybe Position
+--
 --     * isWithin :: [Position] -> Bool
 --
 --     * nearestPoint :: Position -> GreatArc -> Position

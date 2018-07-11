@@ -10,13 +10,9 @@
 --
 module Main where
 
-import qualified Data.Geo.Jord as J
-import qualified Data.List as L
+import Data.Geo.Jord
 import Prelude hiding (lookup)
 import System.IO
-
-newtype Vars =
-    Vars [(String, J.Value)]
 
 main :: IO ()
 main = do
@@ -24,8 +20,8 @@ main = do
     hSetEncoding stdout utf8
     putStrLn
         ("jord interpreter, version " ++
-         J.jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
-    loop (Vars [])
+         jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
+    loop emptyVault
   where
     loop state = do
         input <- readI
@@ -45,43 +41,42 @@ printS (Left err) = putStrLn ("\x1b[31m\9783 \x1b[30m" ++ err)
 printS (Right "") = return ()
 printS (Right r) = putStrLn ("\x1b[32m\9783 \x1b[30m" ++ r)
 
-evalS :: String -> Vars -> (Either String String, Vars)
-evalS s vs
-    | null s = (Right "", vs)
-    | head s == ':' = evalC w vs
+evalS :: String -> Vault -> (Either String String, Vault)
+evalS s vault
+    | null s = (Right "", vault)
+    | head s == ':' = evalC w vault
     | (v:"=":e) <- w =
-        let r = evalE (unwords e) vs
-            vs' = save r v vs
-         in (showR r, vs')
-    | otherwise = (showR (evalE s vs), vs)
+        let r = eval (unwords e) vault
+            vault' = save r v vault
+         in (showR r, vault')
+    | otherwise = (showR (eval s vault), vault)
   where
     w = words s
 
-evalC :: [String] -> Vars -> (Either String String, Vars)
-evalC [":show", v] vs = (evalShow (Just v) vs, vs)
-evalC [":show"] vs = (evalShow Nothing vs, vs)
-evalC [":delete", v] vs = evalDel (Just v) vs
-evalC [":clear"] vs = evalDel Nothing vs
-evalC [":help"] vs = (Right help, vs)
-evalC [":?"] vs = (Right help, vs)
-evalC c vs = (Left ("Unsupported command " ++ unwords c ++ "; :? for help"), vs)
+evalC :: [String] -> Vault -> (Either String String, Vault)
+evalC [":show", v] vault = (evalShow v vault, vault)
+evalC [":delete", v] vault = evalDel (Just v) vault
+evalC [":clear"] vault = evalDel Nothing vault
+evalC [":help"] vault = (Right help, vault)
+evalC [":?"] vault = (Right help, vault)
+evalC c vault = (Left ("Unsupported command " ++ unwords c ++ "; :? for help"), vault)
 
-evalShow :: Maybe String -> Vars -> Either String String
-evalShow (Just n) vs = maybe (Left ("Unbound variable: " ++ n)) (Right . showVar n) (lookup n vs)
-evalShow Nothing (Vars es) = Right ("vars:\n  " ++ L.intercalate "\n  " (map (uncurry showVar) es))
+evalShow :: String -> Vault -> Either String String
+evalShow n vault = maybe (Left ("Unbound variable: " ++ n)) (Right . showVar n) (lookup n vault)
 
-evalDel :: Maybe String -> Vars -> (Either String String, Vars)
-evalDel _ vs = (Left "Unsupported", vs)
+evalDel :: Maybe String -> Vault -> (Either String String, Vault)
+evalDel (Just n) vault = (Right ("deleted var: " ++ n), delete n vault)
+evalDel Nothing _ = (Right "deleted all variable ", emptyVault)
 
 help :: String
 help =
     "\njord interpreter, version " ++
-    J.jordVersion ++
+    jordVersion ++
     "\n" ++
     "\n Commands available from the prompt:\n\n" ++
     "    :help, :?              display this list of commands\n" ++
     "    :quit, :q              quit jord\n" ++
-    "    :show {var}            shows {var} or all variable(s) if no arg\n" ++
+    "    :show {var}            shows {var}\n" ++
     "    :delete {var}          deletes {var}\n" ++
     "    :clear                 deletes all variable(s)\n" ++
     "\n Jord expressions:\n\n" ++
@@ -115,39 +110,24 @@ help =
     "  Saved results can subsequently be used when calling a function\n" ++
     "    \9783 a = antipode 54N028E\n" ++ "    \9783 antipode a\n"
 
-evalE :: String -> Vars -> J.Result
-evalE e vs = J.eval e (`lookup` vs)
+save :: Result -> String -> Vault -> Vault
+save (Right a@(Ang _)) k vault = insert k a vault
+save (Right l@(Len _)) k vault = insert k l vault
+save (Right g@(Geo _)) k vault = insert k g vault
+save (Right v@(Vec _)) k vault = insert k v vault
+save (Right ll@(GeoDec _)) k vault = insert k ll vault
+save _ _ vault = vault
 
-save :: J.Result -> String -> Vars -> Vars
-save (Right a@(J.Ang _)) k vs = bind k a vs
-save (Right l@(J.Len _)) k vs = bind k l vs
-save (Right g@(J.Geo _)) k vs = bind k g vs
-save (Right v@(J.Vec _)) k vs = bind k v vs
-save (Right ll@(J.GeoDec _)) k vs = bind k ll vs
-save _ _ vs = vs
-
-showR :: J.Result -> Either String String
+showR :: Result -> Either String String
 showR (Left err) = Left err
 showR (Right v) = Right (showV v)
 
-showV :: J.Value -> String
-showV (J.Ang a) = "angle: " ++ show a
-showV (J.Len l) = "length: " ++ show l
-showV (J.Geo g) = "geo pos: " ++ show g
-showV (J.Vec v) = "n-vector: " ++ show v
-showV (J.GeoDec ll) = "latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll)
+showV :: Value -> String
+showV (Ang a) = "angle: " ++ show a
+showV (Len l) = "length: " ++ show l
+showV (Geo g) = "geo pos: " ++ show g
+showV (Vec v) = "n-vector: " ++ show v
+showV (GeoDec ll) = "latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll)
 
-showVar :: String -> J.Value -> String
+showVar :: String -> Value -> String
 showVar n v = n ++ "=" ++ showV v
-
--- variables
-bind :: String -> J.Value -> Vars -> Vars
-bind k v m = Vars (e ++ [(k, v)])
-  where
-    Vars e = unbind k m
-
-lookup :: String -> Vars -> Maybe J.Value
-lookup k (Vars es) = fmap snd (L.find (\e -> fst e == k) es)
-
-unbind :: String -> Vars -> Vars
-unbind k (Vars es) = Vars (filter (\e -> fst e /= k) es)

@@ -27,5 +27,5 @@ import Data.Geo.Jord
 Jord comes with a REPL (still lacking history and completion at the time of writing) that provides access to all position calculations:
 
     $ jord-exe
-    ☷ finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)
+    ☷ finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E
     ☷ angle: 126°0'0.0"

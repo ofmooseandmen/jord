@@ -12,12 +12,15 @@
 -- Types and functions for evaluating expressions in textual form.
 --
 module Data.Geo.Jord.Eval
-    ( Resolve
+    ( Value(..)
+    , Vault
     , Result
-    , Value(..)
+    , emptyVault
     , eval
-    , eval'
     , functions
+    , insert
+    , delete
+    , lookup
     ) where
 
 import Control.Applicative ((<|>))
@@ -28,8 +31,8 @@ import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
-import Data.List
-import Prelude hiding (fail)
+import Data.List hiding (delete, lookup, insert)
+import Prelude hiding (fail, lookup)
 import Text.ParserCombinators.ReadP
 
 -- | A value accepted and returned by 'eval'.
@@ -44,8 +47,13 @@ data Value
 -- | 'Either' an error or a 'Value'.
 type Result = Either String Value
 
--- | Resolves a value by its name if it exists.
-type Resolve = String -> Maybe Value
+-- | A location for 'Value's to be shared by successive evalations.
+newtype Vault =
+    Vault [(String, Value)]
+
+-- | An empty 'Vault'.
+emptyVault :: Vault
+emptyVault = Vault []
 
 instance MonadFail (Either String) where
     fail = Left
@@ -63,13 +71,13 @@ instance MonadFail (Either String) where
 -- a description of the error ('Left').
 --
 -- @
---     angle = eval "finalBearing 54N154E 54S154W" -- Right Ang
---     length = eval "distance (antipode 54N154E) 54S154W" -- Right Len
---     -- parameter resolution by name
---     m = Map.empty -- assuming use of Data.Map
---     a1 = eval "finalBearing 54N154E 54S154W"
---     m = insert "a1" a
---     a2 = eval' (\\k -> lookup k m) "(finalBearing a1 54S154W)"
+--     vault = emptyVault
+--     angle = eval "finalBearing 54N154E 54S154W" vault -- Right Ang
+--     length = eval "distance (antipode 54N154E) 54S154W" vault -- Right Len
+--     -- parameter resolution from vault
+--     a1 = eval "finalBearing 54N154E 54S154W" vault
+--     vault = insert "a1" vault
+--     a2 = eval "(finalBearing a1 54S154W)" vault
 -- @
 --
 -- By default, all returned positions are 'Geo' ('GeoPos'), to get back a 'Vec' ('NVector'), the
@@ -89,7 +97,7 @@ instance MonadFail (Either String) where
 --     length = eval "distance antipode 54N154E 54S154W" -- Left String
 -- @
 --
-eval :: String -> Resolve -> Result
+eval :: String -> Vault -> Result
 eval s r =
     case expr s of
         Left err -> Left err
@@ -100,10 +108,6 @@ eval s r =
                         then vec
                         else Right (Geo (fromNVector v))
                 oth -> oth
-
--- | Same as 'eval' but never resolves parameters by name.
-eval' :: String -> Result
-eval' s = eval s (const Nothing)
 
 -- | All supported functions:
 --
@@ -138,6 +142,20 @@ functions =
     , "toNVector"
     ]
 
+-- | @insert k v vault@ inserts value @v@ for key @k@. Overwrites any previous value.
+insert :: String -> Value -> Vault -> Vault
+insert k v vault = Vault (e ++ [(k, v)])
+  where
+    Vault e = delete k vault
+
+-- | @lookup k vault@ looks up the value of key @k@ in the vault.
+lookup :: String -> Vault -> Maybe Value
+lookup k (Vault es) = fmap snd (find (\e -> fst e == k) es)
+
+-- | @delete k vault@ deletes key @k@ from the vault.
+delete :: String -> Vault -> Vault
+delete k (Vault es) = Vault (filter (\e -> fst e /= k) es)
+
 expr :: (MonadFail m) => String -> m (Bool, Expr)
 expr s = do
     ts <- tokenise s
@@ -148,48 +166,48 @@ expectVec :: [Token] -> Bool
 expectVec (_:Func "toNVector":_) = True
 expectVec _ = False
 
-evalExpr :: Expr -> Resolve -> Result
-evalExpr (Param p) f =
-    case f p of
+evalExpr :: Expr -> Vault -> Result
+evalExpr (Param p) vault =
+    case lookup p vault of
         Just (Geo g) -> Right (Vec (toNVector g))
         Just v -> Right v
         Nothing -> tryRead p
-evalExpr (Antipode a) f =
-    case evalExpr a f of
+evalExpr (Antipode a) vault =
+    case evalExpr a vault of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
-evalExpr (DecimalLatLong a) f =
-    case evalExpr a f of
+evalExpr (DecimalLatLong a) vault =
+    case evalExpr a vault of
         (Right (Vec p)) ->
             let g = fromNVector p
              in Right (GeoDec (toDecimalDegrees (latitude g), toDecimalDegrees (longitude g)))
         r -> Left ("Call error: decimalLatLong " ++ showErr [r])
-evalExpr (Destination a b c) f =
-    case [evalExpr a f, evalExpr b f, evalExpr c f] of
+evalExpr (Destination a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination' p a' l))
         r -> Left ("Call error: destination " ++ showErr r)
-evalExpr (Distance a b) f =
-    case [evalExpr a f, evalExpr b f] of
+evalExpr (Distance a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance' p1 p2))
         r -> Left ("Call error: distance " ++ showErr r)
-evalExpr (FinalBearing a b) f =
-    case [evalExpr a f, evalExpr b f] of
+evalExpr (FinalBearing a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (finalBearing p1 p2))
         r -> Left ("Call error: finalBearing " ++ showErr r)
-evalExpr (InitialBearing a b) f =
-    case [evalExpr a f, evalExpr b f] of
+evalExpr (InitialBearing a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ showErr r)
-evalExpr (Midpoint as) f =
-    let m = map (`evalExpr` f) as
+evalExpr (Midpoint as) vault =
+    let m = map (`evalExpr` vault) as
         ps = [p | Right (Vec p) <- m]
      in if length m == length ps
             then Right (Vec (midpoint ps))
             else Left ("Call error: midpoint " ++ showErr m)
 evalExpr (ReadGeoPos s) _ =
     bimap (\e -> "Call error: readGeoPos : " ++ e) (Vec . toNVector) (readGeoPosE s)
-evalExpr (ToNVector a) f =
-    case evalExpr a f of
+evalExpr (ToNVector a) vault =
+    case evalExpr a vault of
         r@(Right (Vec _)) -> r
         r -> Left ("Call error: toNVector " ++ showErr [r])
 

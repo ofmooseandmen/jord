@@ -38,10 +38,11 @@ import Text.ParserCombinators.ReadP
 -- | A value accepted and returned by 'eval'.
 data Value
     = Ang Angle -- ^ 'Angle'
+    | AngDec Double -- ^ 'Angle' in decimal degrees
     | Len Length -- ^ 'Length'
     | Geo GeoPos -- ^ 'GeoPos'
+    | GeoDec (Double, Double) -- ^ 'GeoPos' latitude and longitude in decimal degrees
     | Vec NVector -- ^ 'NVector'
-    | GeoDec (Double, Double) -- ^ tuple of decimal latitude and longitude
     deriving (Eq, Show)
 
 -- | 'Either' an error or a 'Value'.
@@ -113,7 +114,7 @@ eval s r =
 --
 --     * 'antipode'
 --
---     * 'decimalLatLong'
+--     * 'decimal'
 --
 --     * 'destination'
 --
@@ -132,7 +133,7 @@ eval s r =
 functions :: [String]
 functions =
     [ "antipode"
-    , "decimalLatLong"
+    , "decimal"
     , "destination"
     , "distance"
     , "finalBearing"
@@ -176,8 +177,9 @@ evalExpr (Antipode a) vault =
     case evalExpr a vault of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
-evalExpr (DecimalLatLong a) vault =
-    case evalExpr a vault of
+evalExpr (Decimal d) vault =
+    case evalExpr d vault of
+        (Right (Ang a)) -> Right (AngDec (toDecimalDegrees a))
         (Right (Vec p)) ->
             let g = fromNVector p
              in Right (GeoDec (toDecimalDegrees (latitude g), toDecimalDegrees (longitude g)))
@@ -321,7 +323,7 @@ walkParams n ts@(h:t) acc
 data Expr
     = Param String
     | Antipode Expr
-    | DecimalLatLong Expr
+    | Decimal Expr
     | Destination Expr
                   Expr
                   Expr
@@ -338,7 +340,7 @@ data Expr
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
-transform (Call "decimalLatLong" [e]) = fmap DecimalLatLong (transform e)
+transform (Call "decimal" [e]) = fmap Decimal (transform e)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2

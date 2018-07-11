@@ -94,7 +94,8 @@ help =
     "                                  on initial bearing ang\n" ++
     "       initialBearing pos1 pos2   bearing arriving at pos2 from pos1\n" ++
     "       finalBearing pos1 pos2     initial bearing from pos1 to pos2\n" ++
-    "       decimalLatLong pos         decimal latitude and longitude of pos\n" ++
+    "       decimal pos                decimal latitude and longitude of pos\n" ++
+    "       decimal ang                decimal degrees of ang\n" ++
     "       midpoint [pos]             mid position between [pos]\n" ++
     "       toNVector pos              n-vector corresponding to pos\n" ++
     "\n  Supported Position formats:\n\n" ++
@@ -112,10 +113,11 @@ help =
 
 save :: Result -> String -> Vault -> Vault
 save (Right a@(Ang _)) k vault = insert k a vault
+save (Right a@(AngDec _)) k vault = insert k a vault
 save (Right l@(Len _)) k vault = insert k l vault
 save (Right g@(Geo _)) k vault = insert k g vault
-save (Right v@(Vec _)) k vault = insert k v vault
 save (Right ll@(GeoDec _)) k vault = insert k ll vault
+save (Right v@(Vec _)) k vault = insert k v vault
 save _ _ vault = vault
 
 showR :: Result -> Either String String
@@ -124,10 +126,11 @@ showR (Right v) = Right (showV v)
 
 showV :: Value -> String
 showV (Ang a) = "angle: " ++ show a
+showV (AngDec a) = "angle (dd): " ++ show a
 showV (Len l) = "length: " ++ show l
 showV (Geo g) = "geo pos: " ++ show g
+showV (GeoDec ll) = "latitude (dd): " ++ show (fst ll) ++ "; longitude (dd): " ++ show (snd ll)
 showV (Vec v) = "n-vector: " ++ show v
-showV (GeoDec ll) = "latitude: " ++ show (fst ll) ++ "; longitude: " ++ show (snd ll)
 
 showVar :: String -> Value -> String
 showVar n v = n ++ "=" ++ showV v

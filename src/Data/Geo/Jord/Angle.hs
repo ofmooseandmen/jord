@@ -12,10 +12,13 @@
 -- of 30 millimetres at the equator (which should be good enough for geodesic calculations).
 --
 module Data.Geo.Jord.Angle
-    ( Angle
-    -- * constructors
+    ( -- * The 'Angle' type
+      Angle
+    -- * Smart constructors
     , decimalDegrees
     , dms
+    , dmsE
+    , dmsF
     -- * calculations
     , arcLength
     , central
@@ -46,11 +49,11 @@ import Data.Fixed
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Parse
 import Data.Geo.Jord.Quantity
+import Data.Maybe
 import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (get, look, pfail)
 
--- | An angle.
 newtype Angle = Angle
     { milliseconds :: Int
     } deriving (Eq)
@@ -71,21 +74,31 @@ instance Quantity Angle where
     add (Angle millis1) (Angle millis2) = Angle (millis1 + millis2)
     sub (Angle millis1) (Angle millis2) = Angle (millis1 - millis2)
 
--- | Returns an 'Angle' from given decimal degrees. Any 'Double' is accepted: it must be
+-- | 'Angle' from given decimal degrees. Any 'Double' is accepted: it must be
 -- validated by the call site when used to represent a latitude or longitude.
 decimalDegrees :: Double -> Angle
 decimalDegrees dec = Angle (round (dec * 3600000.0))
 
--- | Returns an 'Angle' from the given given degrees, minutes, seconds and milliseconds.
--- 'fail's if minutes, seconds and/or milliseconds are invalid.
+-- | 'Angle' from the given given degrees, minutes, seconds and milliseconds.
+-- 'error's if given minutes, seconds and/or milliseconds are invalid.
 -- Degrees are not validated and can be any 'Int': they must be validated by the call site
 -- when used to represent a latitude or longitude.
-dms :: (MonadFail m) => Int -> Int -> Int -> Int -> m Angle
-dms degs mins secs millis
-    | mins < 0 || mins > 59 = fail ("Invalid minutes: " ++ show mins)
-    | secs < 0 || secs >= 60 = fail ("Invalid seconds: " ++ show secs)
-    | millis < 0 || millis >= 1000 = fail ("Invalid milliseconds: " ++ show millis)
-    | otherwise = return (decimalDegrees ms)
+dms :: Int -> Int -> Int -> Int -> Angle
+dms degs mins secs millis =
+    fromMaybe
+        (error ("Invalid minutes=" ++ show mins ++ " or seconds=" ++ show secs ++ " or milliseconds=" ++ show millis))
+        (dmsF degs mins secs millis)
+
+-- | 'Angle' from the given given degrees, minutes, seconds and milliseconds.
+-- A 'Left' indicates that given minutes, seconds and/or milliseconds are invalid.
+-- Degrees are not validated and can be any 'Int': they must be validated by the call site
+-- when used to represent a latitude or longitude.
+dmsE :: Int -> Int -> Int -> Int -> Either String Angle
+dmsE degs mins secs millis
+    | mins < 0 || mins > 59 = Left ("Invalid minutes: " ++ show mins)
+    | secs < 0 || secs >= 60 = Left ("Invalid seconds: " ++ show secs)
+    | millis < 0 || millis >= 1000 = Left ("Invalid milliseconds: " ++ show millis)
+    | otherwise = Right (decimalDegrees ms)
   where
     ms =
         signed
@@ -94,11 +107,23 @@ dms degs mins secs millis
              (fromIntegral millis / 3600000.0 :: Double))
             (signum degs)
 
--- | Computes the length of the arc that subtends the given 'Angle' for the given radius.
+-- | 'Angle' from the given given degrees, minutes, seconds and milliseconds.
+-- 'fail's if given minutes, seconds and/or milliseconds are invalid.
+-- Degrees are not validated and can be any 'Int': they must be validated by the call site
+-- when used to represent a latitude or longitude.
+dmsF :: (MonadFail m) => Int -> Int -> Int -> Int -> m Angle
+dmsF degs mins secs millis =
+    case e of
+      Left err -> fail err
+      Right a -> return a
+    where
+      e = dmsE degs mins secs millis
+
+-- | @arcLength a r@ computes the 'Length' of the arc that subtends the @a@ for  @r@.
 arcLength :: Angle -> Length -> Length
 arcLength a r = metres (toMetres r * toRadians a)
 
--- | Computes the central 'Angle' from the given arc length and radius.
+-- | @central l r@ computes the central 'Angle' from the arc length  @l@ and radius @r@.
 central :: Length -> Length -> Angle
 central s r = fromRadians (toMetres s / toMetres r)
 
@@ -112,23 +137,23 @@ normalise a n = decimalDegrees dec
   where
     dec = mod' (toDecimalDegrees a + toDecimalDegrees n) 360.0
 
--- | Is given 'Angle' < 0?
+-- | is given 'Angle' < 0?
 isNegative :: Angle -> Bool
 isNegative (Angle millis) = millis < 0
 
--- | Is given 'Angle' within range [@low@..@high@] inclusive?
+-- | is given 'Angle' within range [@low@..@high@] inclusive?
 isWithin :: Angle -> Angle -> Angle -> Bool
 isWithin (Angle millis) (Angle low) (Angle high) = millis >= low && millis <= high
 
--- | @'atan2'' y x@ computes the 'Angle' (from the positive x-axis) of the vector from the origin to the point (x,y).
+-- | @atan2' y x@ computes the 'Angle' (from the positive x-axis) of the vector from the origin to the point (x,y).
 atan2' :: Double -> Double -> Angle
 atan2' y x = fromRadians (atan2 y x)
 
--- | cosinus of the given 'Angle'.
+-- | @cos' a@ returns the cosinus of @a@.
 cos' :: Angle -> Double
 cos' a = cos (toRadians a)
 
--- | sinus of the given 'Angle'.
+-- | @sin' a@ returns the sinus of @a@.
 sin' :: Angle -> Double
 sin' a = sin (toRadians a)
 
@@ -144,19 +169,19 @@ toRadians a = toDecimalDegrees a * pi / 180.0
 toDecimalDegrees :: Angle -> Double
 toDecimalDegrees (Angle millis) = fromIntegral millis / 3600000.0
 
--- | degrees of given 'Angle'.
+-- | @getDegrees a@ returns the degrees of @a@ as an 'Int'.
 getDegrees :: Angle -> Int
 getDegrees a = signed (field a 3600000.0 360.0) (signum (milliseconds a))
 
--- | minutes of given 'Angle'.
+-- | @getMinutes a@ returns the minutes of @a@ as an 'Int'.
 getMinutes :: Angle -> Int
 getMinutes a = field a 60000.0 60.0
 
--- | seconds of given 'Angle'.
+-- | @getSeconds a@ returns the seconds of @a@ as an 'Int'.
 getSeconds :: Angle -> Int
 getSeconds a = field a 1000.0 60.0
 
--- | milliseconds of given 'Angle'.
+-- | @getMilliseconds a@ returns the milliseconds of @a@ as an 'Int'.
 getMilliseconds :: Angle -> Int
 getMilliseconds (Angle millis) = mod millis 1000
 
@@ -213,7 +238,7 @@ degsMinsSecs = do
     d' <- fmap fromIntegral integer
     degSymbol
     (m', s', ms') <- option (0, 0, 0) (minsSecs <|> minsOnly)
-    dms d' m' s' ms'
+    dmsF d' m' s' ms'
 
 -- | Parses minutes, seconds with optionally milliseconds.
 minsSecs :: ReadP (Int, Int, Int)

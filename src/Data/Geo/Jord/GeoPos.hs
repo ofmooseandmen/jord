@@ -9,9 +9,12 @@
 -- Types to represent a geographic position by its latitude and longitude.
 --
 module Data.Geo.Jord.GeoPos
-    ( GeoPos(latitude, longitude)
+    ( -- * The 'GeoPos' type
+      GeoPos(latitude, longitude)
+      -- * Smart constructors
     , geoPos
     , geoPosF
+      -- * read
     , readGeoPos
     , readGeoPosE
     , readGeoPosF
@@ -116,8 +119,8 @@ blat = do
     (m', s') <- option (0, 0) (ms <|> m)
     h <- hemisphere
     if h == 'N'
-        then dms d' m' s' 0
-        else dms (-d') m' s' 0
+        then dmsF d' m' s' 0
+        else dmsF (-d') m' s' 0
 
 -- | Parses and returns a longitude, DDDMMSS expected.
 blon :: ReadP Angle
@@ -126,8 +129,8 @@ blon = do
     (m', s') <- option (0, 0) (ms <|> m)
     m'' <- meridian
     if m'' == 'E'
-        then dms d' m' s' 0
-        else dms (-d') m' s' 0
+        then dmsF d' m' s' 0
+        else dmsF (-d') m' s' 0
 
 -- | Parses N or S char.
 hemisphere :: ReadP Char

@@ -7,9 +7,6 @@
 -- Portability: portable
 --
 -- Types and functions for working with angles representing latitudes, longitude and bearings.
--- Angles are internally stored as whole milliseconds of degrees.
--- When used as a latitude/longitude this roughly translate to a precision
--- of 30 millimetres at the equator (which should be good enough for geodesic calculations).
 --
 module Data.Geo.Jord.Angle
     ( -- * The 'Angle' type
@@ -19,24 +16,24 @@ module Data.Geo.Jord.Angle
     , dms
     , dmsE
     , dmsF
-    -- * calculations
+    -- * Calculations
     , arcLength
     , central
     , isNegative
     , isWithin
     , negate'
     , normalise
-    -- * trigonometric
+    -- * Trigonometric functions
     , atan2'
     , cos'
     , sin'
-    -- * accessors
+    -- * Accessors
     , getDegrees
     , getMinutes
     , getSeconds
     , getMilliseconds
     , toDecimalDegrees
-    -- * read
+    -- * Read
     , angle
     , readAngle
     , readAngleE
@@ -54,6 +51,9 @@ import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (get, look, pfail)
 
+-- | An angle with a resolution of a milliseconds of a degree.
+-- When used as a latitude/longitude this roughly translate to a precision
+-- of 30 millimetres at the equator.
 newtype Angle = Angle
     { milliseconds :: Int
     } deriving (Eq)
@@ -119,11 +119,11 @@ dmsF degs mins secs millis =
     where
       e = dmsE degs mins secs millis
 
--- | @arcLength a r@ computes the 'Length' of the arc that subtends the @a@ for  @r@.
+-- | @arcLength a r@ computes the 'Length' of the arc that subtends the angle @a@ for radius @r@.
 arcLength :: Angle -> Length -> Length
 arcLength a r = metres (toMetres r * toRadians a)
 
--- | @central l r@ computes the central 'Angle' from the arc length  @l@ and radius @r@.
+-- | @central l r@ computes the central 'Angle' from the arc length @l@ and radius @r@.
 central :: Length -> Length -> Angle
 central s r = fromRadians (toMetres s / toMetres r)
 
@@ -137,11 +137,11 @@ normalise a n = decimalDegrees dec
   where
     dec = mod' (toDecimalDegrees a + toDecimalDegrees n) 360.0
 
--- | is given 'Angle' < 0?
+-- | Is given 'Angle' < 0?
 isNegative :: Angle -> Bool
 isNegative (Angle millis) = millis < 0
 
--- | is given 'Angle' within range [@low@..@high@] inclusive?
+-- | Is given 'Angle' within range [@low@..@high@] inclusive?
 isWithin :: Angle -> Angle -> Angle -> Bool
 isWithin (Angle millis) (Angle low) (Angle high) = millis >= low && millis <= high
 
@@ -169,19 +169,19 @@ toRadians a = toDecimalDegrees a * pi / 180.0
 toDecimalDegrees :: Angle -> Double
 toDecimalDegrees (Angle millis) = fromIntegral millis / 3600000.0
 
--- | @getDegrees a@ returns the degrees of @a@ as an 'Int'.
+-- | @getDegrees a@ returns the degree component of @a@.
 getDegrees :: Angle -> Int
 getDegrees a = signed (field a 3600000.0 360.0) (signum (milliseconds a))
 
--- | @getMinutes a@ returns the minutes of @a@ as an 'Int'.
+-- | @getMinutes a@ returns the minute component of @a@.
 getMinutes :: Angle -> Int
 getMinutes a = field a 60000.0 60.0
 
--- | @getSeconds a@ returns the seconds of @a@ as an 'Int'.
+-- | @getSeconds a@ returns the second component of @a@.
 getSeconds :: Angle -> Int
 getSeconds a = field a 1000.0 60.0
 
--- | @getMilliseconds a@ returns the milliseconds of @a@ as an 'Int'.
+-- | @getMilliseconds a@ returns the milliseconds component of @a@.
 getMilliseconds :: Angle -> Int
 getMilliseconds (Angle millis) = mod millis 1000
 
@@ -191,7 +191,7 @@ field (Angle millis) divisor modulo =
 
 signed :: (Num a, Num b, Ord b) => a -> b -> a
 signed n s
-    | s < 0 = (-n)
+    | s < 0 = -n
     | otherwise = n
 
 -- | Parses and returns an 'Angle'.

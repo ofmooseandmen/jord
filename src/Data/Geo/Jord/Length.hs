@@ -9,17 +9,22 @@
 -- Types and functions for working with (signed) lengths in metres, kilometres or nautical miles.
 --
 module Data.Geo.Jord.Length
-    ( Length(millimetres)
-    , isZero
+    ( -- * The 'Length' type
+      Length(millimetres)
+    -- * Smart constructors
     , kilometres
     , metres
     , nauticalMiles
+    -- * Read
     , readLength
     , readLengthE
     , readLengthF
+    -- * Conversions
     , toKilometres
     , toMetres
     , toNauticalMiles
+    -- * Misc.
+    , isZero
     ) where
 
 import Control.Applicative
@@ -30,7 +35,7 @@ import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
--- | A length - the value is internally stored in millimetres.
+-- | A length with a resolution of 1 millimetre.
 newtype Length = Length
     { millimetres :: Int
     } deriving (Eq)
@@ -52,19 +57,15 @@ instance Quantity Length where
     add a b = Length (millimetres a + millimetres b)
     sub a b = Length (millimetres a - millimetres b)
 
--- | Is given 'Length' == 0?
-isZero :: Length -> Bool
-isZero (Length mm) = mm == 0
-
--- | Returns a 'Length' representing the given amount of nautical miles.
+-- | 'Length' from given amount of nautical miles.
 nauticalMiles :: Double -> Length
 nauticalMiles nm = metres (nm * 1852.0)
 
--- | Returns a 'Length' representing the given amount of metres.
+-- | 'Length' from given amount of metres.
 metres :: Double -> Length
 metres m = Length (round (m * 1000.0))
 
--- | Returns a 'Length' representing the given amount of kilometres.
+-- | 'Length' from given amount of kilometres.
 kilometres :: Double -> Length
 kilometres km = metres (km * 1000.0)
 
@@ -90,17 +91,21 @@ readLengthF s =
             Left e -> fail e
             Right l -> return l
 
--- | Returns amount of kilometres that the given 'Length' represents.
+-- | @toKilometres l@ converts @l@ to kilometres.
 toKilometres :: Length -> Double
 toKilometres l = toMetres l / 1000.0
 
--- | Returns amount of metres that the given 'Length' represents.
+-- | @toMetres l@ converts @l@ to metres.
 toMetres :: Length -> Double
 toMetres (Length mm) = fromIntegral mm / 1000.0
 
--- | Returns amount of nautical miles that the given 'Length' represents.
+-- | @toNauticalMiles l@ converts @l@ to nautical miles.
 toNauticalMiles :: Length -> Double
 toNauticalMiles l = toMetres l / 1852.0
+
+-- | Is given 'Length' == 0?
+isZero :: Length -> Bool
+isZero (Length mm) = mm == 0
 
 -- | Parses and returns a 'Length'.
 length :: ReadP Length

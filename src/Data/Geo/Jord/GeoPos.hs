@@ -41,26 +41,30 @@ instance Read GeoPos where
 instance Show GeoPos where
     show (GeoPos lat lon) = showLat lat ++ "," ++ showLon lon
 
--- | 'GeoPos' smart constructor.
--- 'error's if given latitude is outisde [-90, 90]° and/or
--- given longitude is outisde [-180, 180]°.
-geoPos :: Double -> Double -> GeoPos
+-- | 'GeoPos' from given latitude and longitude.
+-- 'error's if given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+geoPos :: Angle -> Angle -> GeoPos
 geoPos lat lon =
     fromMaybe
         (error ("Invalid latitude=" ++ show lat ++ " or longitude=" ++ show lon))
         (geoPosF lat lon)
 
--- | 'GeoPos' smart constructor.
--- A 'Left' indicates that the given latitude is outisde [-90, 90]° and/or
--- given longitude is outisde [-180, 180]°.
-geoPosE :: Double -> Double -> Either String GeoPos
+-- | 'GeoPos' from given latitude and longitude.
+-- A 'Left' indicates that the given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+geoPosE :: Angle -> Angle -> Either String GeoPos
 geoPosE lat lon
-    | not (isValidLatitude lat) = Left ("Invalid latitude=" ++ show lat)
-    | not (isValidLongitude lon) = Left ("Invalid longitude=" ++ show lon)
-    | otherwise = Right (GeoPos (ofDegrees lat) (ofDegrees lon))
+    | not (isWithin lat (decimalDegrees (-90)) (decimalDegrees 90)) =
+        Left ("Invalid latitude=" ++ show lat)
+    | not (isWithin lon (decimalDegrees (-180)) (decimalDegrees 180)) =
+        Left ("Invalid longitude=" ++ show lon)
+    | otherwise = Right (GeoPos lat lon)
 
--- | 'GeoPos' smart constructor. Same as 'geoPosE' but returns a 'MonadFail'.
-geoPosF :: (MonadFail m) => Double -> Double -> m GeoPos
+-- | 'GeoPos' from given latitude and longitude.
+-- 'fail's if given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+geoPosF :: (MonadFail m) => Angle -> Angle -> m GeoPos
 geoPosF lat lon =
     case e of
         Left err -> fail err
@@ -94,14 +98,6 @@ readGeoPosF s =
             Left e -> fail e
             Right g -> return g
 
--- | Is given latitude in range [-90, 90]?
-isValidLatitude :: (Ord a, Num a) => a -> Bool
-isValidLatitude lat = lat >= -90 && lat <= 90
-
--- | Is given longitude in range [-180, 180]?
-isValidLongitude :: (Ord a, Num a) => a -> Bool
-isValidLongitude lon = lon >= -180 && lon <= 180
-
 -- | Parses and returns a 'GeoPos'.
 geo :: ReadP GeoPos
 geo = block <|> human
@@ -114,24 +110,24 @@ block = do
     geoPosF lat lon
 
 -- | Parses and returns a latitude, DDMMSS expected.
-blat :: ReadP Double
+blat :: ReadP Angle
 blat = do
     d' <- digits 2
-    (m', s') <- option (0, 0.0) (ms <|> m)
+    (m', s') <- option (0, 0) (ms <|> m)
     h <- hemisphere
     if h == 'N'
-        then fromDMS d' m' s'
-        else fmap negate (fromDMS d' m' s')
+        then dms d' m' s' 0
+        else dms (-d') m' s' 0
 
 -- | Parses and returns a longitude, DDDMMSS expected.
-blon :: ReadP Double
+blon :: ReadP Angle
 blon = do
     d' <- digits 3
-    (m', s') <- option (0, 0.0) (ms <|> m)
+    (m', s') <- option (0, 0) (ms <|> m)
     m'' <- meridian
     if m'' == 'E'
-        then fromDMS d' m' s'
-        else fmap negate (fromDMS d' m' s')
+        then dms d' m' s' 0
+        else dms (-d') m' s' 0
 
 -- | Parses N or S char.
 hemisphere :: ReadP Char
@@ -142,17 +138,17 @@ meridian :: ReadP Char
 meridian = char 'E' <|> char 'W'
 
 -- | Parses minutes and seconds.
-ms :: ReadP (Int, Double)
+ms :: ReadP (Int, Int)
 ms = do
     m' <- digits 2
-    s' <- fmap fromIntegral (digits 2)
+    s' <- digits 2
     return (m', s')
 
 -- | Parses minutes.
-m :: ReadP (Int, Double)
+m :: ReadP (Int, Int)
 m = do
     m' <- digits 2
-    return (m', 0.0)
+    return (m', 0)
 
 -- | Parses and returns a 'GeoPos' from a human friendly text - see 'Angle'.
 human :: ReadP GeoPos
@@ -163,31 +159,31 @@ human = do
     geoPosF lat lon
 
 -- | Parses and returns a latitude, 'Angle'N|S expected.
-hlat :: ReadP Double
+hlat :: ReadP Angle
 hlat = do
-    lat <- fmap degrees angle
+    lat <- angle
     h <- hemisphere
     if h == 'N'
         then return lat
-        else return (-lat)
+        else return (negate' lat)
 
 -- | Parses and returns a longitude, 'Angle'E|W expected.
-hlon :: ReadP Double
+hlon :: ReadP Angle
 hlon = do
-    lon <- fmap degrees angle
+    lon <- angle
     m' <- meridian
     if m' == 'E'
         then return lon
-        else return (-lon)
+        else return (negate' lon)
 
 -- | Latitude to string.
 showLat :: Angle -> String
 showLat lat
-    | degrees lat >= 0.0 = show lat ++ "N"
-    | otherwise = show (neg lat) ++ "S"
+    | isNegative lat = show (negate' lat) ++ "S"
+    | otherwise = show lat ++ "N"
 
 -- | Longitude to string.
 showLon :: Angle -> String
 showLon lon
-    | degrees lon >= 0.0 = show lon ++ "E"
-    | otherwise = show (neg lon) ++ "W"
+    | isNegative lon = show (negate' lon) ++ "W"
+    | otherwise = show lon ++ "E"

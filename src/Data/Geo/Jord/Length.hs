@@ -6,18 +6,20 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working with lengths in metres, kilometres or nautical miles.
+-- Types and functions for working with (signed) lengths in metres, kilometres or nautical miles.
 --
 module Data.Geo.Jord.Length
-    ( Length(metres)
-    , ofMetres
-    , ofKilometres
-    , ofNauticalMiles
+    ( Length(millimetres)
+    , isZero
+    , kilometres
+    , metres
+    , nauticalMiles
     , readLength
     , readLengthE
     , readLengthF
-    , kilometres
-    , nauticalMiles
+    , toKilometres
+    , toMetres
+    , toNauticalMiles
     ) where
 
 import Control.Applicative
@@ -28,9 +30,9 @@ import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
--- | A length - the value is internally stored in metres.
+-- | A length - the value is internally stored in millimetres.
 newtype Length = Length
-    { metres :: Double
+    { millimetres :: Int
     } deriving (Eq)
 
 -- | See 'readLength'.
@@ -39,26 +41,32 @@ instance Read Length where
 
 -- | Length is shown in metres when <= 10,000 m and in kilometres otherwise.
 instance Show Length where
-    show (Length v)
-        | v <= 10000.0 = show v ++ "m"
-        | otherwise = show (v / 1000.0) ++ "km"
+    show l
+        | m <= 10000.0 = show m ++ "m"
+        | otherwise = show (m / 1000.0) ++ "km"
+      where
+        m = toMetres l
 
 -- | Add/Subtract Length.
 instance Quantity Length where
-    add a b = Length (metres a + metres b)
-    sub a b = Length (metres a - metres b)
+    add a b = Length (millimetres a + millimetres b)
+    sub a b = Length (millimetres a - millimetres b)
 
--- | Returns a 'Length' representing the given amount of metres.
-ofMetres :: Double -> Length
-ofMetres = Length
-
--- | Returns a 'Length' representing the given amount of kilometres.
-ofKilometres :: Double -> Length
-ofKilometres km = Length (km * 1000.0)
+-- | Is given 'Length' == 0?
+isZero :: Length -> Bool
+isZero (Length mm) = mm == 0
 
 -- | Returns a 'Length' representing the given amount of nautical miles.
-ofNauticalMiles :: Double -> Length
-ofNauticalMiles nm = Length (nm * 1852.0)
+nauticalMiles :: Double -> Length
+nauticalMiles nm = metres (nm * 1852.0)
+
+-- | Returns a 'Length' representing the given amount of metres.
+metres :: Double -> Length
+metres m = Length (round (m * 1000.0))
+
+-- | Returns a 'Length' representing the given amount of kilometres.
+kilometres :: Double -> Length
+kilometres km = metres (km * 1000.0)
 
 -- | Obtains a 'Length' from the given string formatted as (-)float[m|km|nm] - e.g. 3000m, 2.5km or -154nm.
 --
@@ -83,12 +91,16 @@ readLengthF s =
             Right l -> return l
 
 -- | Returns amount of kilometres that the given 'Length' represents.
-kilometres :: Length -> Double
-kilometres l = metres l / 1000.0
+toKilometres :: Length -> Double
+toKilometres l = toMetres l / 1000.0
+
+-- | Returns amount of metres that the given 'Length' represents.
+toMetres :: Length -> Double
+toMetres (Length mm) = fromIntegral mm / 1000.0
 
 -- | Returns amount of nautical miles that the given 'Length' represents.
-nauticalMiles :: Length -> Double
-nauticalMiles l = metres l / 1852.0
+toNauticalMiles :: Length -> Double
+toNauticalMiles l = toMetres l / 1852.0
 
 -- | Parses and returns a 'Length'.
 length :: ReadP Length
@@ -97,7 +109,7 @@ length = do
     skipSpaces
     u <- string "m" <|> string "km" <|> string "Nm"
     case u of
-        "m" -> return (Length v)
-        "km" -> return (ofKilometres v)
-        "Nm" -> return (ofNauticalMiles v)
+        "m" -> return (metres v)
+        "km" -> return (kilometres v)
+        "Nm" -> return (nauticalMiles v)
         _ -> pfail

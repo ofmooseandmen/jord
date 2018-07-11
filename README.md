@@ -28,4 +28,4 @@ Jord comes with a REPL (still lacking history and completion at the time of writ
 
     $ jord-exe
     ☷ finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)
-    ☷ angle: 125°59'59.999"
+    ☷ angle: 126°0'0.0"

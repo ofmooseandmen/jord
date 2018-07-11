@@ -69,8 +69,9 @@ newtype GreatCircle = GreatCircle
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
 -- to a 'Position'. This allows the call site to pass either 'NVector' or 'GeoPos' and to get back
 -- the same class instance.
-class Position a where
+class Position a
     -- | Converts a 'NVector' into 'Position' instance.
+    where
     fromNVector :: NVector -> a
     -- | Converts the 'Position' instance into a 'NVector'.
     toNVector :: a -> NVector
@@ -154,12 +155,12 @@ greatCircleBearing p b = GreatCircle (sub n' e')
 --  the final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
 -- Returns 180 if both position are equals.
 finalBearing :: (Position a) => a -> a -> Angle
-finalBearing p1 p2 = normalise (initialBearing p2 p1) 180
+finalBearing p1 p2 = normalise (initialBearing p2 p1) (decimalDegrees 180)
 
 -- | Computes the initial bearing from given @p1@ 'Position' to given @p2@ 'Position', in compass degrees.
 -- Returns 0 if both position are equals.
 initialBearing :: (Position a) => a -> a -> Angle
-initialBearing p1 p2 = normalise (angleBetween gc1 gc2 (Just v1)) 360
+initialBearing p1 p2 = normalise (angleBetween gc1 gc2 (Just v1)) (decimalDegrees 360)
   where
     v1 = toNVector p1
     v2 = toNVector p2

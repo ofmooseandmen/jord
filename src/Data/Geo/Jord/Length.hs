@@ -6,9 +6,8 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working with lengths in metres, kilometres or nautical miles.
+-- Types and functions for working with (signed) lengths in metres, kilometres or nautical miles.
 --
--- TODO this should be distance (indicating that it can be negative, hence a directed distance).
 module Data.Geo.Jord.Length
     ( Length(millimetres)
     , isZero

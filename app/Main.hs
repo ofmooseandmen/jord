@@ -20,6 +20,7 @@ newtype Vars =
 
 main :: IO ()
 main = do
+    hSetEncoding stdin utf8
     hSetEncoding stdout utf8
     putStrLn
         ("jord interpreter, version " ++
@@ -104,7 +105,7 @@ help =
     "\n  Supported Position formats:\n\n" ++
     "       DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
     "       d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
-    "         ^ zeroes can be ommitted and separtors can be any string\n" ++
+    "         ^ zeroes can be ommitted and separtors can also be d, m, s\n" ++
     "       decimal°[N|S],decimal°[E|W]     - 51.885°N,13,1°E\n" ++
     "\n  Supported Angle formats:\n\n" ++
     "       d°m's    - 55°36'21.154\n" ++

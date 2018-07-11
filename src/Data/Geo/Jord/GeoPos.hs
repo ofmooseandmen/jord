@@ -55,8 +55,10 @@ geoPos lat lon =
 -- given longitude is outisde [-180..180]°.
 geoPosE :: Angle -> Angle -> Either String GeoPos
 geoPosE lat lon
-    | not (isWithin lat (-90) 90) = Left ("Invalid latitude=" ++ show lat)
-    | not (isWithin lon (-180) 180) = Left ("Invalid longitude=" ++ show lon)
+    | not (isWithin lat (decimalDegrees (-90)) (decimalDegrees 90)) =
+        Left ("Invalid latitude=" ++ show lat)
+    | not (isWithin lon (decimalDegrees (-180)) (decimalDegrees 180)) =
+        Left ("Invalid longitude=" ++ show lon)
     | otherwise = Right (GeoPos lat lon)
 
 -- | 'GeoPos' from given latitude and longitude.
@@ -114,8 +116,8 @@ blat = do
     (m', s') <- option (0, 0) (ms <|> m)
     h <- hemisphere
     if h == 'N'
-        then angle d' m' s' 0
-        else angle (-d') m' s' 0
+        then dms d' m' s' 0
+        else dms (-d') m' s' 0
 
 -- | Parses and returns a longitude, DDDMMSS expected.
 blon :: ReadP Angle
@@ -124,8 +126,8 @@ blon = do
     (m', s') <- option (0, 0) (ms <|> m)
     m'' <- meridian
     if m'' == 'E'
-        then angle d' m' s' 0
-        else angle (-d') m' s' 0
+        then dms d' m' s' 0
+        else dms (-d') m' s' 0
 
 -- | Parses N or S char.
 hemisphere :: ReadP Char
@@ -159,29 +161,29 @@ human = do
 -- | Parses and returns a latitude, 'Angle'N|S expected.
 hlat :: ReadP Angle
 hlat = do
-    lat <- angleParser
+    lat <- angle
     h <- hemisphere
     if h == 'N'
         then return lat
-        else return (neg lat)
+        else return (negate' lat)
 
 -- | Parses and returns a longitude, 'Angle'E|W expected.
 hlon :: ReadP Angle
 hlon = do
-    lon <- angleParser
+    lon <- angle
     m' <- meridian
     if m' == 'E'
         then return lon
-        else return (neg lon)
+        else return (negate' lon)
 
 -- | Latitude to string.
 showLat :: Angle -> String
 showLat lat
-    | isNegative lat = show (neg lat) ++ "S"
+    | isNegative lat = show (negate' lat) ++ "S"
     | otherwise = show lat ++ "N"
 
 -- | Longitude to string.
 showLon :: Angle -> String
 showLon lon
-    | isNegative lon = show (neg lon) ++ "W"
+    | isNegative lon = show (negate' lon) ++ "W"
     | otherwise = show lon ++ "E"

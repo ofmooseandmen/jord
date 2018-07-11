@@ -1,9 +1,5 @@
 sudo: false
 
-branches:
-  except:
-  - Resolution
-
 # Caching so the next build will be fast too.
 cache:
   directories:

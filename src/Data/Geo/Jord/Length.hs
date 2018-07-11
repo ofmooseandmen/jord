@@ -9,7 +9,8 @@
 -- Types and functions for working with (signed) lengths in metres, kilometres or nautical miles.
 --
 module Data.Geo.Jord.Length
-    ( -- * The 'Length' type
+    (
+    -- * The 'Length' type
       Length(millimetres)
     -- * Smart constructors
     , kilometres

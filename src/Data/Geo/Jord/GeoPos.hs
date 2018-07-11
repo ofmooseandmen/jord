@@ -9,12 +9,13 @@
 -- Types to represent a geographic position by its latitude and longitude.
 --
 module Data.Geo.Jord.GeoPos
-    ( -- * The 'GeoPos' type
+    (
+    -- * The 'GeoPos' type
       GeoPos(latitude, longitude)
-      -- * Smart constructors
+    -- * Smart constructors
     , geoPos
     , geoPosF
-      -- * read
+    -- * read
     , readGeoPos
     , readGeoPosE
     , readGeoPosF

@@ -28,16 +28,23 @@
 --     * closestApproach
 --
 module Data.Geo.Jord.GreatCircle
-    ( GreatCircle
+    (
+    -- * The 'GreatCircle' type
+      GreatCircle
+    -- * The 'Position' type
     , Position(..)
+    -- * Smart constructors
+    , greatCircle
+    , greatCircleE
+    , greatCircleF
+    , greatCircleBearing
+    -- * Geodesic calculations
     , antipode
     , destination
     , destination'
     , distance
     , distance'
     , finalBearing
-    , greatCircle
-    , greatCircleBearing
     , initialBearing
     , interpolate
     , intersections
@@ -47,23 +54,27 @@ module Data.Geo.Jord.GreatCircle
     , southPole
     ) where
 
+import Control.Monad.Fail
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
+import Data.Maybe
+import Prelude hiding (fail)
 
 -- | A circle on the surface of the Earth which lies in a plane passing through
--- the Earth's centre.
+-- the Earth's centre. Every two distinct and non-antipodal points on the surface
+-- of the Earth define a Great Circle.
 --
 -- It is internally represented as its normal vector - i.e. the normal vector
 -- to the plane containing the great circle.
 --
--- Use either 'greatCircle' or 'greatCircleBearing' constructors.
+-- See 'greatCircle', 'greatCircleE', 'greatCircleF' or 'greatCircleBearing' constructors.
 --
 newtype GreatCircle = GreatCircle
     { normal :: NVector
-    }
+    } deriving (Eq, Show)
 
 -- | The 'Position' class defines 2 functions to convert a position to and from a 'NVector'.
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
@@ -94,6 +105,45 @@ instance Position GeoPos where
 instance Position NVector where
     fromNVector v = v
     toNVector v = v
+
+-- | 'GreateCircle' passing by both given 'Position's. 'error's if given positions are
+-- equal or antipodal.
+greatCircle :: (Eq a, Position a, Show a) => a -> a -> GreatCircle
+greatCircle p1 p2 =
+    fromMaybe
+        (error (show p1 ++ " and " ++ show p2 ++ " do not define a unique Great Circle"))
+        (greatCircleF p1 p2)
+
+-- | 'GreateCircle' passing by both given 'Position's. A 'Left' indicates that given positions are
+-- equal or antipodal.
+greatCircleE :: (Eq a, Position a) => a -> a -> Either String GreatCircle
+greatCircleE p1 p2
+   | p1 == p2 = Left "Invalid Great Circle: positions are equal"
+   | p1 == antipode p2 = Left "Invalid Great Circle: positions are antipodal"
+   | otherwise = Right (GreatCircle (cross v1 v2))
+  where
+    v1 = toNVector p1
+    v2 = toNVector p2
+
+-- | 'GreateCircle' passing by both given 'Position's. 'fail's if given positions are
+-- equal or antipodal.
+greatCircleF :: (Eq a, MonadFail m, Position a) => a -> a -> m GreatCircle
+greatCircleF p1 p2 =
+    case e of
+        Left err -> fail err
+        Right gc -> return gc
+  where
+    e = greatCircleE p1 p2
+
+-- | 'GreatCircle' passing by the given 'Position' and heading on given bearing.
+greatCircleBearing :: (Position a) => a -> Angle -> GreatCircle
+greatCircleBearing p b = GreatCircle (sub n' e')
+  where
+    v = toNVector p
+    e = cross northPole v -- easting
+    n = cross v e -- northing
+    e' = scale e (cos' b / norm e)
+    n' = scale n (sin' b / norm n)
 
 -- | Returns the antipodal 'Position' of the given 'Position' - i.e. the position on the surface
 -- of the Earth which is diametrically opposite to the given position.
@@ -130,25 +180,6 @@ distance p1 p2 = arcLength (angleBetween v1 v2 Nothing)
 -- | 'distance' assuming a radius of 'meanEarthRadius'.
 distance' :: (Position a) => a -> a -> Length
 distance' p1 p2 = distance p1 p2 meanEarthRadius
-
--- | Returns a 'GreateCircle' passing by both given 'Position's.
--- TODO: should fail if a == a or a == antipode a
-greatCircle :: (Position a) => a -> a -> GreatCircle
-greatCircle p1 p2 = GreatCircle (cross v1 v2)
-  where
-    v1 = toNVector p1
-    v2 = toNVector p2
-
--- | Returns a 'GreatCircle' passing by the given 'Position' and heading on given bearing.
--- TODO: should fail if a == a or a == antipode a
-greatCircleBearing :: (Position a) => a -> Angle -> GreatCircle
-greatCircleBearing p b = GreatCircle (sub n' e')
-  where
-    v = toNVector p
-    e = cross northPole v -- easting
-    n = cross v e -- northing
-    e' = scale e (cos' b / norm e)
-    n' = scale n (sin' b / norm n)
 
 -- | Computes the final bearing arriving at given destination  @p2@ 'Position' from given 'Position' @p1@.
 --  the final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.

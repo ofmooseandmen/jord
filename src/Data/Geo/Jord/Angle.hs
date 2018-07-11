@@ -9,7 +9,8 @@
 -- Types and functions for working with angles representing latitudes, longitude and bearings.
 --
 module Data.Geo.Jord.Angle
-    ( -- * The 'Angle' type
+    (
+    -- * The 'Angle' type
       Angle
     -- * Smart constructors
     , decimalDegrees
@@ -86,7 +87,9 @@ decimalDegrees dec = Angle (round (dec * 3600000.0))
 dms :: Int -> Int -> Int -> Int -> Angle
 dms degs mins secs millis =
     fromMaybe
-        (error ("Invalid minutes=" ++ show mins ++ " or seconds=" ++ show secs ++ " or milliseconds=" ++ show millis))
+        (error
+             ("Invalid minutes=" ++
+              show mins ++ " or seconds=" ++ show secs ++ " or milliseconds=" ++ show millis))
         (dmsF degs mins secs millis)
 
 -- | 'Angle' from the given given degrees, minutes, seconds and milliseconds.
@@ -114,10 +117,10 @@ dmsE degs mins secs millis
 dmsF :: (MonadFail m) => Int -> Int -> Int -> Int -> m Angle
 dmsF degs mins secs millis =
     case e of
-      Left err -> fail err
-      Right a -> return a
-    where
-      e = dmsE degs mins secs millis
+        Left err -> fail err
+        Right a -> return a
+  where
+    e = dmsE degs mins secs millis
 
 -- | @arcLength a r@ computes the 'Length' of the arc that subtends the angle @a@ for radius @r@.
 arcLength :: Angle -> Length -> Length

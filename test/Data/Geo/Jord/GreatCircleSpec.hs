@@ -88,6 +88,13 @@ spec = do
         it "returns the final bearing in compass degrees" $
             finalBearing (readGeoPos "535941S0255915W") (readGeoPos "54N154E") `shouldBe`
             decimalDegrees 125.6839436
+    describe "Great Circle Smart constructors" $ do
+        it "fails if both positions are equal" $
+            greatCircleE (gp 3 154) (gp 3 154) `shouldBe`
+            Left "Invalid Great Circle: positions are equal"
+        it "fails if both positions are antipodal" $
+            greatCircleE (gp 3 154) (antipode (gp 3 154)) `shouldBe`
+            Left "Invalid Great Circle: positions are antipodal"
     describe "Midpoint" $ do
         it "fails if no point is given" $
             evaluate (midpoint [] :: GeoPos) `shouldThrow`

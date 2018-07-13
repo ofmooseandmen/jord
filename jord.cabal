@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 46c9ee11d0293ded54f9b14b861de347913bf3319b98fd4b6c8cbf308df1dcba
+-- hash: 3687ad47daa84c0bc5ffcb5e93c46271e57d76b6cda528fc084e43f07112abf2
 
 name:           jord
 version:        0.1.0.0
@@ -55,6 +55,7 @@ executable jord-exe
   ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
+    , haskeline >=0.7 && <0.8
     , jord
   default-language: Haskell2010
 

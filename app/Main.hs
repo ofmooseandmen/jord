@@ -11,9 +11,21 @@
 module Main where
 
 import Data.Geo.Jord
-import Data.List (intercalate)
+import Data.List (intercalate, isPrefixOf)
 import Prelude hiding (lookup)
+import System.Console.Haskeline
 import System.IO
+
+search :: String -> [Completion]
+search s = map simpleCompletion $ filter (s `isPrefixOf`) functions
+
+mySettings :: Settings IO
+mySettings =
+    Settings
+        { complete = completeWord Nothing " \t" $ return . search
+        , historyFile = Nothing
+        , autoAddHistory = True
+        }
 
 main :: IO ()
 main = do
@@ -22,25 +34,23 @@ main = do
     putStrLn
         ("jord interpreter, version " ++
          jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
-    loop emptyVault
+    runInputT mySettings $ withInterrupt $ loop emptyVault
   where
     loop state = do
-        input <- readI
+        input <- handleInterrupt (return (Just "")) $ getInputLine "\9783 "
         case input of
-            ":quit" -> return ()
-            ":q" -> return ()
-            _ -> do
-                let (result, newState) = evalS input state
+            Nothing -> return ()
+            Just ":quit" -> return ()
+            Just ":q" -> return ()
+            Just i -> do
+                let (result, newState) = evalS i state
                 printS result
                 loop newState
 
-readI :: IO String
-readI = putStr "\9783 " >> hFlush stdout >> getLine
-
-printS :: Either String String -> IO ()
-printS (Left err) = putStrLn ("\x1b[31m\9783 \x1b[30m" ++ err)
+printS :: Either String String -> InputT IO ()
+printS (Left err) = outputStrLn ("\x1b[31m\9783 \x1b[30m" ++ err)
 printS (Right "") = return ()
-printS (Right r) = putStrLn ("\x1b[32m\9783 \x1b[30m" ++ r)
+printS (Right r) = outputStrLn ("\x1b[32m\9783 \x1b[30m" ++ r)
 
 evalS :: String -> Vault -> (Either String String, Vault)
 evalS s vault
@@ -129,13 +139,13 @@ showV (Ang a) = "angle: " ++ show a
 showV (AngDec a) = "angle (dd): " ++ show a
 showV (Len l) = "length: " ++ show l
 showV (Geo g) = "geographic position: " ++ show g
-showV (Geos gs) = "geographic position: " ++ (intercalate "; " (map show gs))
+showV (Geos gs) = "geographic position: " ++ intercalate "; " (map show gs)
 showV (GeoDec ll) = "latitude, longitude (dd): " ++ show (fst ll) ++ ", " ++ show (snd ll)
 showV (GeosDec lls) =
     "latitudes, longitudes (dd): " ++
-    (intercalate "; " (map (\ll -> show (fst ll) ++ ", " ++ show (snd ll)) lls))
+    intercalate "; " (map (\ll -> show (fst ll) ++ ", " ++ show (snd ll)) lls)
 showV (Vec v) = "n-vector: " ++ show v
-showV (Vecs vs) = "n-vectors: " ++ (intercalate "; " (map show vs))
+showV (Vecs vs) = "n-vectors: " ++ intercalate "; " (map show vs)
 showV (Gc _) = "great circle"
 
 showVar :: String -> Value -> String

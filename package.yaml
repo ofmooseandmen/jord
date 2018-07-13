@@ -40,6 +40,7 @@ executables:
     source-dirs:         app
     dependencies:
     - jord
+    - haskeline >= 0.7 && < 0.8
 
 tests:
   jord-test:

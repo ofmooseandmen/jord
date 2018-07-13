@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3687ad47daa84c0bc5ffcb5e93c46271e57d76b6cda528fc084e43f07112abf2
+-- hash: c02feb8438ae6672aeef69101f3c30532d6cf7132fece36f1fb9b67b207c9332
 
 name:           jord
 version:        0.1.0.0
@@ -10,7 +10,7 @@ synopsis:       Geographic position calculations on Great Circles
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 category:       Geography
 stability:      experimental
-homepage:       https://ofmooseandmen.github.io/jord
+homepage:       https://github.com/ofmooseandmen/jord
 bug-reports:    https://github.com/ofmooseandmen/jord/issues
 author:         Cedric Liegeois
 maintainer:     Cedric Liegeois <ofmooseandmen@yahoo.com>

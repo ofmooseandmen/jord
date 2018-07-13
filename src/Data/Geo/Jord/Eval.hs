@@ -23,7 +23,6 @@ module Data.Geo.Jord.Eval
     , lookup
     ) where
 
-import Control.Applicative ((<|>))
 import Control.Monad.Fail
 import Data.Bifunctor
 import Data.Geo.Jord.Angle
@@ -31,7 +30,8 @@ import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
-import Data.List hiding (delete, lookup, insert)
+import Data.List hiding (delete, insert, lookup)
+import Data.Maybe
 import Prelude hiding (fail, lookup)
 import Text.ParserCombinators.ReadP
 
@@ -40,9 +40,13 @@ data Value
     = Ang Angle -- ^ 'Angle'
     | AngDec Double -- ^ 'Angle' in decimal degrees
     | Len Length -- ^ 'Length'
+    | Gc GreatCircle -- ^ 'GreatCircle'
     | Geo GeoPos -- ^ 'GeoPos'
-    | GeoDec (Double, Double) -- ^ 'GeoPos' latitude and longitude in decimal degrees
+    | Geos [GeoPos] -- ^ list of 'GeoPos'
+    | GeoDec (Double, Double) -- ^ latitude and longitude in decimal degrees
+    | GeosDec [(Double, Double)] -- ^ list of latitude and longitude in decimal degrees
     | Vec NVector -- ^ 'NVector'
+    | Vecs [NVector] -- ^ list of 'NVector's
     deriving (Eq, Show)
 
 -- | 'Either' an error or a 'Value'.
@@ -61,7 +65,7 @@ instance MonadFail (Either String) where
 
 -- | Evaluates @s@, an expression of the form @"(f x y ..)"@.
 --
--- >>> eval "finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E)"
+-- >>> eval "finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E"
 -- 126°
 --
 -- @f@ must be one of the supported 'functions' and each parameter @x@, @y@, .. , is either another function call
@@ -102,19 +106,21 @@ eval :: String -> Vault -> Result
 eval s r =
     case expr s of
         Left err -> Left err
-        Right (rvec, ex) ->
-            case evalExpr ex r of
-                vec@(Right (Vec v)) ->
-                    if rvec
-                        then vec
-                        else Right (Geo (fromNVector v))
-                oth -> oth
+        Right (rvec, ex) -> convert (evalExpr ex r) rvec
+
+convert :: Result -> Bool -> Result
+convert r True = r
+convert r False =
+    case r of
+        Right (Vec v) -> Right (Geo (fromNVector v))
+        Right (Vecs vs) -> Right (Geos (map fromNVector vs))
+        oth -> oth
 
 -- | All supported functions:
 --
 --     * 'antipode'
 --
---     * 'decimal'
+--     * 'decimalDegrees'
 --
 --     * 'destination'
 --
@@ -122,7 +128,11 @@ eval s r =
 --
 --     * 'finalBearing'
 --
+--     * 'greatCircle'
+--
 --     * 'initialBearing'
+--
+--     * 'intersections'
 --
 --     * 'midpoint'
 --
@@ -133,11 +143,13 @@ eval s r =
 functions :: [String]
 functions =
     [ "antipode"
-    , "decimal"
+    , "decimalDegrees"
     , "destination"
     , "distance"
     , "finalBearing"
+    , "greatCircle"
     , "initialBearing"
+    , "intersections"
     , "midpoint"
     , "readGeoPos"
     , "toNVector"
@@ -177,13 +189,14 @@ evalExpr (Antipode a) vault =
     case evalExpr a vault of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
-evalExpr (Decimal d) vault =
+evalExpr (DecimalDegrees d) vault =
     case evalExpr d vault of
         (Right (Ang a)) -> Right (AngDec (toDecimalDegrees a))
-        (Right (Vec p)) ->
-            let g = fromNVector p
-             in Right (GeoDec (toDecimalDegrees (latitude g), toDecimalDegrees (longitude g)))
-        r -> Left ("Call error: decimalLatLong " ++ showErr [r])
+        (Right (Geo p)) -> Right (GeoDec (toDecimalDegrees' p))
+        (Right (Geos ps)) -> Right (GeosDec (map toDecimalDegrees' ps))
+        (Right (Vec p)) -> Right (GeoDec ((toDecimalDegrees' . fromNVector) p))
+        (Right (Vecs ps)) -> Right (GeosDec (map (toDecimalDegrees' . fromNVector) ps))
+        r -> Left ("Call error: decimal degrees" ++ showErr [r])
 evalExpr (Destination a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination' p a' l))
@@ -196,10 +209,23 @@ evalExpr (FinalBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (finalBearing p1 p2))
         r -> Left ("Call error: finalBearing " ++ showErr r)
+evalExpr (GreatCircleSC a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Vec p1), Right (Vec p2)] -> bimap id Gc (greatCircleE p1 p2)
+        [Right (Vec p), Right (Ang a')] -> Right (Gc (greatCircleBearing p a'))
+        r -> Left ("Call error: greatCircle " ++ showErr r)
 evalExpr (InitialBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ showErr r)
+evalExpr (Intersections a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Gc gc1), Right (Gc gc2)] ->
+            maybe
+                (Right (Vecs []))
+                (\is -> Right (Vecs [fst is, snd is]))
+                (intersections gc1 gc2 :: Maybe (NVector, NVector))
+        r -> Left ("Call error: intersections " ++ showErr r)
 evalExpr (Midpoint as) vault =
     let m = map (`evalExpr` vault) as
         ps = [p | Right (Vec p) <- m]
@@ -229,6 +255,9 @@ tryRead s =
 readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
 readE p v s = bimap id v (p s)
 
+toDecimalDegrees' :: GeoPos -> (Double, Double)
+toDecimalDegrees' g = (toDecimalDegrees (latitude g), toDecimalDegrees (longitude g))
+
 ------------------------------------------
 --  Lexical Analysis: String -> [Token] --
 ------------------------------------------
@@ -239,15 +268,19 @@ data Token
     deriving (Show)
 
 tokenise :: (MonadFail m) => String -> m [Token]
-tokenise s =
-    case last (readP_to_S tokens (wrap s)) of
-        (e, "") -> return e
-        r -> fail ("Lexical error: " ++ snd r)
+tokenise s
+    | null r = fail ("Lexical error: " ++ s)
+    | (e, "") <- last r = return (wrap e)
+    | otherwise = fail ("Lexical error: " ++ snd (last r))
+  where
+    r = readP_to_S tokens s
 
-wrap :: String -> String
-wrap s
-    | head s /= '(' = '(' : s ++ [')']
-    | otherwise = s
+-- | wraps top level expression between () if needed.
+wrap :: [Token] -> [Token]
+wrap ts
+    | null ts = ts
+    | (Paren '(') <- head ts = ts
+    | otherwise = Paren '(' : ts ++ [Paren ')']
 
 tokens :: ReadP [Token]
 tokens = many1 token
@@ -256,10 +289,11 @@ token :: ReadP Token
 token = (<++) ((<++) paren func) str
 
 paren :: ReadP Token
-paren = parenO <|> parenC
+paren = (<++) parenO parenC
 
 parenO :: ReadP Token
 parenO = do
+    optional (char ' ')
     c <- char '('
     return (Paren c)
 
@@ -323,7 +357,7 @@ walkParams n ts@(h:t) acc
 data Expr
     = Param String
     | Antipode Expr
-    | Decimal Expr
+    | DecimalDegrees Expr
     | Destination Expr
                   Expr
                   Expr
@@ -331,8 +365,12 @@ data Expr
                Expr
     | FinalBearing Expr
                    Expr
+    | GreatCircleSC Expr
+                    Expr
     | InitialBearing Expr
                      Expr
+    | Intersections Expr
+                    Expr
     | Midpoint [Expr]
     | ReadGeoPos String
     | ToNVector Expr
@@ -340,7 +378,7 @@ data Expr
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
-transform (Call "decimal" [e]) = fmap Decimal (transform e)
+transform (Call "decimalDegrees" [e]) = fmap DecimalDegrees (transform e)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
@@ -354,10 +392,18 @@ transform (Call "finalBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (FinalBearing p1 p2)
+transform (Call "greatCircle" [e1, e2]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (GreatCircleSC p1 p2)
 transform (Call "initialBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (InitialBearing p1 p2)
+transform (Call "intersections" [e1, e2]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (Intersections p1 p2)
 transform (Call "midpoint" e) = do
     ps <- mapM transform e
     return (Midpoint ps)

@@ -11,6 +11,7 @@
 module Main where
 
 import Data.Geo.Jord
+import Data.List (intercalate)
 import Prelude hiding (lookup)
 import System.IO
 
@@ -89,13 +90,17 @@ help =
     "    Top level () can be ommitted: antipode 54N028E\n" ++
     "\n  Position calculations:\n\n" ++
     "       antipode pos               antipodal point of pos\n" ++
+    "       decimalDegrees pos         latitude and longitude of pos in decimal degrees\n" ++
+    "       decimalDegrees ang         decimal degrees of ang\n" ++
     "       distance pos1 pos2         surface distance between pos1 and pos2\n" ++
     "       destination pos len ang    destination position from pos having travelled len\n" ++
     "                                  on initial bearing ang\n" ++
-    "       initialBearing pos1 pos2   bearing arriving at pos2 from pos1\n" ++
     "       finalBearing pos1 pos2     initial bearing from pos1 to pos2\n" ++
-    "       decimal pos                decimal latitude and longitude of pos\n" ++
-    "       decimal ang                decimal degrees of ang\n" ++
+    "       greatCircle  pos1 pos2     great circle passing by pos1 and pos2\n" ++
+    "       greatCircle  pos ang       great circle passing by pos and heading on bearing ang\n" ++
+    "       initialBearing pos1 pos2   bearing arriving at pos2 from pos1\n" ++
+    "       intersections gc1 gc2      intersections between great circle 1 and 2\n" ++
+    "                                  exactly 0 or 2 intersections\n" ++
     "       midpoint [pos]             mid position between [pos]\n" ++
     "       toNVector pos              n-vector corresponding to pos\n" ++
     "\n  Supported Position formats:\n\n" ++
@@ -112,12 +117,7 @@ help =
     "    \9783 a = antipode 54N028E\n" ++ "    \9783 antipode a\n"
 
 save :: Result -> String -> Vault -> Vault
-save (Right a@(Ang _)) k vault = insert k a vault
-save (Right a@(AngDec _)) k vault = insert k a vault
-save (Right l@(Len _)) k vault = insert k l vault
-save (Right g@(Geo _)) k vault = insert k g vault
-save (Right ll@(GeoDec _)) k vault = insert k ll vault
-save (Right v@(Vec _)) k vault = insert k v vault
+save (Right v) k vault = insert k v vault
 save _ _ vault = vault
 
 showR :: Result -> Either String String
@@ -128,9 +128,15 @@ showV :: Value -> String
 showV (Ang a) = "angle: " ++ show a
 showV (AngDec a) = "angle (dd): " ++ show a
 showV (Len l) = "length: " ++ show l
-showV (Geo g) = "geo pos: " ++ show g
-showV (GeoDec ll) = "latitude (dd): " ++ show (fst ll) ++ "; longitude (dd): " ++ show (snd ll)
+showV (Geo g) = "geographic position: " ++ show g
+showV (Geos gs) = "geographic position: " ++ (intercalate "; " (map show gs))
+showV (GeoDec ll) = "latitude, longitude (dd): " ++ show (fst ll) ++ ", " ++ show (snd ll)
+showV (GeosDec lls) =
+    "latitudes, longitudes (dd): " ++
+    (intercalate "; " (map (\ll -> show (fst ll) ++ ", " ++ show (snd ll)) lls))
 showV (Vec v) = "n-vector: " ++ show v
+showV (Vecs vs) = "n-vectors: " ++ (intercalate "; " (map show vs))
+showV (Gc _) = "great circle"
 
 showVar :: String -> Value -> String
 showVar n v = n ++ "=" ++ showV v

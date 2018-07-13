@@ -15,8 +15,9 @@ Jord is a [Haskell](https://www.haskell.org) library that implements various geo
 
 If you have [Stack](https://docs.haskellstack.org/en/stable/README/),
 then:
-
-    $ stack build --test
+```sh
+$ stack build --test
+```
 
 ## How do I use it?
 

@@ -1,3 +1,3 @@
-# Changelog for jord
+### 0.1.0.0
 
-## Unreleased changes
+- Initial version

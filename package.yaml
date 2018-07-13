@@ -7,7 +7,7 @@ maintainer:          Cedric Liegeois <ofmooseandmen@yahoo.com>
 copyright:           2018 Cedric Liegeois
 category:            Geography
 stability:           experimental
-homepage:            https://ofmooseandmen.github.io/jord
+homepage:            https://github.com/ofmooseandmen/jord
 synopsis:            Geographic position calculations on Great Circles
 description:         Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 

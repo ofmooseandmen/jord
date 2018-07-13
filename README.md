@@ -33,6 +33,8 @@ distance' p (antipode p)
 
 Jord comes with a REPL (built with [haskeline](https://github.com/judah/haskeline)) that provides access to all position calculations:
 
-    $ jord-exe
-    ☷ finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E
-    ☷ angle: 126°0'0.0"
+```sh
+$ jord-exe
+☷ finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E
+☷ angle: 126°0'0.0"
+```

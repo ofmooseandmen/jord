@@ -15,8 +15,6 @@
 --
 -- TODO:
 --
---     * crossTrackDistance :: Position -> GreatCircle -> Length
---
 --     * alongTrackDistance :: Position -> GreatArc -> Length
 --
 --     * intersection :: GreatArc -> GreatArc -> Maybe Position
@@ -30,8 +28,9 @@
 --     * closestApproach
 --
 module Data.Geo.Jord.GreatCircle
+    (
     -- * The 'GreatCircle' type
-    ( GreatCircle
+      GreatCircle
     -- * The 'Position' type
     , Position(..)
     -- * Smart constructors
@@ -41,6 +40,8 @@ module Data.Geo.Jord.GreatCircle
     , greatCircleBearing
     -- * Geodesic calculations
     , antipode
+    , crossTrackDistance
+    , crossTrackDistance'
     , destination
     , destination'
     , distance
@@ -51,6 +52,7 @@ module Data.Geo.Jord.GreatCircle
     , intersections
     , meanEarthRadius
     , midpoint
+    -- * Remarkable positions
     , northPole
     , southPole
     ) where
@@ -93,7 +95,7 @@ class Position a where
 
 -- | 'GeoPos' to/from 'NVector'.
 instance Position GeoPos where
-    fromNVector v = geoPos lat lon
+    fromNVector v = latLong lat lon
       where
         lat = atan2' (z v) (sqrt (x v * x v + y v * y v))
         lon = atan2' (y v) (x v)
@@ -162,6 +164,17 @@ greatCircleBearing p b =
 -- of the Earth which is diametrically opposite to the given position.
 antipode :: (Position a) => a -> a
 antipode p = fromNVector (scale (toNVector p) (-1.0))
+
+-- | 'crossTrackDistance'' assuming a radius of 'meanEarthRadius'.
+crossTrackDistance :: (Position a) => a -> GreatCircle -> Length
+crossTrackDistance p gc = crossTrackDistance' p gc meanEarthRadius
+
+-- | Signed distance from given 'Position' to given 'GreatCircle'.
+-- return a negative 'Length' if position if left of great circle,
+-- positive 'Length' if position if right of great circle.
+crossTrackDistance' :: (Position a) => a -> GreatCircle -> Length -> Length
+crossTrackDistance' p gc =
+    arcLength (sub (angleBetween (normal gc) (toNVector p) Nothing) (decimalDegrees 90))
 
 -- | 'destination'' assuming a radius of 'meanEarthRadius'.
 destination :: (Position a) => a -> Angle -> Length -> a

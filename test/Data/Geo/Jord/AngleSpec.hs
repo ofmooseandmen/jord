@@ -13,6 +13,7 @@ spec = do
         it "reads 55d36m21.0s" $ readAngle "55d36m21.0s" `shouldBe` decimalDegrees 55.6058333
         it "reads 55.6058333°" $ readAngle "55.6058333°" `shouldBe` decimalDegrees 55.6058333
         it "reads -55.6058333°" $ readAngle "-55.6058333°" `shouldBe` decimalDegrees (-55.6058333)
+        it "reads 96°01′18″" $ readAngle "96°01′18″" `shouldBe` decimalDegrees 96.02166666
     describe "Adding/Subtracting angles" $ do
         it "adds angles" $
             add (decimalDegrees 55.6058333) (decimalDegrees 5.0) `shouldBe`

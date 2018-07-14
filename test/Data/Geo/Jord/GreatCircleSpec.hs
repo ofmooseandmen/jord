@@ -11,11 +11,25 @@ spec :: Spec
 spec = do
     describe "Antipode" $ do
         it "returns the antipodal point" $
-            antipode (readGeoPos "484137N0061105E") `shouldBe` gp (-48.6936111) (-173.8152777)
+            antipode (readGeoPos "484137N0061105E") `shouldBe`
+            latLongDecimal (-48.6936111) (-173.8152777)
         it "returns the south pole when called with the north pole" $
-            antipode (northPole :: GeoPos) `shouldBe` gp (-90.0) (-180.0)
+            antipode (northPole :: GeoPos) `shouldBe` latLongDecimal (-90.0) (-180.0)
         it "returns the north pole when called with the south pole" $
-            antipode (southPole :: GeoPos) `shouldBe` gp 90.0 (-180.0)
+            antipode (southPole :: GeoPos) `shouldBe` latLongDecimal 90.0 (-180.0)
+    describe "Cross Track Distance" $ do
+        it "returns a negative length when position is left of great circle (bearing)" $ do
+            let p = latLongDecimal 53.2611 (-0.7972)
+            let gc = greatCircleBearing (latLongDecimal 53.3206 (-1.7297)) (decimalDegrees 96.0)
+            crossTrackDistance p gc `shouldBe` metres (-305.663)
+        it "returns a negative length when position is left of great circle" $ do
+            let p = latLongDecimal 53.2611 (-0.7972)
+            let gc = greatCircle (latLongDecimal 53.3206 (-1.7297)) (latLongDecimal 53.1887 0.1334)
+            crossTrackDistance p gc `shouldBe` metres (-307.547)
+        it "returns a positve length when position is right of great circle (bearing)" $ do
+            let p = readGeoPos "531540N0014750W"
+            let gc = greatCircleBearing (readGeoPos "531914N0014347W") (readAngle "96d01m18s")
+            crossTrackDistance p gc `shouldBe` metres 7042.324
     describe "Distance" $ do
         it "returns 0 if both points are equal" $
             distance (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959W") `shouldBe`
@@ -35,7 +49,7 @@ spec = do
             readGeoPos "531914N0014347W"
         it "return the destination point along great-circle at distance and bearing" $
             destination (readGeoPos "531914N0014347W") (decimalDegrees 96.0217) (metres 124800) `shouldBe`
-            gp 53.1882691 0.1332744
+            latLongDecimal 53.1882691 0.1332744
     describe "Initial bearing" $ do
         it "returns the 0 if both point are the same" $
             initialBearing (readGeoPos "500359N0054253W") (readGeoPos "500359N0054253W") `shouldBe`
@@ -64,16 +78,16 @@ spec = do
                 (readGeoPos "53°28'46''N 2°14'43''W")
                 (readGeoPos "55°36'21''N 13°02'09''E")
                 0.5 `shouldBe`
-            gp 54.7835574 5.1949856
+            latLongDecimal 54.7835574 5.1949856
     describe "Intersections" $ do
         it "returns nothing if both great circle are equals" $ do
-            let gc = greatCircleBearing (gp 51.885 0.235) (decimalDegrees 108.63)
+            let gc = greatCircleBearing (latLongDecimal 51.885 0.235) (decimalDegrees 108.63)
             (intersections gc gc :: Maybe (GeoPos, GeoPos)) `shouldBe` Nothing
         it "returns the two points where the two great circles intersects" $ do
-            let gc1 = greatCircleBearing (gp 51.885 0.235) (decimalDegrees 108.63)
-            let gc2 = greatCircleBearing (gp 49.008 2.549) (decimalDegrees 32.72)
+            let gc1 = greatCircleBearing (latLongDecimal 51.885 0.235) (decimalDegrees 108.63)
+            let gc2 = greatCircleBearing (latLongDecimal 49.008 2.549) (decimalDegrees 32.72)
             let (i1, i2) = fromJust (intersections gc1 gc2)
-            i1 `shouldBe` gp 50.9017226 4.4942782
+            i1 `shouldBe` latLongDecimal 50.9017226 4.4942782
             i2 `shouldBe` antipode i1
     describe "Final bearing" $ do
         it "returns the 180.0 if both point are the same" $
@@ -90,10 +104,10 @@ spec = do
             decimalDegrees 125.6839436
     describe "Great Circle Smart constructors" $ do
         it "fails if both positions are equal" $
-            greatCircleE (gp 3 154) (gp 3 154) `shouldBe`
+            greatCircleE (latLongDecimal 3 154) (latLongDecimal 3 154) `shouldBe`
             Left "Invalid Great Circle: positions are equal"
         it "fails if both positions are antipodal" $
-            greatCircleE (gp 3 154) (antipode (gp 3 154)) `shouldBe`
+            greatCircleE (latLongDecimal 3 154) (antipode (latLongDecimal 3 154)) `shouldBe`
             Left "Invalid Great Circle: positions are antipodal"
     describe "Midpoint" $ do
         it "fails if no point is given" $
@@ -103,9 +117,8 @@ spec = do
             midpoint [readGeoPos "500359N0054253W"] `shouldBe` readGeoPos "500359N0054253W"
         it "returns the mid point between given points" $
             midpoint [readGeoPos "500359N0054253W", readGeoPos "583838N0030412W"] `shouldBe`
-            gp 54.3622869 (-4.5306725)
-    describe "North pole" $ it "returns (90, 0)" $ (northPole :: GeoPos) `shouldBe` gp 90.0 0.0
-    describe "South pole" $ it "returns (-90, 0)" $ (southPole :: GeoPos) `shouldBe` gp (-90.0) 0.0
-
-gp :: Double -> Double -> GeoPos
-gp lat lon = geoPos (decimalDegrees lat) (decimalDegrees lon)
+            latLongDecimal 54.3622869 (-4.5306725)
+    describe "North pole" $
+        it "returns (90, 0)" $ (northPole :: GeoPos) `shouldBe` latLongDecimal 90.0 0.0
+    describe "South pole" $
+        it "returns (-90, 0)" $ (southPole :: GeoPos) `shouldBe` latLongDecimal (-90.0) 0.0

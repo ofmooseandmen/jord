@@ -107,13 +107,14 @@ help =
     "    Top level () can be ommitted: antipode 54N028E\n" ++
     "\n  Position calculations:\n\n" ++
     "       antipode pos                   antipodal point of pos\n" ++
+    "       crossTrackDistance pos gc      signed distance from pos to great circle gc\n" ++
     "       distance pos1 pos2             surface distance between pos1 and pos2\n" ++
     "       destination pos len ang        destination position from pos having travelled len\n" ++
     "                                      on initial bearing ang\n" ++
     "       finalBearing pos1 pos2         initial bearing from pos1 to pos2\n" ++
     "       initialBearing pos1 pos2       bearing arriving at pos2 from pos1\n" ++
     "       interpolate pos1 pos2 [0..1]   position at fraction between pos1 and pos2\n" ++
-    "       intersections gc1 gc2          intersections between great circle 1 and 2\n" ++
+    "       intersections gc1 gc2          intersections between great circles gc1 and gc2\n" ++
     "                                      exactly 0 or 2 intersections\n" ++
     "       midpoint [pos]                 mid position between [pos]\n" ++
     "\n  Constructors and conversions:\n\n" ++

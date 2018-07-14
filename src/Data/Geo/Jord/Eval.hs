@@ -122,6 +122,8 @@ convert r False =
 --
 --     * 'antipode'
 --
+--     * 'crossTrackDistance'
+--
 --     * 'destination'
 --
 --     * 'distance'
@@ -153,6 +155,7 @@ convert r False =
 functions :: [String]
 functions =
     [ "antipode"
+    , "crossTrackDistance"
     , "destination"
     , "distance"
     , "finalBearing"
@@ -203,6 +206,10 @@ evalExpr (Antipode a) vault =
     case evalExpr a vault of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
+evalExpr (CrossTrackDistance a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Vec p), Right (Gc gc)] -> Right (Len (crossTrackDistance p gc))
+        r -> Left ("Call error: crossTrackDistance " ++ showErr r)
 evalExpr (Destination a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
@@ -384,6 +391,8 @@ walkParams n ts@(h:t) acc
 data Expr
     = Param String
     | Antipode Expr
+    | CrossTrackDistance Expr
+                         Expr
     | Destination Expr
                   Expr
                   Expr
@@ -411,6 +420,10 @@ data Expr
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
+transform (Call "crossTrackDistance" [e1, e2]) = do
+    p <- transform e1
+    gc <- transform e2
+    return (CrossTrackDistance p gc)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
@@ -437,14 +450,14 @@ transform (Call "interpolate" [e1, e2, Lit s]) = do
     p2 <- transform e2
     case readMaybe s of
         Just d ->
-            if (d >= 0.0 && d <= 1.0)
+            if d >= 0.0 && d <= 1.0
                 then return (Interpolate p1 p2 d)
-                else fail ("Semantic error: interpolate expects [0..1] as last argument")
-        Nothing -> fail ("Semantic error: interpolate expects [0..1] as last argument")
+                else fail "Semantic error: interpolate expects [0..1] as last argument"
+        Nothing -> fail "Semantic error: interpolate expects [0..1] as last argument"
 transform (Call "intersections" [e1, e2]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    return (Intersections p1 p2)
+    gc1 <- transform e1
+    gc2 <- transform e2
+    return (Intersections gc1 gc2)
 transform (Call "midpoint" e) = do
     ps <- mapM transform e
     return (Midpoint ps)

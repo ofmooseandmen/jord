@@ -13,8 +13,12 @@ module Data.Geo.Jord.GeoPos
     -- * The 'GeoPos' type
       GeoPos(latitude, longitude)
     -- * Smart constructors
-    , geoPos
-    , geoPosF
+    , latLong
+    , latLongE
+    , latLongF
+    , latLongDecimal
+    , latLongDecimalE
+    , latLongDecimalF
     -- * read
     , readGeoPos
     , readGeoPosE
@@ -50,17 +54,17 @@ instance Show GeoPos where
 -- | 'GeoPos' from given latitude and longitude.
 -- 'error's if given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
-geoPos :: Angle -> Angle -> GeoPos
-geoPos lat lon =
+latLong :: Angle -> Angle -> GeoPos
+latLong lat lon =
     fromMaybe
         (error ("Invalid latitude=" ++ show lat ++ " or longitude=" ++ show lon))
-        (geoPosF lat lon)
+        (latLongF lat lon)
 
 -- | 'GeoPos' from given latitude and longitude.
 -- A 'Left' indicates that the given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
-geoPosE :: Angle -> Angle -> Either String GeoPos
-geoPosE lat lon
+latLongE :: Angle -> Angle -> Either String GeoPos
+latLongE lat lon
     | not (isWithin lat (decimalDegrees (-90)) (decimalDegrees 90)) =
         Left ("Invalid latitude=" ++ show lat)
     | not (isWithin lon (decimalDegrees (-180)) (decimalDegrees 180)) =
@@ -70,13 +74,31 @@ geoPosE lat lon
 -- | 'GeoPos' from given latitude and longitude.
 -- 'fail's if given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
-geoPosF :: (MonadFail m) => Angle -> Angle -> m GeoPos
-geoPosF lat lon =
+latLongF :: (MonadFail m) => Angle -> Angle -> m GeoPos
+latLongF lat lon =
     case e of
         Left err -> fail err
         Right g -> return g
   where
-    e = geoPosE lat lon
+    e = latLongE lat lon
+
+-- | 'GeoPos' from given latitude and longitude in decimal degrees.
+-- 'error's if given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+latLongDecimal :: Double -> Double -> GeoPos
+latLongDecimal lat lon = latLong (decimalDegrees lat) (decimalDegrees lon)
+
+-- | 'GeoPos' from given latitude and longitude in decimal degrees.
+-- A 'Left' indicates that the given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+latLongDecimalE :: Double -> Double -> Either String GeoPos
+latLongDecimalE lat lon = latLongE (decimalDegrees lat) (decimalDegrees lon)
+
+-- | 'GeoPos' from given latitude and longitude in decimal degrees.
+-- 'fail's if given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+latLongDecimalF :: (MonadFail m) => Double -> Double -> m GeoPos
+latLongDecimalF lat lon = latLongF (decimalDegrees lat) (decimalDegrees lon)
 
 -- | Obtains a 'GeoPos' from the given string formatted as either:
 --
@@ -117,7 +139,7 @@ block :: ReadP GeoPos
 block = do
     lat <- blat
     lon <- blon
-    geoPosF lat lon
+    latLongF lat lon
 
 -- | Parses and returns a latitude, DDMMSS expected.
 blat :: ReadP Angle
@@ -166,7 +188,7 @@ human = do
     lat <- hlat
     _ <- char ' ' <|> char ','
     lon <- hlon
-    geoPosF lat lon
+    latLongF lat lon
 
 -- | Parses and returns a latitude, 'Angle'N|S expected.
 hlat :: ReadP Angle

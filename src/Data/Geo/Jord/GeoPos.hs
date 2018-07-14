@@ -19,6 +19,8 @@ module Data.Geo.Jord.GeoPos
     , readGeoPos
     , readGeoPosE
     , readGeoPosF
+    -- * Misc.
+    , toDecimalDegrees'
     ) where
 
 import Control.Applicative hiding (many)
@@ -101,6 +103,10 @@ readGeoPosF s =
      in case pg of
             Left e -> fail e
             Right g -> return g
+
+-- | Converts the given 'GeoPos' to tuple of latitude and longitude in decimal degrees.
+toDecimalDegrees' :: GeoPos -> (Double, Double)
+toDecimalDegrees' g = (toDecimalDegrees (latitude g), toDecimalDegrees (longitude g))
 
 -- | Parses and returns a 'GeoPos'.
 geo :: ReadP GeoPos

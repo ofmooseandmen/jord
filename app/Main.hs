@@ -11,13 +11,20 @@
 module Main where
 
 import Data.Geo.Jord
-import Data.List (intercalate, isPrefixOf)
+import Data.List ((\\), dropWhileEnd, intercalate, isPrefixOf)
 import Prelude hiding (lookup)
 import System.Console.Haskeline
 import System.IO
 
 search :: String -> [Completion]
-search s = map simpleCompletion $ filter (s `isPrefixOf`) functions
+search s = map simpleCompletion $ filterFunc s
+
+filterFunc :: String -> [String]
+filterFunc s = map (\f -> pref ++ f) filtered
+  where
+    pref = dropWhileEnd (/= '(') s -- everything before the last '(' inclusive
+    func = (\\) s pref -- everything after the last '('
+    filtered = filter (\f -> func `isPrefixOf` f) functions
 
 mySettings :: Settings IO
 mySettings =
@@ -100,19 +107,24 @@ help =
     "    Top level () can be ommitted: antipode 54N028E\n" ++
     "\n  Position calculations:\n\n" ++
     "       antipode pos                   antipodal point of pos\n" ++
-    "       decimalDegrees pos             latitude and longitude of pos in decimal degrees\n" ++
-    "       decimalDegrees ang             decimal degrees of ang\n" ++
     "       distance pos1 pos2             surface distance between pos1 and pos2\n" ++
     "       destination pos len ang        destination position from pos having travelled len\n" ++
-    "                                        on initial bearing ang\n" ++
+    "                                      on initial bearing ang\n" ++
     "       finalBearing pos1 pos2         initial bearing from pos1 to pos2\n" ++
     "       greatCircle  pos1 pos2         great circle passing by pos1 and pos2\n" ++
     "       greatCircle  pos ang           great circle passing by pos and heading on bearing ang\n" ++
     "       initialBearing pos1 pos2       bearing arriving at pos2 from pos1\n" ++
     "       interpolate pos1 pos2 [0..1]   position at fraction between pos1 and pos2\n" ++
     "       intersections gc1 gc2          intersections between great circle 1 and 2\n" ++
-    "                                        exactly 0 or 2 intersections\n" ++
+    "                                      exactly 0 or 2 intersections\n" ++
     "       midpoint [pos]                 mid position between [pos]\n" ++
+    "\n  Constructors and conversions:\n\n" ++
+    "       readGeoPos string              read string to geographic position\n" ++
+    "       toDecimalDegrees pos           latitude and longitude of pos in decimal degrees\n" ++
+    "       toDecimalDegrees ang           decimal degrees of ang\n" ++
+    "       toKilometres len               length to kilometres\n" ++
+    "       toMetres len                   length to metres\n" ++
+    "       toNauticalMiles len            length to nautical miles\n" ++
     "       toNVector pos                  n-vector corresponding to pos\n" ++
     "\n  Supported Position formats:\n\n" ++
     "       DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
@@ -138,6 +150,7 @@ showR (Right v) = Right (showV v)
 showV :: Value -> String
 showV (Ang a) = "angle: " ++ show a
 showV (AngDec a) = "angle (dd): " ++ show a
+showV (Dbl d) = show d
 showV (Len l) = "length: " ++ show l
 showV (Geo g) = "geographic position: " ++ show g
 showV (Geos gs) = "geographic position: " ++ intercalate "; " (map show gs)

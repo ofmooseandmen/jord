@@ -40,6 +40,7 @@ import Text.Read (readMaybe)
 data Value
     = Ang Angle -- ^ 'Angle'
     | AngDec Double -- ^ 'Angle' in decimal degrees
+    | Dbl Double -- ^ double
     | Len Length -- ^ 'Length'
     | Gc GreatCircle -- ^ 'GreatCircle'
     | Geo GeoPos -- ^ 'GeoPos'
@@ -121,8 +122,6 @@ convert r False =
 --
 --     * 'antipode'
 --
---     * 'decimalDegrees'
---
 --     * 'destination'
 --
 --     * 'distance'
@@ -141,12 +140,19 @@ convert r False =
 --
 --     * 'readGeoPos'
 --
+--     * 'toDecimalDegrees'
+--
+--     * 'toKilometres'
+--
+--     * 'toMetres'
+--
+--     * 'toNauticalMiles'
+--
 --     * 'toNVector'
 --
 functions :: [String]
 functions =
     [ "antipode"
-    , "decimalDegrees"
     , "destination"
     , "distance"
     , "finalBearing"
@@ -156,6 +162,10 @@ functions =
     , "intersections"
     , "midpoint"
     , "readGeoPos"
+    , "toDecimalDegrees"
+    , "toKilometres"
+    , "toMetres"
+    , "toNauticalMiles"
     , "toNVector"
     ]
 
@@ -193,14 +203,6 @@ evalExpr (Antipode a) vault =
     case evalExpr a vault of
         (Right (Vec p)) -> Right (Vec (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
-evalExpr (DecimalDegrees d) vault =
-    case evalExpr d vault of
-        (Right (Ang a)) -> Right (AngDec (toDecimalDegrees a))
-        (Right (Geo p)) -> Right (GeoDec (toDecimalDegrees' p))
-        (Right (Geos ps)) -> Right (GeosDec (map toDecimalDegrees' ps))
-        (Right (Vec p)) -> Right (GeoDec ((toDecimalDegrees' . fromNVector) p))
-        (Right (Vecs ps)) -> Right (GeosDec (map (toDecimalDegrees' . fromNVector) ps))
-        r -> Left ("Call error: decimal degrees" ++ showErr [r])
 evalExpr (Destination a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
@@ -242,6 +244,26 @@ evalExpr (Midpoint as) vault =
             else Left ("Call error: midpoint " ++ showErr m)
 evalExpr (ReadGeoPos s) _ =
     bimap (\e -> "Call error: readGeoPos : " ++ e) (Vec . toNVector) (readGeoPosE s)
+evalExpr (ToDecimalDegrees e) vault =
+    case evalExpr e vault of
+        (Right (Ang a)) -> Right (AngDec (toDecimalDegrees a))
+        (Right (Geo p)) -> Right (GeoDec (toDecimalDegrees' p))
+        (Right (Geos ps)) -> Right (GeosDec (map toDecimalDegrees' ps))
+        (Right (Vec p)) -> Right (GeoDec ((toDecimalDegrees' . fromNVector) p))
+        (Right (Vecs ps)) -> Right (GeosDec (map (toDecimalDegrees' . fromNVector) ps))
+        r -> Left ("Call error: toDecimalDegrees" ++ showErr [r])
+evalExpr (ToKilometres e) vault =
+    case evalExpr e vault of
+        (Right (Len l)) -> Right (Dbl (toKilometres l))
+        r -> Left ("Call error: toKilometres" ++ showErr [r])
+evalExpr (ToMetres e) vault =
+    case evalExpr e vault of
+        (Right (Len l)) -> Right (Dbl (toMetres l))
+        r -> Left ("Call error: toMetres" ++ showErr [r])
+evalExpr (ToNauticalMiles e) vault =
+    case evalExpr e vault of
+        (Right (Len l)) -> Right (Dbl (toNauticalMiles l))
+        r -> Left ("Call error: toNauticalMiles" ++ showErr [r])
 evalExpr (ToNVector a) vault =
     case evalExpr a vault of
         r@(Right (Vec _)) -> r
@@ -262,9 +284,6 @@ tryRead s =
 
 readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
 readE p v s = bimap id v (p s)
-
-toDecimalDegrees' :: GeoPos -> (Double, Double)
-toDecimalDegrees' g = (toDecimalDegrees (latitude g), toDecimalDegrees (longitude g))
 
 ------------------------------------------
 --  Lexical Analysis: String -> [Token] --
@@ -365,7 +384,6 @@ walkParams n ts@(h:t) acc
 data Expr
     = Param String
     | Antipode Expr
-    | DecimalDegrees Expr
     | Destination Expr
                   Expr
                   Expr
@@ -384,12 +402,15 @@ data Expr
                     Expr
     | Midpoint [Expr]
     | ReadGeoPos String
+    | ToDecimalDegrees Expr
+    | ToKilometres Expr
+    | ToMetres Expr
+    | ToNauticalMiles Expr
     | ToNVector Expr
     deriving (Show)
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
-transform (Call "decimalDegrees" [e]) = fmap DecimalDegrees (transform e)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
@@ -428,6 +449,10 @@ transform (Call "midpoint" e) = do
     ps <- mapM transform e
     return (Midpoint ps)
 transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
+transform (Call "toDecimalDegrees" [e]) = fmap ToDecimalDegrees (transform e)
+transform (Call "toKilometres" [e]) = fmap ToKilometres (transform e)
+transform (Call "toMetres" [e]) = fmap ToMetres (transform e)
+transform (Call "toNauticalMiles" [e]) = fmap ToNauticalMiles (transform e)
 transform (Call "toNVector" [e]) = fmap ToNVector (transform e)
 transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)
 transform (Lit s) = return (Param s)

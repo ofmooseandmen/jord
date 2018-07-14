@@ -168,7 +168,7 @@ fromRadians r = decimalDegrees (r / pi * 180.0)
 toRadians :: Angle -> Double
 toRadians a = toDecimalDegrees a * pi / 180.0
 
--- | Converts the given 'Angle' into decimal degrees.
+-- | Converts the given 'Angle' to decimal degrees.
 toDecimalDegrees :: Angle -> Double
 toDecimalDegrees (Angle millis) = fromIntegral millis / 3600000.0
 

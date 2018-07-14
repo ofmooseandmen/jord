@@ -152,12 +152,16 @@ greatCircleBearing p b = GreatCircle (sub n' e')
 antipode :: (Position a) => a -> a
 antipode p = fromNVector (scale (toNVector p) (-1.0))
 
+-- | 'destination'' assuming a radius of 'meanEarthRadius'.
+destination :: (Position a) => a -> Angle -> Length -> a
+destination p b d = destination' p b d meanEarthRadius
+
 -- | Computes the destination 'Position' from the given 'Position' having travelled the given distance on the
 -- given initial bearing (bearing will normally vary before destination is reached) and using the given earth radius.
 --
 -- This is known as the direct geodetic problem.
-destination :: (Position a) => a -> Angle -> Length -> Length -> a
-destination p b d r
+destination' :: (Position a) => a -> Angle -> Length -> Length -> a
+destination' p b d r
     | isZero d = p
     | otherwise = fromNVector (add (scale v (cos' ta)) (scale de (sin' ta)))
   where
@@ -167,21 +171,17 @@ destination p b d r
     ta = central d r -- central angle
     de = add (scale nd (cos' b)) (scale ed (sin' b)) -- unit vector in the direction of the azimuth
 
--- | 'destination' assuming a radius of 'meanEarthRadius'.
-destination' :: (Position a) => a -> Angle -> Length -> a
-destination' p b d = destination p b d meanEarthRadius
+-- | 'distance'' assuming a radius of 'meanEarthRadius'.
+distance :: (Position a) => a -> a -> Length
+distance p1 p2 = distance' p1 p2 meanEarthRadius
 
 -- | Computes the surface distance (length of geodesic) in 'Meters' assuming a
 -- spherical Earth between the two given 'Position's and using the given earth radius.
-distance :: (Position a) => a -> a -> Length -> Length
-distance p1 p2 = arcLength (angleBetween v1 v2 Nothing)
+distance' :: (Position a) => a -> a -> Length -> Length
+distance' p1 p2 = arcLength (angleBetween v1 v2 Nothing)
   where
     v1 = toNVector p1
     v2 = toNVector p2
-
--- | 'distance' assuming a radius of 'meanEarthRadius'.
-distance' :: (Position a) => a -> a -> Length
-distance' p1 p2 = distance p1 p2 meanEarthRadius
 
 -- | Computes the final bearing arriving at given destination  @p2@ 'Position' from given 'Position' @p1@.
 --  the final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.

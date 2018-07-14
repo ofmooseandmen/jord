@@ -203,11 +203,11 @@ evalExpr (DecimalDegrees d) vault =
         r -> Left ("Call error: decimal degrees" ++ showErr [r])
 evalExpr (Destination a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
-        [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination' p a' l))
+        [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
         r -> Left ("Call error: destination " ++ showErr r)
 evalExpr (Distance a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance' p1 p2))
+        [Right (Vec p1), Right (Vec p2)] -> Right (Len (distance p1 p2))
         r -> Left ("Call error: distance " ++ showErr r)
 evalExpr (FinalBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of

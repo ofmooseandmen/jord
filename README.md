@@ -1,4 +1,4 @@
-# ☷ Jord
+# Jord
 
 [![travis build status](https://img.shields.io/travis/ofmooseandmen/jord/master.svg?label=travis+build)](https://travis-ci.org/ofmooseandmen/jord)
 [![license](https://img.shields.io/badge/license-BSD3-lightgray.svg)](https://opensource.org/licenses/BSD-3-Clause)
@@ -36,6 +36,6 @@ Jord comes with a REPL (built with [haskeline](https://github.com/judah/haskelin
 
 ```sh
 $ jord-exe
-☷ finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E
-☷ angle: 126°0'0.0"
+jord> finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E
+jord> angle: 126°0'0.0"
 ```

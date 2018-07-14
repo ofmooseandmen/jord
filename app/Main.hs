@@ -14,7 +14,6 @@ import Data.Geo.Jord
 import Data.List ((\\), dropWhileEnd, intercalate, isPrefixOf)
 import Prelude hiding (lookup)
 import System.Console.Haskeline
-import System.IO
 
 search :: String -> [Completion]
 search s = map simpleCompletion $ filterFunc s
@@ -36,15 +35,13 @@ mySettings =
 
 main :: IO ()
 main = do
-    hSetEncoding stdin utf8
-    hSetEncoding stdout utf8
     putStrLn
         ("jord interpreter, version " ++
          jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
     runInputT mySettings $ withInterrupt $ loop emptyVault
   where
     loop state = do
-        input <- handleInterrupt (return (Just "")) $ getInputLine "\9783 "
+        input <- handleInterrupt (return (Just "")) $ getInputLine "jord> "
         case input of
             Nothing -> return ()
             Just ":quit" -> return ()
@@ -55,9 +52,9 @@ main = do
                 loop newState
 
 printS :: Either String String -> InputT IO ()
-printS (Left err) = outputStrLn ("\x1b[31m\9783 \x1b[30m" ++ err)
+printS (Left err) = outputStrLn ("jord> " ++ err)
 printS (Right "") = return ()
-printS (Right r) = outputStrLn ("\x1b[32m\9783 \x1b[30m" ++ r)
+printS (Right r) = outputStrLn ("jord> " ++ r)
 
 evalS :: String -> Vault -> (Either String String, Vault)
 evalS s vault
@@ -138,7 +135,7 @@ help =
     "\n  Supported Length formats: {l}m, {l}km, {l}Nm\n\n" ++
     "\n  Every evaluated result can be saved by prefixing the expression with \"{var} = \"\n" ++
     "  Saved results can subsequently be used when calling a function\n" ++
-    "    \9783 a = antipode 54N028E\n" ++ "    \9783 antipode a\n"
+    "    jord> a = antipode 54N028E\n" ++ "    jord> antipode a\n"
 
 save :: Result -> String -> Vault -> Vault
 save (Right v) k vault = insert k v vault

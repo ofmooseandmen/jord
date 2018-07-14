@@ -170,8 +170,15 @@ crossTrackDistance :: (Position a) => a -> GreatCircle -> Length
 crossTrackDistance p gc = crossTrackDistance' p gc meanEarthRadius
 
 -- | Signed distance from given 'Position' to given 'GreatCircle'.
--- return a negative 'Length' if position if left of great circle,
--- positive 'Length' if position if right of great circle.
+-- Returns a negative 'Length' if position if left of great circle,
+-- positive 'Length' if position if right of great circle; the orientation of the
+-- great circle is therefore important:
+--
+-- @
+--     let gc1 = greatCircle (latLongDecimal 51 0) (latLongDecimal 52 1)
+--     let gc2 = greatCircle (latLongDecimal 52 1) (latLongDecimal 51 0)
+--     crossTrackDistance p gc1 == (- crossTrackDistance p gc2)
+-- @
 crossTrackDistance' :: (Position a) => a -> GreatCircle -> Length -> Length
 crossTrackDistance' p gc =
     arcLength (sub (angleBetween (normal gc) (toNVector p) Nothing) (decimalDegrees 90))
@@ -245,7 +252,8 @@ interpolate p0 p1 f
     v1 = toNVector p1
 
 -- | Computes the intersections between the two given 'GreatCircle's.
--- Two 'GreatCircle's intersect exactly twice unless there are equal, in which case 'Nothing' is returned.
+-- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
+-- in which case 'Nothing' is returned.
 intersections :: (Position a) => GreatCircle -> GreatCircle -> Maybe (a, a)
 intersections gc1 gc2
     | norm i == 0.0 = Nothing

@@ -83,6 +83,10 @@ spec = do
         it "returns nothing if both great circle are equals" $ do
             let gc = greatCircleBearing (latLongDecimal 51.885 0.235) (decimalDegrees 108.63)
             (intersections gc gc :: Maybe (GeoPos, GeoPos)) `shouldBe` Nothing
+        it "returns nothing if both great circle are equals (opposite orientation)" $ do
+            let gc1 = greatCircle (latLongDecimal 51.885 0.235) (latLongDecimal 52.885 1.235)
+            let gc2 = greatCircle (latLongDecimal 52.885 1.235) (latLongDecimal 51.885 0.235)
+            (intersections gc1 gc2 :: Maybe (GeoPos, GeoPos)) `shouldBe` Nothing
         it "returns the two points where the two great circles intersects" $ do
             let gc1 = greatCircleBearing (latLongDecimal 51.885 0.235) (decimalDegrees 108.63)
             let gc2 = greatCircleBearing (latLongDecimal 49.008 2.549) (decimalDegrees 32.72)

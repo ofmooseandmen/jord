@@ -111,14 +111,14 @@ help =
     "       destination pos len ang        destination position from pos having travelled len\n" ++
     "                                      on initial bearing ang\n" ++
     "       finalBearing pos1 pos2         initial bearing from pos1 to pos2\n" ++
-    "       greatCircle  pos1 pos2         great circle passing by pos1 and pos2\n" ++
-    "       greatCircle  pos ang           great circle passing by pos and heading on bearing ang\n" ++
     "       initialBearing pos1 pos2       bearing arriving at pos2 from pos1\n" ++
     "       interpolate pos1 pos2 [0..1]   position at fraction between pos1 and pos2\n" ++
     "       intersections gc1 gc2          intersections between great circle 1 and 2\n" ++
     "                                      exactly 0 or 2 intersections\n" ++
     "       midpoint [pos]                 mid position between [pos]\n" ++
     "\n  Constructors and conversions:\n\n" ++
+    "       greatCircle  pos1 pos2         great circle passing by pos1 and pos2\n" ++
+    "       greatCircle  pos ang           great circle passing by pos and heading on bearing ang\n" ++
     "       readGeoPos string              read string to geographic position\n" ++
     "       toDecimalDegrees pos           latitude and longitude of pos in decimal degrees\n" ++
     "       toDecimalDegrees ang           decimal degrees of ang\n" ++
@@ -160,7 +160,7 @@ showV (GeosDec lls) =
     intercalate "; " (map (\ll -> show (fst ll) ++ ", " ++ show (snd ll)) lls)
 showV (Vec v) = "n-vector: " ++ show v
 showV (Vecs vs) = "n-vectors: " ++ intercalate "; " (map show vs)
-showV (Gc _) = "great circle"
+showV (Gc gc) = "great circle: " ++ show gc
 
 showVar :: String -> Value -> String
 showVar n v = n ++ "=" ++ showV v

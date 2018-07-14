@@ -30,9 +30,8 @@
 --     * closestApproach
 --
 module Data.Geo.Jord.GreatCircle
-    (
     -- * The 'GreatCircle' type
-      GreatCircle
+    ( GreatCircle
     -- * The 'Position' type
     , Position(..)
     -- * Smart constructors
@@ -74,9 +73,13 @@ import Prelude hiding (fail)
 --
 -- See 'greatCircle', 'greatCircleE', 'greatCircleF' or 'greatCircleBearing' constructors.
 --
-newtype GreatCircle = GreatCircle
+data GreatCircle = GreatCircle
     { normal :: NVector
-    } deriving (Eq, Show)
+    , dscr :: String
+    } deriving (Eq)
+
+instance Show GreatCircle where
+    show = dscr
 
 -- | The 'Position' class defines 2 functions to convert a position to and from a 'NVector'.
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
@@ -120,9 +123,14 @@ greatCircle p1 p2 =
 -- equal or antipodal.
 greatCircleE :: (Eq a, Position a) => a -> a -> Either String GreatCircle
 greatCircleE p1 p2
-   | p1 == p2 = Left "Invalid Great Circle: positions are equal"
-   | p1 == antipode p2 = Left "Invalid Great Circle: positions are antipodal"
-   | otherwise = Right (GreatCircle (cross v1 v2))
+    | p1 == p2 = Left "Invalid Great Circle: positions are equal"
+    | p1 == antipode p2 = Left "Invalid Great Circle: positions are antipodal"
+    | otherwise =
+        Right
+            (GreatCircle
+                 (cross v1 v2)
+                 ("passing by " ++
+                  show (fromNVector v1 :: GeoPos) ++ " & " ++ show (fromNVector v2 :: GeoPos)))
   where
     v1 = toNVector p1
     v2 = toNVector p2
@@ -139,7 +147,10 @@ greatCircleF p1 p2 =
 
 -- | 'GreatCircle' passing by the given 'Position' and heading on given bearing.
 greatCircleBearing :: (Position a) => a -> Angle -> GreatCircle
-greatCircleBearing p b = GreatCircle (sub n' e')
+greatCircleBearing p b =
+    GreatCircle
+        (sub n' e')
+        ("passing by " ++ show (fromNVector v :: GeoPos) ++ " heading on " ++ show b)
   where
     v = toNVector p
     e = cross northPole v -- easting

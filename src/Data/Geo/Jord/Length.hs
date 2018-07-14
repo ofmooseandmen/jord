@@ -92,15 +92,15 @@ readLengthF s =
             Left e -> fail e
             Right l -> return l
 
--- | @toKilometres l@ converts @l@ to kilometres.
+-- | @toKilometres l@ converts @l@ to kilometres.
 toKilometres :: Length -> Double
 toKilometres l = toMetres l / 1000.0
 
--- | @toMetres l@ converts @l@ to metres.
+-- | @toMetres l@ converts @l@ to metres.
 toMetres :: Length -> Double
 toMetres (Length mm) = fromIntegral mm / 1000.0
 
--- | @toNauticalMiles l@ converts @l@ to nautical miles.
+-- | @toNauticalMiles l@ converts @l@ to nautical miles.
 toNauticalMiles :: Length -> Double
 toNauticalMiles l = toMetres l / 1852.0
 

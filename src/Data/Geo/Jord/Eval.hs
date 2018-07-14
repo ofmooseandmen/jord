@@ -34,6 +34,7 @@ import Data.List hiding (delete, insert, lookup)
 import Data.Maybe
 import Prelude hiding (fail, lookup)
 import Text.ParserCombinators.ReadP
+import Text.Read (readMaybe)
 
 -- | A value accepted and returned by 'eval'.
 data Value
@@ -132,6 +133,8 @@ convert r False =
 --
 --     * 'initialBearing'
 --
+--     * 'interpolate'
+--
 --     * 'intersections'
 --
 --     * 'midpoint'
@@ -149,6 +152,7 @@ functions =
     , "finalBearing"
     , "greatCircle"
     , "initialBearing"
+    , "interpolate"
     , "intersections"
     , "midpoint"
     , "readGeoPos"
@@ -218,6 +222,10 @@ evalExpr (InitialBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Vec p1), Right (Vec p2)] -> Right (Ang (initialBearing p1 p2))
         r -> Left ("Call error: initialBearing " ++ showErr r)
+evalExpr (Interpolate a b c) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Vec p1), Right (Vec p2)] -> Right (Vec (interpolate p1 p2 c))
+        r -> Left ("Call error: interpolate " ++ showErr r)
 evalExpr (Intersections a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Gc gc1), Right (Gc gc2)] ->
@@ -369,6 +377,9 @@ data Expr
                     Expr
     | InitialBearing Expr
                      Expr
+    | Interpolate Expr
+                  Expr
+                  Double
     | Intersections Expr
                     Expr
     | Midpoint [Expr]
@@ -400,6 +411,15 @@ transform (Call "initialBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (InitialBearing p1 p2)
+transform (Call "interpolate" [e1, e2, Lit s]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    case readMaybe s of
+        Just d ->
+            if (d >= 0.0 && d <= 1.0)
+                then return (Interpolate p1 p2 d)
+                else fail ("Semantic error: interpolate expects [0..1] as last argument")
+        Nothing -> fail ("Semantic error: interpolate expects [0..1] as last argument")
 transform (Call "intersections" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2

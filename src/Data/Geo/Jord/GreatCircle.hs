@@ -58,7 +58,7 @@ module Data.Geo.Jord.GreatCircle
 
 import Control.Monad.Fail
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.GeoPos
+import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
@@ -85,7 +85,7 @@ instance Show GreatCircle where
 
 -- | The 'Position' class defines 2 functions to convert a position to and from a 'NVector'.
 -- All functions in this module first convert 'Position' to 'NVector' and any resulting 'NVector' back
--- to a 'Position'. This allows the call site to pass either 'NVector' or 'GeoPos' and to get back
+-- to a 'Position'. This allows the call site to pass either 'NVector' or 'LatLong' and to get back
 -- the same class instance.
 class Position a where
     -- | Converts a 'NVector' into 'Position' instance.
@@ -93,8 +93,8 @@ class Position a where
     -- | Converts the 'Position' instance into a 'NVector'.
     toNVector :: a -> NVector
 
--- | 'GeoPos' to/from 'NVector'.
-instance Position GeoPos where
+-- | 'LatLong' to/from 'NVector'.
+instance Position LatLong where
     fromNVector v = latLong lat lon
       where
         lat = atan2' (z v) (sqrt (x v * x v + y v * y v))
@@ -132,7 +132,7 @@ greatCircleE p1 p2
             (GreatCircle
                  (cross v1 v2)
                  ("passing by " ++
-                  show (fromNVector v1 :: GeoPos) ++ " & " ++ show (fromNVector v2 :: GeoPos)))
+                  show (fromNVector v1 :: LatLong) ++ " & " ++ show (fromNVector v2 :: LatLong)))
   where
     v1 = toNVector p1
     v2 = toNVector p2
@@ -152,7 +152,7 @@ greatCircleBearing :: (Position a) => a -> Angle -> GreatCircle
 greatCircleBearing p b =
     GreatCircle
         (sub n' e')
-        ("passing by " ++ show (fromNVector v :: GeoPos) ++ " heading on " ++ show b)
+        ("passing by " ++ show (fromNVector v :: LatLong) ++ " heading on " ++ show b)
   where
     v = toNVector p
     e = cross northPole v -- easting
@@ -314,7 +314,7 @@ mean ps =
     ts = filter (\l -> length l == 2) (subsequences vs)
     antipodals =
         filter
-            (\t -> (fromNVector (antipode (head t)) :: GeoPos) == (fromNVector (last t) :: GeoPos))
+            (\t -> (fromNVector (antipode (head t)) :: LatLong) == (fromNVector (last t) :: LatLong))
             ts
 
 -- | a, b,c  => a b, a, c, b, c

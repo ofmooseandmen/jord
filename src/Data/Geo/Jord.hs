@@ -16,8 +16,8 @@
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.Eval
-    , module Data.Geo.Jord.GeoPos
     , module Data.Geo.Jord.GreatCircle
+    , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NVector
     , module Data.Geo.Jord.Quantity
@@ -26,12 +26,12 @@ module Data.Geo.Jord
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Eval
-import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 
 -- | version.
 jordVersion :: String
-jordVersion = "0.1.0.0"
+jordVersion = "0.2.0.0"

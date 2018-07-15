@@ -121,14 +121,14 @@ help =
     "       greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
     "       latLong ang ang                geographic position from latitude & longitude\n" ++
     "       latLongDecimal double double   geographic position from latitude & longitude (DD)\n" ++
-    "       readGeoPos string              geographic position from string\n" ++
+    "       readLatLong string             geographic position from string\n" ++
     "       toDecimalDegrees pos           latitude and longitude of pos in decimal degrees\n" ++
     "       toDecimalDegrees ang           decimal degrees of ang\n" ++
     "       toKilometres len               length to kilometres\n" ++
     "       toMetres len                   length to metres\n" ++
     "       toNauticalMiles len            length to nautical miles\n" ++
     "       toNVector pos                  n-vector corresponding to pos\n" ++
-    "\n  Supported Position formats:\n\n" ++
+    "\n  Supported Lat/Long formats:\n\n" ++
     "       DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
     "       d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
     "         ^ zeroes can be ommitted and separtors can also be d, m, s\n" ++
@@ -155,10 +155,10 @@ showV (AngDec a) = "angle (dd): " ++ show a
 showV (Bool b) = show b
 showV (Double d) = show d
 showV (Len l) = "length: " ++ show l
-showV (Geo g) = "geographic position: " ++ show g
-showV (Geos gs) = "geographic position: " ++ intercalate "; " (map show gs)
-showV (GeoDec ll) = "latitude, longitude (dd): " ++ show (fst ll) ++ ", " ++ show (snd ll)
-showV (GeosDec lls) =
+showV (Ll g) = "geographic position: " ++ show g
+showV (Lls gs) = "geographic position: " ++ intercalate "; " (map show gs)
+showV (LlDec ll) = "latitude, longitude (dd): " ++ show (fst ll) ++ ", " ++ show (snd ll)
+showV (LlsDec lls) =
     "latitudes, longitudes (dd): " ++
     intercalate "; " (map (\ll -> show (fst ll) ++ ", " ++ show (snd ll)) lls)
 showV (Vec v) = "n-vector: " ++ show v

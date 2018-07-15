@@ -1,5 +1,5 @@
 name:                jord
-version:             0.1.0.0
+version:             0.2.0.0
 github:              ofmooseandmen/jord
 license:             BSD3
 author:              Cedric Liegeois
@@ -27,7 +27,7 @@ library:
     - Data.Geo.Jord.Angle
     - Data.Geo.Jord.Eval
     - Data.Geo.Jord.Length
-    - Data.Geo.Jord.GeoPos
+    - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.GreatCircle
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.NVector

@@ -2,10 +2,10 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c02feb8438ae6672aeef69101f3c30532d6cf7132fece36f1fb9b67b207c9332
+-- hash: 74495fddb48b9ac763697af122192d945ece8b209bf98cbf1be74eaf93904439
 
 name:           jord
-version:        0.1.0.0
+version:        0.2.0.0
 synopsis:       Geographic position calculations on Great Circles
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 category:       Geography
@@ -33,7 +33,7 @@ library
       Data.Geo.Jord.Angle
       Data.Geo.Jord.Eval
       Data.Geo.Jord.Length
-      Data.Geo.Jord.GeoPos
+      Data.Geo.Jord.LatLong
       Data.Geo.Jord.GreatCircle
       Data.Geo.Jord.Quantity
       Data.Geo.Jord.NVector
@@ -65,8 +65,8 @@ test-suite jord-test
   other-modules:
       Data.Geo.Jord.AngleSpec
       Data.Geo.Jord.EvalSpec
-      Data.Geo.Jord.GeoPosSpec
       Data.Geo.Jord.GreatCircleSpec
+      Data.Geo.Jord.LatLongSpec
       Data.Geo.Jord.LengthSpec
       Paths_jord
   hs-source-dirs:

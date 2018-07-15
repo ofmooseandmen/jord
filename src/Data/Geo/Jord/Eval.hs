@@ -26,8 +26,8 @@ module Data.Geo.Jord.Eval
 import Control.Monad.Fail
 import Data.Bifunctor
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.List hiding (delete, insert, lookup)
@@ -44,10 +44,10 @@ data Value
     | Double Double -- ^ double
     | Len Length -- ^ 'Length'
     | Gc GreatCircle -- ^ 'GreatCircle'
-    | Geo GeoPos -- ^ 'GeoPos'
-    | Geos [GeoPos] -- ^ list of 'GeoPos'
-    | GeoDec (Double, Double) -- ^ latitude and longitude in decimal degrees
-    | GeosDec [(Double, Double)] -- ^ list of latitude and longitude in decimal degrees
+    | Ll LatLong -- ^ 'LatLong'
+    | Lls [LatLong] -- ^ list of 'LatLong'
+    | LlDec (Double, Double) -- ^ latitude and longitude in decimal degrees
+    | LlsDec [(Double, Double)] -- ^ list of latitude and longitude in decimal degrees
     | Vec NVector -- ^ 'NVector'
     | Vecs [NVector] -- ^ list of 'NVector's
     deriving (Eq, Show)
@@ -73,7 +73,7 @@ instance MonadFail (Either String) where
 --
 -- @f@ must be one of the supported 'functions' and each parameter @x@, @y@, .. , is either another function call
 -- or a 'String' parameter. Parameters are either resolved by name using the 'Resolve'
--- function @r@ or if it returns 'Nothing', 'read' to an 'Angle', a 'Length' or a 'GeoPos'.
+-- function @r@ or if it returns 'Nothing', 'read' to an 'Angle', a 'Length' or a 'LatLong'.
 --
 -- If the evaluation is successful, returns the resulting 'Value' ('Right') otherwise
 -- a description of the error ('Left').
@@ -88,11 +88,11 @@ instance MonadFail (Either String) where
 --     a2 = eval "(finalBearing a1 54S154W)" vault
 -- @
 --
--- By default, all returned positions are 'Geo' ('GeoPos'), to get back a 'Vec' ('NVector'), the
+-- All returned positions are 'LatLong' by default, to get back a 'NVector' the
 -- expression must be wrapped by 'toNVector'.
 --
 -- @
---     dest = eval "destination 54°N,154°E 54° 1000m" -- Right Geo
+--     dest = eval "destination 54°N,154°E 54° 1000m" -- Right Ll
 --     dest = eval "toNVector (destination 54°N,154°E 54° 1000m)" -- Right Vec
 -- @
 --
@@ -115,8 +115,8 @@ convert :: Result -> Bool -> Result
 convert r True = r
 convert r False =
     case r of
-        Right (Vec v) -> Right (Geo (fromNVector v))
-        Right (Vecs vs) -> Right (Geos (map fromNVector vs))
+        Right (Vec v) -> Right (Ll (fromNVector v))
+        Right (Vecs vs) -> Right (Lls (map fromNVector vs))
         oth -> oth
 
 -- | All supported functions:
@@ -149,7 +149,7 @@ convert r False =
 --
 --     * 'latLongDecimal'
 --
---     * 'readGeoPos'
+--     * 'readLatLong'
 --
 --     * 'toDecimalDegrees'
 --
@@ -177,7 +177,7 @@ functions =
     , "latLong"
     , "latLongDecimal"
     , "mean"
-    , "readGeoPos"
+    , "readLatLong"
     , "toDecimalDegrees"
     , "toKilometres"
     , "toMetres"
@@ -212,7 +212,7 @@ expectVec _ = False
 evalExpr :: Expr -> Vault -> Result
 evalExpr (Param p) vault =
     case lookup p vault of
-        Just (Geo g) -> Right (Vec (toNVector g))
+        Just (Ll ll) -> Right (Vec (toNVector ll))
         Just v -> Right v
         Nothing -> tryRead p
 evalExpr (Antipode a) vault =
@@ -276,15 +276,15 @@ evalExpr (LatLong a b) vault =
         r -> Left ("Call error: latLong " ++ showErr r)
 evalExpr (LatLongDecimal a b) _ =
     bimap (\e -> "Call error: LatLongDecimal : " ++ e) (Vec . toNVector) (latLongDecimalE a b)
-evalExpr (ReadGeoPos s) _ =
-    bimap (\e -> "Call error: readGeoPos : " ++ e) (Vec . toNVector) (readGeoPosE s)
+evalExpr (ReadLatLong s) _ =
+    bimap (\e -> "Call error: readLatLong : " ++ e) (Vec . toNVector) (readLatLongE s)
 evalExpr (ToDecimalDegrees e) vault =
     case evalExpr e vault of
         (Right (Ang a)) -> Right (AngDec (toDecimalDegrees a))
-        (Right (Geo p)) -> Right (GeoDec (toDecimalDegrees' p))
-        (Right (Geos ps)) -> Right (GeosDec (map toDecimalDegrees' ps))
-        (Right (Vec p)) -> Right (GeoDec ((toDecimalDegrees' . fromNVector) p))
-        (Right (Vecs ps)) -> Right (GeosDec (map (toDecimalDegrees' . fromNVector) ps))
+        (Right (Ll p)) -> Right (LlDec (toDecimalDegrees' p))
+        (Right (Lls ps)) -> Right (LlsDec (map toDecimalDegrees' ps))
+        (Right (Vec p)) -> Right (LlDec ((toDecimalDegrees' . fromNVector) p))
+        (Right (Vecs ps)) -> Right (LlsDec (map (toDecimalDegrees' . fromNVector) ps))
         r -> Left ("Call error: toDecimalDegrees" ++ showErr [r])
 evalExpr (ToKilometres e) vault =
     case evalExpr e vault of
@@ -311,10 +311,10 @@ tryRead s =
     case r of
         [a@(Right (Ang _)), _, _] -> a
         [_, l@(Right (Len _)), _] -> l
-        [_, _, Right (Geo g)] -> Right (Vec (toNVector g))
+        [_, _, Right (Ll ll)] -> Right (Vec (toNVector ll))
         _ -> Left ("couldn't read " ++ s)
   where
-    r = map ($ s) [readE readAngleE Ang, readE readLengthE Len, readE readGeoPosE Geo]
+    r = map ($ s) [readE readAngleE Ang, readE readLengthE Len, readE readLatLongE Ll]
 
 readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
 readE p v s = bimap id v (p s)
@@ -443,7 +443,7 @@ data Expr
               Expr
     | LatLongDecimal Double
                      Double
-    | ReadGeoPos String
+    | ReadLatLong String
     | ToDecimalDegrees Expr
     | ToKilometres Expr
     | ToMetres Expr
@@ -504,7 +504,7 @@ transform (Call "latLongDecimal" [Lit s1, Lit s2]) = do
 transform (Call "mean" e) = do
     ps <- mapM transform e
     return (Mean ps)
-transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
+transform (Call "readLatLong" [Lit s]) = return (ReadLatLong s)
 transform (Call "toDecimalDegrees" [e]) = fmap ToDecimalDegrees (transform e)
 transform (Call "toKilometres" [e]) = fmap ToKilometres (transform e)
 transform (Call "toMetres" [e]) = fmap ToMetres (transform e)

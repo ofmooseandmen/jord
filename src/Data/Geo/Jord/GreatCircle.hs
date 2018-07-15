@@ -19,8 +19,6 @@
 --
 --     * intersection :: GreatArc -> GreatArc -> Maybe Position
 --
---     * isWithin :: [Position] -> Bool
---
 --     * nearestPoint :: Position -> GreatArc -> Position
 --
 --     * area :: [Position] -> Surface
@@ -30,7 +28,7 @@
 module Data.Geo.Jord.GreatCircle
     (
     -- * The 'GreatCircle' type
-      GreatCircle
+    GreatCircle
     -- * The 'Position' type
     , Position(..)
     -- * Smart constructors
@@ -50,9 +48,10 @@ module Data.Geo.Jord.GreatCircle
     , initialBearing
     , interpolate
     , intersections
+    , isInside
+    , mean
+    -- * Misc.
     , meanEarthRadius
-    , midpoint
-    -- * Remarkable positions
     , northPole
     , southPole
     ) where
@@ -63,7 +62,8 @@ import Data.Geo.Jord.GeoPos
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
-import Data.Maybe
+import Data.List (subsequences)
+import Data.Maybe (fromMaybe)
 import Prelude hiding (fail)
 
 -- | A circle on the surface of the Earth which lies in a plane passing through
@@ -232,7 +232,7 @@ initialBearing p1 p2 = normalise (angleBetween gc1 gc2 (Just v1)) (decimalDegree
 
 -- | Computes the 'Position' at given fraction @f@ between the two given 'Position's @p0@ and @p1@.
 --
--- Special cases:
+-- Special conditions:
 --
 -- @
 --     interpolate p0 p1 0.0 => p0
@@ -262,17 +262,65 @@ intersections gc1 gc2
   where
     i = cross (normal gc1) (normal gc2)
 
+-- | Determines whether the given 'Position' is inside the polygon defined by the given list of 'Position's.
+-- The polygon is closed if needed (i.e. if @head ps /= last ps@).
+--
+-- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
+-- will sum to less than 360°, and exterior point angles will be small but non-zero.
+--
+-- Always returns 'False' if positions does not at least defines a triangle.
+--
+isInside :: (Eq a, Position a) => a -> [a] -> Bool
+isInside p ps
+    | null ps = False
+    | head ps == last ps = isInside p (init ps)
+    | length ps < 3 = False
+    | otherwise =
+        let aSum = foldl (\a v' -> add a (uncurry angleBetween v' (Just v))) (decimalDegrees 0) es
+         in abs (toDecimalDegrees aSum) > 180.0
+  where
+    v = toNVector p
+    es = egdes (map (sub v . toNVector) ps)
+
+-- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
+egdes :: [NVector] -> [(NVector, NVector)]
+egdes ps = zip ps ps'
+  where
+    ps' = tail ps ++ [head ps]
+
+-- | Computes the geographic mean 'Position' of the given 'Position's if it is defined.
+--
+-- The geographic mean is not defined for the antipodals positions (since they
+-- cancel each other).
+--
+-- Special conditions:
+--
+-- @
+--     mean [] == Nothing
+--     mean [p] == Just p
+--     mean [p1, p2, p3] == Just circumcentre
+--     mean [p1, .., antipode p1] == Nothing
+-- @
+--
+mean :: (Position a) => [a] -> Maybe a
+mean [] = Nothing
+mean [p] = Just p
+mean ps =
+    if null antipodals
+        then Just (fromNVector (unit (foldl add zero vs)))
+        else Nothing
+  where
+    vs = map toNVector ps
+    ts = filter (\l -> length l == 2) (subsequences vs)
+    antipodals =
+        filter
+            (\t -> (fromNVector (antipode (head t)) :: GeoPos) == (fromNVector (last t) :: GeoPos))
+            ts
+
+-- | a, b,c  => a b, a, c, b, c
 -- | Mean Earth radius: 6,371,008.8 metres.
 meanEarthRadius :: Length
 meanEarthRadius = metres 6371008.8
-
--- | Computes the mid 'Position' between the given list of 'Position's which must be non-empty.
-midpoint :: (Position a) => [a] -> a
-midpoint [] = error "midpoint expects a non-empty list"
-midpoint [p] = p
-midpoint ps = fromNVector (unit (foldl add zero vs))
-  where
-    vs = map toNVector ps
 
 -- | 'Position' of the North Pole.
 northPole :: (Position a) => a

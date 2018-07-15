@@ -110,14 +110,18 @@ help =
     "                                      on initial bearing ang\n" ++
     "       finalBearing pos1 pos2         initial bearing from pos1 to pos2\n" ++
     "       initialBearing pos1 pos2       bearing arriving at pos2 from pos1\n" ++
-    "       interpolate pos1 pos2 [0..1]   position at fraction between pos1 and pos2\n" ++
+    "       interpolate pos1 pos2 (0..1)   position at fraction between pos1 and pos2\n" ++
     "       intersections gc1 gc2          intersections between great circles gc1 and gc2\n" ++
     "                                      exactly 0 or 2 intersections\n" ++
-    "       midpoint [pos]                 mid position between [pos]\n" ++
+    "       isInside pos [pos]             is p inside polygon?\n" ++
+    "       mean [pos]                     geographical mean position of [pos]\n" ++
     "\n  Constructors and conversions:\n\n" ++
-    "       greatCircle  pos1 pos2         great circle passing by pos1 and pos2\n" ++
-    "       greatCircle  pos ang           great circle passing by pos and heading on bearing ang\n" ++
-    "       readGeoPos string              read string to geographic position\n" ++
+    "       decimalDegrees double          angle from decimal degrees\n" ++
+    "       greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
+    "       greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
+    "       latLong ang ang                geographic position from latitude & longitude\n" ++
+    "       latLongDecimal double double   geographic position from latitude & longitude (DD)\n" ++
+    "       readGeoPos string              geographic position from string\n" ++
     "       toDecimalDegrees pos           latitude and longitude of pos in decimal degrees\n" ++
     "       toDecimalDegrees ang           decimal degrees of ang\n" ++
     "       toKilometres len               length to kilometres\n" ++
@@ -148,7 +152,8 @@ showR (Right v) = Right (showV v)
 showV :: Value -> String
 showV (Ang a) = "angle: " ++ show a
 showV (AngDec a) = "angle (dd): " ++ show a
-showV (Dbl d) = show d
+showV (Bool b) = show b
+showV (Double d) = show d
 showV (Len l) = "length: " ++ show l
 showV (Geo g) = "geographic position: " ++ show g
 showV (Geos gs) = "geographic position: " ++ intercalate "; " (map show gs)

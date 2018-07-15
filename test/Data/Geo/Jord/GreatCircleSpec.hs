@@ -30,6 +30,10 @@ spec = do
             let p = readGeoPos "531540N0014750W"
             let gc = greatCircleBearing (readGeoPos "531914N0014347W") (readAngle "96d01m18s")
             crossTrackDistance p gc `shouldBe` metres 7042.324
+        it "returns a positive length when position is left of great circle" $ do
+            let p = antipode (latLongDecimal 53.2611 (-0.7972))
+            let gc = greatCircle (latLongDecimal 53.3206 (-1.7297)) (latLongDecimal 53.1887 0.1334)
+            crossTrackDistance p gc `shouldBe` metres 307.547
     describe "Distance" $ do
         it "returns 0 if both points are equal" $
             distance (readGeoPos "500359N1795959W") (readGeoPos "500359N1795959W") `shouldBe`
@@ -93,6 +97,59 @@ spec = do
             let (i1, i2) = fromJust (intersections gc1 gc2)
             i1 `shouldBe` latLongDecimal 50.9017226 4.4942782
             i2 `shouldBe` antipode i1
+    describe "isInside" $ do
+        it "return False if polygon is empty" $ isInside (latLongDecimal 45 1) [] `shouldBe` False
+        it "return False if polygon does not define at least a triangle" $
+            isInside (latLongDecimal 45 1) [latLongDecimal 45 1, latLongDecimal 45 2] `shouldBe`
+            False
+        it "returns True if point is inside polygon" $ do
+            let polygon =
+                    [ latLongDecimal 45 1
+                    , latLongDecimal 45 2
+                    , latLongDecimal 46 2
+                    , latLongDecimal 46 1
+                    ]
+            let p = latLongDecimal 45.1 1.1
+            isInside p polygon `shouldBe` True
+        it "returns False if point is inside polygon" $ do
+            let polygon =
+                    [ latLongDecimal 45 1
+                    , latLongDecimal 45 2
+                    , latLongDecimal 46 2
+                    , latLongDecimal 46 1
+                    ]
+            let p = antipode (latLongDecimal 45.1 1.1)
+            isInside p polygon `shouldBe` False
+        it "returns False if point is a vertex of the polygon" $ do
+            let polygon =
+                    [ latLongDecimal 45 1
+                    , latLongDecimal 45 2
+                    , latLongDecimal 46 2
+                    , latLongDecimal 46 1
+                    ]
+            let p = latLongDecimal 45 1
+            isInside p polygon `shouldBe` False
+        it "handles closed polygons" $ do
+            let polygon =
+                    [ latLongDecimal 45 1
+                    , latLongDecimal 45 2
+                    , latLongDecimal 46 2
+                    , latLongDecimal 46 1
+                    , latLongDecimal 45 1
+                    ]
+            let p = latLongDecimal 45.1 1.1
+            isInside p polygon `shouldBe` True
+        it "handles concave polygons" $ do
+            let malmo = latLongDecimal 55.6050 13.0038
+            let ystad = latLongDecimal 55.4295 13.82
+            let lund = latLongDecimal 55.7047 13.1910
+            let helsingborg = latLongDecimal 56.0465 12.6945
+            let kristianstad = latLongDecimal 56.0294 14.1567
+            let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
+            let hoor = latLongDecimal 55.9295 13.5297
+            let hassleholm = latLongDecimal 56.1589 13.7668
+            isInside hoor polygon `shouldBe` True
+            isInside hassleholm polygon `shouldBe` False
     describe "Final bearing" $ do
         it "returns the 180.0 if both point are the same" $
             finalBearing (readGeoPos "500359N0054253W") (readGeoPos "500359N0054253W") `shouldBe`
@@ -113,15 +170,22 @@ spec = do
         it "fails if both positions are antipodal" $
             greatCircleE (latLongDecimal 3 154) (antipode (latLongDecimal 3 154)) `shouldBe`
             Left "Invalid Great Circle: positions are antipodal"
-    describe "Midpoint" $ do
-        it "fails if no point is given" $
-            evaluate (midpoint [] :: GeoPos) `shouldThrow`
-            errorCall "midpoint expects a non-empty list"
+    describe "Mean" $ do
+        it "returns Nothing if no point is given" $ (mean [] :: Maybe GeoPos) `shouldBe` Nothing
         it "returns the unique given point" $
-            midpoint [readGeoPos "500359N0054253W"] `shouldBe` readGeoPos "500359N0054253W"
-        it "returns the mid point between given points" $
-            midpoint [readGeoPos "500359N0054253W", readGeoPos "583838N0030412W"] `shouldBe`
-            latLongDecimal 54.3622869 (-4.5306725)
+            mean [readGeoPos "500359N0054253W"] `shouldBe` Just (readGeoPos "500359N0054253W")
+        it "returns the geographical mean" $
+            mean [readGeoPos "500359N0054253W", readGeoPos "583838N0030412W"] `shouldBe`
+            Just (latLongDecimal 54.3622869 (-4.5306725))
+        it "returns Nothing if list contains antipodal points" $ do
+            let points =
+                    [ latLongDecimal 45 1
+                    , latLongDecimal 45 2
+                    , latLongDecimal 46 2
+                    , latLongDecimal 46 1
+                    , antipode (latLongDecimal 45 2)
+                    ]
+            mean points `shouldBe` Nothing
     describe "North pole" $
         it "returns (90, 0)" $ (northPole :: GeoPos) `shouldBe` latLongDecimal 90.0 0.0
     describe "South pole" $

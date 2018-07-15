@@ -40,7 +40,8 @@ import Text.Read (readMaybe)
 data Value
     = Ang Angle -- ^ 'Angle'
     | AngDec Double -- ^ 'Angle' in decimal degrees
-    | Dbl Double -- ^ double
+    | Bool Bool -- ^ boolean
+    | Double Double -- ^ double
     | Len Length -- ^ 'Length'
     | Gc GreatCircle -- ^ 'GreatCircle'
     | Geo GeoPos -- ^ 'GeoPos'
@@ -124,6 +125,8 @@ convert r False =
 --
 --     * 'crossTrackDistance'
 --
+--     * 'decimalDegrees'
+--
 --     * 'destination'
 --
 --     * 'distance'
@@ -138,7 +141,13 @@ convert r False =
 --
 --     * 'intersections'
 --
---     * 'midpoint'
+--     * 'isInside'
+--
+--     * 'mean'
+--
+--     * 'latLong'
+--
+--     * 'latLongDecimal'
 --
 --     * 'readGeoPos'
 --
@@ -157,13 +166,17 @@ functions =
     [ "antipode"
     , "crossTrackDistance"
     , "destination"
+    , "decimalDegrees"
     , "distance"
     , "finalBearing"
     , "greatCircle"
     , "initialBearing"
     , "interpolate"
     , "intersections"
-    , "midpoint"
+    , "isInside"
+    , "latLong"
+    , "latLongDecimal"
+    , "mean"
     , "readGeoPos"
     , "toDecimalDegrees"
     , "toKilometres"
@@ -210,6 +223,7 @@ evalExpr (CrossTrackDistance a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Vec p), Right (Gc gc)] -> Right (Len (crossTrackDistance p gc))
         r -> Left ("Call error: crossTrackDistance " ++ showErr r)
+evalExpr (DecimalDegrees d) _ = Right (Ang (decimalDegrees d))
 evalExpr (Destination a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
         [Right (Vec p), Right (Ang a'), Right (Len l)] -> Right (Vec (destination p a' l))
@@ -243,12 +257,25 @@ evalExpr (Intersections a b) vault =
                 (\is -> Right (Vecs [fst is, snd is]))
                 (intersections gc1 gc2 :: Maybe (NVector, NVector))
         r -> Left ("Call error: intersections " ++ showErr r)
-evalExpr (Midpoint as) vault =
+evalExpr (IsInside as) vault =
+    let m = map (`evalExpr` vault) as
+        ps = [p | Right (Vec p) <- m]
+     in if length m == length ps && length ps > 3
+            then Right (Bool (isInside (head ps) (tail ps)))
+            else Left ("Call error: isInside " ++ showErr m)
+evalExpr (Mean as) vault =
     let m = map (`evalExpr` vault) as
         ps = [p | Right (Vec p) <- m]
      in if length m == length ps
-            then Right (Vec (midpoint ps))
-            else Left ("Call error: midpoint " ++ showErr m)
+            then maybe (Left ("Call error: mean " ++ showErr m)) (Right . Vec) (mean ps)
+            else Left ("Call error: mean " ++ showErr m)
+evalExpr (LatLong a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Ang lat), Right (Ang lon)] ->
+            bimap (\e -> "Call error: latLong : " ++ e) (Vec . toNVector) (latLongE lat lon)
+        r -> Left ("Call error: latLong " ++ showErr r)
+evalExpr (LatLongDecimal a b) _ =
+    bimap (\e -> "Call error: LatLongDecimal : " ++ e) (Vec . toNVector) (latLongDecimalE a b)
 evalExpr (ReadGeoPos s) _ =
     bimap (\e -> "Call error: readGeoPos : " ++ e) (Vec . toNVector) (readGeoPosE s)
 evalExpr (ToDecimalDegrees e) vault =
@@ -261,15 +288,15 @@ evalExpr (ToDecimalDegrees e) vault =
         r -> Left ("Call error: toDecimalDegrees" ++ showErr [r])
 evalExpr (ToKilometres e) vault =
     case evalExpr e vault of
-        (Right (Len l)) -> Right (Dbl (toKilometres l))
+        (Right (Len l)) -> Right (Double (toKilometres l))
         r -> Left ("Call error: toKilometres" ++ showErr [r])
 evalExpr (ToMetres e) vault =
     case evalExpr e vault of
-        (Right (Len l)) -> Right (Dbl (toMetres l))
+        (Right (Len l)) -> Right (Double (toMetres l))
         r -> Left ("Call error: toMetres" ++ showErr [r])
 evalExpr (ToNauticalMiles e) vault =
     case evalExpr e vault of
-        (Right (Len l)) -> Right (Dbl (toNauticalMiles l))
+        (Right (Len l)) -> Right (Double (toNauticalMiles l))
         r -> Left ("Call error: toNauticalMiles" ++ showErr [r])
 evalExpr (ToNVector a) vault =
     case evalExpr a vault of
@@ -393,6 +420,7 @@ data Expr
     | Antipode Expr
     | CrossTrackDistance Expr
                          Expr
+    | DecimalDegrees Double
     | Destination Expr
                   Expr
                   Expr
@@ -409,7 +437,12 @@ data Expr
                   Double
     | Intersections Expr
                     Expr
-    | Midpoint [Expr]
+    | IsInside [Expr]
+    | Mean [Expr]
+    | LatLong Expr
+              Expr
+    | LatLongDecimal Double
+                     Double
     | ReadGeoPos String
     | ToDecimalDegrees Expr
     | ToKilometres Expr
@@ -424,6 +457,7 @@ transform (Call "crossTrackDistance" [e1, e2]) = do
     p <- transform e1
     gc <- transform e2
     return (CrossTrackDistance p gc)
+transform (Call "decimalDegrees" [Lit s]) = fmap DecimalDegrees (readDouble s)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
@@ -448,19 +482,28 @@ transform (Call "initialBearing" [e1, e2]) = do
 transform (Call "interpolate" [e1, e2, Lit s]) = do
     p1 <- transform e1
     p2 <- transform e2
-    case readMaybe s of
-        Just d ->
-            if d >= 0.0 && d <= 1.0
-                then return (Interpolate p1 p2 d)
-                else fail "Semantic error: interpolate expects [0..1] as last argument"
-        Nothing -> fail "Semantic error: interpolate expects [0..1] as last argument"
+    d <- readDouble s
+    if d >= 0.0 && d <= 1.0
+        then return (Interpolate p1 p2 d)
+        else fail "Semantic error: interpolate expects [0..1] as last argument"
 transform (Call "intersections" [e1, e2]) = do
     gc1 <- transform e1
     gc2 <- transform e2
     return (Intersections gc1 gc2)
-transform (Call "midpoint" e) = do
+transform (Call "isInside" e) = do
     ps <- mapM transform e
-    return (Midpoint ps)
+    return (IsInside ps)
+transform (Call "latLong" [e1, e2]) = do
+    gc1 <- transform e1
+    gc2 <- transform e2
+    return (LatLong gc1 gc2)
+transform (Call "latLongDecimal" [Lit s1, Lit s2]) = do
+    d1 <- readDouble s1
+    d2 <- readDouble s2
+    return (LatLongDecimal d1 d2)
+transform (Call "mean" e) = do
+    ps <- mapM transform e
+    return (Mean ps)
 transform (Call "readGeoPos" [Lit s]) = return (ReadGeoPos s)
 transform (Call "toDecimalDegrees" [e]) = fmap ToDecimalDegrees (transform e)
 transform (Call "toKilometres" [e]) = fmap ToKilometres (transform e)
@@ -469,3 +512,9 @@ transform (Call "toNauticalMiles" [e]) = fmap ToNauticalMiles (transform e)
 transform (Call "toNVector" [e]) = fmap ToNVector (transform e)
 transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)
 transform (Lit s) = return (Param s)
+
+readDouble :: (MonadFail m) => String -> m Double
+readDouble s =
+    case readMaybe s of
+        Just d -> return d
+        Nothing -> fail ("Unparsable double: " ++ s)

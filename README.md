@@ -28,11 +28,11 @@ import Data.Geo.Jord
 destination (readGeoPos "531914N0014347W") (decimalDegrees 96.0217) (nauticalMiles 500)
 
 -- distance between 54°N,154°E and its antipodal position
-let p = geoPos (decimalDegrees 54) (decimalDegrees 154)
+let p = latLongDecimal 54 154
 distance p (antipode p)
 ```
 
-Jord comes with a REPL (built with [haskeline](https://github.com/judah/haskeline)) that provides access to all position calculations:
+Jord comes with a REPL (built with [haskeline](https://github.com/judah/haskeline)):
 
 ```sh
 $ jord-exe

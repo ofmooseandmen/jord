@@ -30,6 +30,7 @@ import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Position
 import Data.List hiding (delete, insert, lookup)
 import Data.Maybe
 import Prelude hiding (fail, lookup)

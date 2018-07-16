@@ -1,4 +1,4 @@
-# Jord
+# Jord - Geographical Position Calculations
 
 [![travis build status](https://img.shields.io/travis/ofmooseandmen/jord/master.svg?label=travis+build)](https://travis-ci.org/ofmooseandmen/jord)
 [![Hackage](https://img.shields.io/hackage/v/jord.svg)](http://hackage.haskell.org/package/jord)
@@ -6,11 +6,9 @@
 
 > __Jord__ [_Swedish_] is __Earth__ [_English_]
 
-Geographic position calculations on great circles.
-
 ## What is this?
 
-Jord is a [Haskell](https://www.haskell.org) library that implements various geographical position calculations on great circles using the algorithms described in [Gade, K. (2010). A Non-singular Horizontal Position Representation](http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf).
+Jord is a [Haskell](https://www.haskell.org) library that implements various geographical position calculations using the algorithms described in [Gade, K. (2010). A Non-singular Horizontal Position Representation](http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf).
 
 ## How do I build it?
 

@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 74495fddb48b9ac763697af122192d945ece8b209bf98cbf1be74eaf93904439
+-- hash: d25fa7abd03c2ec15967a946f5c9a98623156912f659e8ceb96e21887c32c862
 
 name:           jord
 version:        0.2.0.0
@@ -35,6 +35,7 @@ library
       Data.Geo.Jord.Length
       Data.Geo.Jord.LatLong
       Data.Geo.Jord.GreatCircle
+      Data.Geo.Jord.Position
       Data.Geo.Jord.Quantity
       Data.Geo.Jord.NVector
   other-modules:
@@ -43,7 +44,7 @@ library
       src
   ghc-options: -Wall
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
   default-language: Haskell2010
 
 executable jord-exe
@@ -54,7 +55,7 @@ executable jord-exe
       app
   ghc-options: -Wall
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
     , haskeline >=0.7 && <0.8
     , jord
   default-language: Haskell2010
@@ -68,13 +69,14 @@ test-suite jord-test
       Data.Geo.Jord.GreatCircleSpec
       Data.Geo.Jord.LatLongSpec
       Data.Geo.Jord.LengthSpec
+      Data.Geo.Jord.PositionSpec
       Paths_jord
   hs-source-dirs:
       test
   ghc-options: -Wall
   build-depends:
       HUnit ==1.6.*
-    , base >=4.7 && <5
+    , base >=4.9 && <5
     , hspec ==2.*
     , jord
   default-language: Haskell2010

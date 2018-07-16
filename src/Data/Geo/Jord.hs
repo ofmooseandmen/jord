@@ -20,6 +20,7 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NVector
+    , module Data.Geo.Jord.Position
     , module Data.Geo.Jord.Quantity
     , jordVersion
     ) where
@@ -30,6 +31,7 @@ import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
 
 -- | version.

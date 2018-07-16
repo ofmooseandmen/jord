@@ -2,11 +2,11 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d25fa7abd03c2ec15967a946f5c9a98623156912f659e8ceb96e21887c32c862
+-- hash: c1197ea6dc351c977d808ecb2b0eef21c2993f1a1c14e40471ff7a0b18fcd501
 
 name:           jord
 version:        0.2.0.0
-synopsis:       Geographic position calculations on Great Circles
+synopsis:       Geographical Position Calculations
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 category:       Geography
 stability:      experimental

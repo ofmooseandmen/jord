@@ -2,7 +2,6 @@ module Data.Geo.Jord.GreatCircleSpec
     ( spec
     ) where
 
-import Control.Exception.Base
 import Data.Geo.Jord
 import Data.Maybe
 import Test.Hspec

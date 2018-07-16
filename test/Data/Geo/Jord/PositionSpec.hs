@@ -4,7 +4,6 @@ module Data.Geo.Jord.PositionSpec
 
 import Control.Exception.Base
 import Data.Geo.Jord
-import Data.Maybe
 import Test.Hspec
 
 spec :: Spec

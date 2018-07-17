@@ -14,11 +14,11 @@ spec = do
                 r -> fail (show r)
         it "evaluates an expression with one function call" $
             case eval "distance 54N154E (antipode 54N154E)" emptyVault of
-                (Right (Len l)) -> l `shouldBe` kilometres 20015.114442000002
+                (Right (Len l)) -> l `shouldBe` kilometres 20015.114351
                 r -> fail (show r)
         it "evaluates an expression with one function call" $
             case eval "distance (antipode 54N154E) 54N154E" emptyVault of
-                (Right (Len l)) -> l `shouldBe` kilometres 20015.114442000002
+                (Right (Len l)) -> l `shouldBe` kilometres 20015.114351
                 r -> fail (show r)
         it "evaluates expression with nested function calls" $
             case eval

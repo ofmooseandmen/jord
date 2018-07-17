@@ -22,10 +22,10 @@ spec = do
             metres 0.0
         it "returns the distance between 2 points" $
             distance (readLatLong "500359N0054253W") (readLatLong "583838N0030412W") `shouldBe`
-            metres 968854.873
+            metres 968854.868
         it "handles singularity at the pole" $
             distance (northPole :: LatLong) (southPole :: LatLong) `shouldBe`
-            metres 2.00151144420359e7
+            kilometres 20015.114351
         it "handles the discontinuity at the Date Line" $
             distance (readLatLong "500359N1795959W") (readLatLong "500359N1795959E") `shouldBe`
             metres 39.66

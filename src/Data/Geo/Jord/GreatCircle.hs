@@ -16,7 +16,7 @@
 module Data.Geo.Jord.GreatCircle
     (
     -- * The 'GreatCircle' type
-    GreatCircle
+      GreatCircle
     -- * Smart constructors
     , greatCircle
     , greatCircleE
@@ -31,6 +31,7 @@ module Data.Geo.Jord.GreatCircle
 
 import Control.Monad.Fail
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.HorizontalPosition
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
@@ -103,9 +104,9 @@ greatCircleBearing p b =
     e' = scale e (cos' b / norm e)
     n' = scale n (sin' b / norm n)
 
--- | 'crossTrackDistance'' assuming a radius of 'meanEarthRadius'.
+-- | 'crossTrackDistance'' using the mean radius of the WGS84 reference ellipsoid.
 crossTrackDistance :: (HorizontalPosition a) => a -> GreatCircle -> Length
-crossTrackDistance p gc = crossTrackDistance' p gc meanEarthRadius
+crossTrackDistance p gc = crossTrackDistance' p gc (meanRadius wgs84)
 
 -- | Signed distance from given 'Position' to given 'GreatCircle'.
 -- Returns a negative 'Length' if position if left of great circle,

@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.GeoPos
+-- Module:      Data.Geo.Jord.LatLong
 -- Copyright:   (c) 2018 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>

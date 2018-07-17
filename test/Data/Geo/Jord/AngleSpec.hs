@@ -15,10 +15,10 @@ spec = do
         it "reads 55.6058333°" $ readAngle "55.6058333°" `shouldBe` decimalDegrees 55.6058333
         it "reads -55.6058333°" $ readAngle "-55.6058333°" `shouldBe` decimalDegrees (-55.6058333)
         it "reads 96°01′18″" $ do
-          hSetEncoding stdin utf8
-          hSetEncoding stdout utf8
-          hSetEncoding stderr utf8
-          readAngle "96°01′18″" `shouldBe` decimalDegrees 96.02166666
+            hSetEncoding stdin utf8
+            hSetEncoding stdout utf8
+            hSetEncoding stderr utf8
+            readAngle "96°01′18″" `shouldBe` decimalDegrees 96.02166666
     describe "Adding/Subtracting angles" $ do
         it "adds angles" $
             add (decimalDegrees 55.6058333) (decimalDegrees 5.0) `shouldBe`
@@ -81,9 +81,9 @@ spec = do
             getMilliseconds actual `shouldBe` 0
     describe "Arc length" $ do
         it "computes the length of an arc with a central angle of 1 milliseconds" $
-            arcLength (decimalDegrees (1.0 / 3600000.0)) meanEarthRadius `shouldBe` metres 0.031
+            arcLength (decimalDegrees (1.0 / 3600000.0)) (meanRadius wgs84) `shouldBe` metres 0.031
         it
             "arc length with central angle of 0.6 milliseconds == arc length with central angle of 1 milliseconds" $
-            arcLength (decimalDegrees (0.6 / 3600000.0)) meanEarthRadius `shouldBe` metres 0.031
+            arcLength (decimalDegrees (0.6 / 3600000.0)) (meanRadius wgs84) `shouldBe` metres 0.031
         it "arc length with central angle of 0.5 milliseconds == 0" $
-            arcLength (decimalDegrees (0.4 / 3600000.0)) meanEarthRadius `shouldBe` metres 0
+            arcLength (decimalDegrees (0.4 / 3600000.0)) (meanRadius wgs84) `shouldBe` metres 0

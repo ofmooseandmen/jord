@@ -15,6 +15,7 @@
 --
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
+    , module Data.Geo.Jord.Ellipsoid
     , module Data.Geo.Jord.Eval
     , module Data.Geo.Jord.GreatCircle
     , module Data.Geo.Jord.HorizontalPosition
@@ -26,6 +27,7 @@ module Data.Geo.Jord
     ) where
 
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Eval
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.HorizontalPosition

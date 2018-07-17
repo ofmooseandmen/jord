@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.GreatCircle
+-- Module:      Data.Geo.Jord.HorizontalPosition
 -- Copyright:   (c) 2018 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -29,13 +29,13 @@ module Data.Geo.Jord.HorizontalPosition
     , interpolate
     , isInside
     , mean
-    -- * Misc.
-    , meanEarthRadius
+    -- * Remarkable positions.
     , northPole
     , southPole
     ) where
 
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Quantity
@@ -47,7 +47,8 @@ import Prelude hiding (fail)
 -- All functions in this module first convert 'HorizontalPosition' to a n-vector and any resulting n-vector back
 -- to a 'HorizontalPosition'. This allows the call site to pass either n-vector or another 'HorizontalPosition' instance
 -- and to get back the same class instance.
-class (Eq a) => HorizontalPosition a where
+class (Eq a) =>
+      HorizontalPosition a where
     -- | Converts a 'Vector3d' into 'HorizontalPosition' instance.
     fromNVector :: Vector3d -> a
     -- | Converts the 'HorizontalPosition' instance into a 'Vector3d'.
@@ -94,7 +95,7 @@ angularDistance' v1 v2 n = atan2' sinO cosO
 antipode :: (HorizontalPosition a) => a -> a
 antipode p = fromNVector (scale (toNVector p) (-1.0))
 
--- | 'destination'' assuming a radius of 'meanEarthRadius'.
+-- | 'destination'' using the mean radius of the WGS84 reference ellipsoid.
 destination :: (HorizontalPosition a) => a -> Angle -> Length -> a
 destination p b d = destination' p b d meanEarthRadius
 
@@ -113,7 +114,7 @@ destination' p b d r
     ta = central d r -- central angle
     de = add (scale nd (cos' b)) (scale ed (sin' b)) -- unit vector in the direction of the azimuth
 
--- | 'distance'' assuming a radius of 'meanEarthRadius'.
+-- | 'distance'' using the mean radius of the WGS84 reference ellipsoid.
 distance :: (HorizontalPosition a) => a -> a -> Length
 distance p1 p2 = distance' p1 p2 meanEarthRadius
 
@@ -173,7 +174,8 @@ isInside p ps
     | head ps == last ps = isInside p (init ps)
     | length ps < 3 = False
     | otherwise =
-        let aSum = foldl (\a v' -> add a (uncurry angularDistance v' (Just v))) (decimalDegrees 0) es
+        let aSum =
+                foldl (\a v' -> add a (uncurry angularDistance v' (Just v))) (decimalDegrees 0) es
          in abs (toDecimalDegrees aSum) > 180.0
   where
     v = toNVector p
@@ -214,10 +216,6 @@ mean ps =
             (\t -> (fromNVector (antipode (head t)) :: LatLong) == (fromNVector (last t) :: LatLong))
             ts
 
--- | Mean Earth radius: 6,371,008.8 metres.
-meanEarthRadius :: Length
-meanEarthRadius = metres 6371008.8
-
 -- | 'HorizontalPosition' of the North Pole.
 northPole :: (HorizontalPosition a) => a
 northPole = fromNVector (Vector3d 0.0 0.0 1.0)
@@ -225,3 +223,7 @@ northPole = fromNVector (Vector3d 0.0 0.0 1.0)
 -- | 'HorizontalPosition' of the South Pole.
 southPole :: (HorizontalPosition a) => a
 southPole = fromNVector (Vector3d 0.0 0.0 (-1.0))
+
+-- | WGS84 ellipsoid mean radius.
+meanEarthRadius :: Length
+meanEarthRadius = meanRadius wgs84

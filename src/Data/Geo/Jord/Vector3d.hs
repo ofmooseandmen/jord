@@ -14,6 +14,7 @@ module Data.Geo.Jord.Vector3d
     , dot
     , norm
     , scale
+    , rotate
     , unit
     ) where
 

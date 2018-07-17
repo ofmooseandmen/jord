@@ -1,3 +1,7 @@
+branches:
+  except:
+  - ecef
+
 sudo: false
 
 # Caching so the next build will be fast too.

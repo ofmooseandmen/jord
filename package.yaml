@@ -25,6 +25,7 @@ library:
   exposed-modules:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
+    - Data.Geo.Jord.Ecef
     - Data.Geo.Jord.Ellipsoid
     - Data.Geo.Jord.Eval
     - Data.Geo.Jord.GreatCircle

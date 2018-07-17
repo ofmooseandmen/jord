@@ -10,6 +10,7 @@
 --
 module Data.Geo.Jord.Ellipsoid
     ( Ellipsoid(..)
+    , eccentricity
     , meanRadius
     , polarRadius
     , wgs84
@@ -23,13 +24,19 @@ data Ellipsoid = Ellipsoid
     , inverseFlattening :: Double -- ^ inverse flattening.
     } deriving (Show)
 
+-- | Computes the eccentricity of the given 'Ellipsoid'.
+eccentricity :: Ellipsoid -> Double
+eccentricity e = sqrt (1.0 - (b * b) / (a * a))
+  where
+    a = semiMajorAxis e
+    b = semiMinorAxis a (inverseFlattening e)
+
 -- | Computes the mean radius of the given 'Ellipsoid'.
 meanRadius :: Ellipsoid -> Length
 meanRadius e = metres ((2.0 * a + b) / 3.0)
   where
     a = semiMajorAxis e
-    f = inverseFlattening e
-    b = semiMinorAxis a f
+    b = semiMinorAxis a (inverseFlattening e)
 
 -- | Computes the polar radius or semi-minor axis (b) of the given 'Ellipsoid'.
 polarRadius :: Ellipsoid -> Length

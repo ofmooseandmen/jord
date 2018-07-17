@@ -7,6 +7,9 @@ import Test.Hspec
 
 spec :: Spec
 spec = do
+    describe "Eccentricity" $
+        it "returns 0.08181919084262157 for the WGS84 ellipsoid" $
+        eccentricity wgs84 `shouldBe` 0.08181919084262157
     describe "Polar radius" $
         it "returns 6356752.314 m for the WGS84 ellipsoid" $
         polarRadius wgs84 `shouldBe` metres 6356752.314

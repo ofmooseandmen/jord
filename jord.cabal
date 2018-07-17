@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8e5d71fc2addbc5dfe6ed47517c215da7e28d22bd82199a81867e3ff30d6c7e5
+-- hash: 35e6467ddda965ba156e90a8e987b2ac07f5d15d5cb1918c77a8d6bb455f0183
 
 name:           jord
 version:        0.3.0.0
@@ -31,6 +31,7 @@ library
   exposed-modules:
       Data.Geo.Jord
       Data.Geo.Jord.Angle
+      Data.Geo.Jord.Ecef
       Data.Geo.Jord.Ellipsoid
       Data.Geo.Jord.Eval
       Data.Geo.Jord.GreatCircle
@@ -66,6 +67,7 @@ test-suite jord-test
   main-is: Spec.hs
   other-modules:
       Data.Geo.Jord.AngleSpec
+      Data.Geo.Jord.EcefSpec
       Data.Geo.Jord.EllipsoidSpec
       Data.Geo.Jord.EvalSpec
       Data.Geo.Jord.GreatCircleSpec

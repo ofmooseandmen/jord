@@ -17,23 +17,23 @@ module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.Eval
     , module Data.Geo.Jord.GreatCircle
+    , module Data.Geo.Jord.HorizontalPosition
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
-    , module Data.Geo.Jord.NVector
-    , module Data.Geo.Jord.Position
     , module Data.Geo.Jord.Quantity
+    , module Data.Geo.Jord.Vector3d
     , jordVersion
     ) where
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Eval
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.HorizontalPosition
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Vector3d
 
 -- | version.
 jordVersion :: String
-jordVersion = "0.2.0.0"
+jordVersion = "0.3.0.0"

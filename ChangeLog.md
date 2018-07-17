@@ -1,3 +1,8 @@
+### 0.3.0.0
+
+- Position -> HorizontalPosition
+- NVector -> Vector3d
+
 ### 0.2.0.0
 
 - GeoPos -> LatLong

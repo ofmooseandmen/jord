@@ -13,5 +13,8 @@ module Data.Geo.Jord.Quantity
     ) where
 
 -- | Something that can be added or subtracted.
-class Quantity a where
+class (Eq a) => Quantity a where
     add, sub :: a -> a -> a
+    zero :: a -- ^ identity
+    isZero :: a -> Bool -- ^ is identity ?
+    isZero a = a == zero

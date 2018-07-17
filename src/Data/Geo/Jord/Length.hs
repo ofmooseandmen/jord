@@ -24,8 +24,6 @@ module Data.Geo.Jord.Length
     , toKilometres
     , toMetres
     , toNauticalMiles
-    -- * Misc.
-    , isZero
     ) where
 
 import Control.Applicative
@@ -57,6 +55,7 @@ instance Show Length where
 instance Quantity Length where
     add a b = Length (millimetres a + millimetres b)
     sub a b = Length (millimetres a - millimetres b)
+    zero = Length 0
 
 -- | 'Length' from given amount of nautical miles.
 nauticalMiles :: Double -> Length
@@ -103,10 +102,6 @@ toMetres (Length mm) = fromIntegral mm / 1000.0
 -- | @toNauticalMiles l@ converts @l@ to nautical miles.
 toNauticalMiles :: Length -> Double
 toNauticalMiles l = toMetres l / 1852.0
-
--- | Is given 'Length' == 0?
-isZero :: Length -> Bool
-isZero (Length mm) = mm == 0
 
 -- | Parses and returns a 'Length'.
 length :: ReadP Length

@@ -31,11 +31,11 @@ module Data.Geo.Jord.GreatCircle
 
 import Control.Monad.Fail
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.HorizontalPosition
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Vector3d
 import Data.Maybe (fromMaybe)
 import Prelude hiding (fail)
 
@@ -49,16 +49,16 @@ import Prelude hiding (fail)
 -- See 'greatCircle', 'greatCircleE', 'greatCircleF' or 'greatCircleBearing' constructors.
 --
 data GreatCircle = GreatCircle
-    { normal :: NVector
+    { normal :: Vector3d
     , dscr :: String
     } deriving (Eq)
 
 instance Show GreatCircle where
     show = dscr
 
--- | 'GreateCircle' passing by both given 'Position's. 'error's if given positions are
+-- | 'GreateCircle' passing by both given 'HorizontalPosition's. 'error's if given positions are
 -- equal or antipodal.
-greatCircle :: (Eq a, Position a, Show a) => a -> a -> GreatCircle
+greatCircle :: (Eq a, HorizontalPosition a, Show a) => a -> a -> GreatCircle
 greatCircle p1 p2 =
     fromMaybe
         (error (show p1 ++ " and " ++ show p2 ++ " do not define a unique Great Circle"))
@@ -66,7 +66,7 @@ greatCircle p1 p2 =
 
 -- | 'GreateCircle' passing by both given 'Position's. A 'Left' indicates that given positions are
 -- equal or antipodal.
-greatCircleE :: (Eq a, Position a) => a -> a -> Either String GreatCircle
+greatCircleE :: (HorizontalPosition a) => a -> a -> Either String GreatCircle
 greatCircleE p1 p2
     | p1 == p2 = Left "Invalid Great Circle: positions are equal"
     | p1 == antipode p2 = Left "Invalid Great Circle: positions are antipodal"
@@ -82,7 +82,7 @@ greatCircleE p1 p2
 
 -- | 'GreateCircle' passing by both given 'Position's. 'fail's if given positions are
 -- equal or antipodal.
-greatCircleF :: (Eq a, MonadFail m, Position a) => a -> a -> m GreatCircle
+greatCircleF :: (MonadFail m, HorizontalPosition a) => a -> a -> m GreatCircle
 greatCircleF p1 p2 =
     case e of
         Left err -> fail err
@@ -91,7 +91,7 @@ greatCircleF p1 p2 =
     e = greatCircleE p1 p2
 
 -- | 'GreatCircle' passing by the given 'Position' and heading on given bearing.
-greatCircleBearing :: (Position a) => a -> Angle -> GreatCircle
+greatCircleBearing :: (HorizontalPosition a) => a -> Angle -> GreatCircle
 greatCircleBearing p b =
     GreatCircle
         (sub n' e')
@@ -104,7 +104,7 @@ greatCircleBearing p b =
     n' = scale n (sin' b / norm n)
 
 -- | 'crossTrackDistance'' assuming a radius of 'meanEarthRadius'.
-crossTrackDistance :: (Position a) => a -> GreatCircle -> Length
+crossTrackDistance :: (HorizontalPosition a) => a -> GreatCircle -> Length
 crossTrackDistance p gc = crossTrackDistance' p gc meanEarthRadius
 
 -- | Signed distance from given 'Position' to given 'GreatCircle'.
@@ -117,14 +117,14 @@ crossTrackDistance p gc = crossTrackDistance' p gc meanEarthRadius
 --     let gc2 = greatCircle (latLongDecimal 52 1) (latLongDecimal 51 0)
 --     crossTrackDistance p gc1 == (- crossTrackDistance p gc2)
 -- @
-crossTrackDistance' :: (Position a) => a -> GreatCircle -> Length -> Length
+crossTrackDistance' :: (HorizontalPosition a) => a -> GreatCircle -> Length -> Length
 crossTrackDistance' p gc =
     arcLength (sub (angularDistance (normal gc) (toNVector p) Nothing) (decimalDegrees 90))
 
 -- | Computes the intersections between the two given 'GreatCircle's.
 -- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
 -- in which case 'Nothing' is returned.
-intersections :: (Position a) => GreatCircle -> GreatCircle -> Maybe (a, a)
+intersections :: (HorizontalPosition a) => GreatCircle -> GreatCircle -> Maybe (a, a)
 intersections gc1 gc2
     | norm i == 0.0 = Nothing
     | otherwise

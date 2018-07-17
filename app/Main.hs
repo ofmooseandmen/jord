@@ -154,6 +154,7 @@ showV (Ang a) = "angle: " ++ show a
 showV (AngDec a) = "angle (dd): " ++ show a
 showV (Bool b) = show b
 showV (Double d) = show d
+showV (Gc gc) = "great circle: " ++ show gc
 showV (Len l) = "length: " ++ show l
 showV (Ll g) = "geographic position: " ++ show g
 showV (Lls gs) = "geographic position: " ++ intercalate "; " (map show gs)
@@ -161,9 +162,8 @@ showV (LlDec ll) = "latitude, longitude (dd): " ++ show (fst ll) ++ ", " ++ show
 showV (LlsDec lls) =
     "latitudes, longitudes (dd): " ++
     intercalate "; " (map (\ll -> show (fst ll) ++ ", " ++ show (snd ll)) lls)
-showV (Vec v) = "n-vector: " ++ show v
-showV (Vecs vs) = "n-vectors: " ++ intercalate "; " (map show vs)
-showV (Gc gc) = "great circle: " ++ show gc
+showV (NVec v) = "n-vector: " ++ show v
+showV (NVecs vs) = "n-vectors: " ++ intercalate "; " (map show vs)
 
 showVar :: String -> Value -> String
 showVar n v = n ++ "=" ++ showV v

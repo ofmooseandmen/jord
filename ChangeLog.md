@@ -1,5 +1,6 @@
 ### 0.3.0.0
 
+- Added Ellipsoid
 - Position -> HorizontalPosition
 - NVector -> Vector3d
 

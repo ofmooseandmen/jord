@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working earth-centered, earth-fixed (ECEF) positions.
+-- Types and functions for working with earth-centered, earth-fixed (ECEF) positions.
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -30,7 +30,7 @@ import Data.Geo.Jord.Vector3d
 -- to geocentric Earth-Centered Earth-Fixed (ECEF) Cartesian position.
 -- The geodetic position refers to the reference 'Ellipsoid' @e@.
 geodeticToEcef :: (HorizontalPosition a) => (a, Double) -> Ellipsoid -> Vector3d
-geodeticToEcef (p, h) e = rotate (Vector3d ex ey ez) [Vector3d 0 0 (-1), Vector3d 0 1 0, Vector3d 1 0 0]
+geodeticToEcef (p, h) e = Vector3d ex ey ez
   where
     nv = unit (toNVector p)
     a = toMetres (equatorialRadius e)
@@ -48,58 +48,29 @@ geodeticToEcef (p, h) e = rotate (Vector3d ex ey ez) [Vector3d 0 0 (-1), Vector3
 -- Cartesian position represented by the 'Vector3d' @v@ to a tuple geodetic position
 -- and ellipsoidal height. The geodetic v refers to the reference 'Ellipsoid' @e@.
 ecefToGeodetic :: (HorizontalPosition a) => Vector3d -> Ellipsoid -> (a, Double)
-ecefToGeodetic p'@(Vector3d px py pz) e = (fromNVector (nvec d e2 k p'), height d e2 k px)
+ecefToGeodetic p'@(Vector3d px py pz) e = (fromNVector (nvec d e2 k p'), h)
   where
     e' = eccentricity e
     e2 = e' * e'
-    e4 = e' ** 4
+    e4 = e2 * e2
     a = toMetres (equatorialRadius e)
-    q = ((1 - e2) / (a * a)) * (px * px)
-    p = (py * px / pz * pz) / (a * a)
+    q = ((1 - e2) / (a * a)) * (pz * pz)
+    p = (px * px + py * py) / (a * a)
     r = (p + q - e4) / 6.0
-    s = (e4 * p * q) / (4 * r ** 3)
+    s = (e4 * p * q) / (4 * r * r * r)
     t = (1.0 + s + sqrt (s * (2.0 + s))) ** (1 / 3)
     u = r * (1.0 + t + 1.0 / t)
     v = sqrt (u * u + q * e4)
     w = e2 * (u + v - q) / (2.0 * v)
     k = sqrt (u + v + w * w)
-    d = k * sqrt (py * py + pz * pz) / (k + e2)
-
-    -- var a = datum.ellipsoid.a;
-    -- var f = datum.ellipsoid.f;
-    --
-    -- var x = this.x;
-    -- var y = this.y;
-    -- var z = this.z;
-    --
-    -- var e2 = 2*f - f*f; // eÂ² = 1st eccentricity squared â‰¡ (aÂ²-bÂ²)/aÂ²
-    -- var e4 = e2*e2;     // eâ´
-    --
-    -- var p = (x*x + y*y) / (a*a);
-    -- var q = z*z * (1-e2) / (a*a);
-    -- var r = (p + q - e4) / 6;
-    -- var s = (e4*p*q) / (4*r*r*r);
-    -- var t = Math.cbrt(1 + s + Math.sqrt(2*s+s*s));
-    -- var u = r * (1 + t + 1/t);
-    -- var v = Math.sqrt(u*u + e4*q);
-    -- var w = e2 * (u + v - q) / (2*v);
-    -- var k = Math.sqrt(u + v + w*w) - w;
-    -- var d = k * Math.sqrt(x*x + y*y) / (k + e2);
-    --
-    -- var tmp = 1 / Math.sqrt(d*d + z*z);
-    -- var xÊ¹ = tmp * k/(k+e2) * x;
-    -- var yÊ¹ = tmp * k/(k+e2) * y;
-    -- var zÊ¹ = tmp * z;
-    -- var h = (k + e2 - 1)/k * Math.sqrt(d*d + z*z);
-    --
-    -- var n = new NvectorEllipsoidal(xÊ¹, yÊ¹, zÊ¹, h, datum);
-
+    d = k * sqrt (px * px + py * py) / (k + e2)
+    h = ((k + e2 - 1.0) / k) * sqrt (d * d + pz * pz)
 
 nvec :: Double -> Double -> Double -> Vector3d -> Vector3d
-nvec d e2 k (Vector3d px py pz) = scale (Vector3d px (a * py) (a * pz)) s
+nvec d e2 k (Vector3d px py pz) = Vector3d nx ny nz
   where
-    s = 1.0 / sqrt (d * d + px * px)
+    s = 1.0 / sqrt (d * d + pz * pz)
     a = k / (k + e2)
-
-height :: Double -> Double -> Double -> Double -> Double
-height d e2 k px = ((k + e2 - 1.0) / k) * sqrt (d * d + px * px)
+    nx = s * a * px
+    ny = s * a * py
+    nz = s * pz

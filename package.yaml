@@ -25,15 +25,15 @@ library:
   exposed-modules:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
-    - Data.Geo.Jord.Ecef
     - Data.Geo.Jord.Ellipsoid
     - Data.Geo.Jord.Eval
-    - Data.Geo.Jord.GreatCircle
-    - Data.Geo.Jord.HorizontalPosition
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
+    - Data.Geo.Jord.NVector
+    - Data.Geo.Jord.Position
     - Data.Geo.Jord.Quantity
-    - Data.Geo.Jord.Vector3d
+    - Data.Geo.Jord.Spherical.Geodetics
+    - Data.Geo.Jord.Spherical.GreatCircle
   other-modules:
     - Data.Geo.Jord.Parse
 

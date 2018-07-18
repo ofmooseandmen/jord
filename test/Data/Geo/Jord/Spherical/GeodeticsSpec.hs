@@ -1,4 +1,4 @@
-module Data.Geo.Jord.HorizontalPositionSpec
+module Data.Geo.Jord.Spherical.GeodeticsSpec
     ( spec
     ) where
 

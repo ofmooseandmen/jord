@@ -1,8 +1,6 @@
 ### 0.3.0.0
 
-- Added Ellipsoid
-- Position -> HorizontalPosition
-- NVector -> Vector3d
+- Added ellipsoid, ECEF positions
 
 ### 0.2.0.0
 

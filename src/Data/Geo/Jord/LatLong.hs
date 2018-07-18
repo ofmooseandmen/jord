@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types to represent a geographic position by its latitude and longitude.
+-- Geodetic latitude and longitude.
 --
 module Data.Geo.Jord.LatLong
     (
@@ -37,7 +37,7 @@ import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
--- | A geographic position (latitude and longitude).
+-- | Horizontal position defined by its geodetic latitude and longitude.
 data LatLong = LatLong
     { latitude :: Angle
     , longitude :: Angle

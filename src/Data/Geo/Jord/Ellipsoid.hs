@@ -22,7 +22,7 @@ import Data.Geo.Jord.Length
 data Ellipsoid = Ellipsoid
     { equatorialRadius :: Length -- ^ equatorial radius or semi-major axis (a).
     , inverseFlattening :: Double -- ^ inverse flattening.
-    } deriving (Show)
+    } deriving (Eq, Show)
 
 -- | Computes the eccentricity of the given 'Ellipsoid'.
 eccentricity :: Ellipsoid -> Double

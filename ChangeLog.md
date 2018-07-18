@@ -1,6 +1,7 @@
 ### 0.3.0.0
 
 - Added ellipsoid, ECEF positions
+- Added NEDVector
 
 ### 0.2.0.0
 

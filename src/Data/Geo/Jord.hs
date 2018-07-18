@@ -19,6 +19,7 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.Eval
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
+    , module Data.Geo.Jord.NEDVector
     , module Data.Geo.Jord.NVector
     , module Data.Geo.Jord.Position
     , module Data.Geo.Jord.Quantity
@@ -32,6 +33,7 @@ import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Eval
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.NEDVector
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity

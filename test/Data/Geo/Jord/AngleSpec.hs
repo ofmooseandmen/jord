@@ -36,12 +36,16 @@ spec = do
         it "considers 59.9999998° /= 60.0°" $
             decimalDegrees 59.9999998 `shouldNotBe` decimalDegrees 60
     describe "Showing angles" $ do
-        it "shows 59.99999999999999 as 60°0'0.0\"" $
-            show (decimalDegrees 59.99999999999999) `shouldBe` "60°0'0.0\""
-        it "shows 154.915 as 154°54'54.0\"" $
-            show (decimalDegrees 154.915) `shouldBe` "154°54'54.0\""
-        it "shows -154.915 as -154°54'54.0\"" $
-            show (decimalDegrees (-154.915)) `shouldBe` "-154°54'54.0\""
+        it "shows 59.99999999999999 as 60°0'0.000\"" $
+            show (decimalDegrees 59.99999999999999) `shouldBe` "60°0'0.000\""
+        it "shows 154.915 as 154°54'54.000\"" $
+            show (decimalDegrees 154.915) `shouldBe` "154°54'54.000\""
+        it "shows -154.915 as -154°54'54.000\"" $
+            show (decimalDegrees (-154.915)) `shouldBe` "-154°54'54.000\""
+        it "show 0.5245 as 0°31'28.800\"" $
+            show (decimalDegrees 0.5245) `shouldBe` "0°31'28.200\""
+        it "show -0.5245 as -0°31'28.800\"" $
+            show (decimalDegrees (-0.5245)) `shouldBe` "-0°31'28.200\""
     describe "Angle from decimal degrees" $ do
         it "returns 1 millisecond when called with 1 / 3600000" $ do
             let actual = decimalDegrees (1 / 3600000)

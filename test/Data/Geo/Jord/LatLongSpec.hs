@@ -52,9 +52,9 @@ spec = do
             readLatLongE "545907S1801860W" `shouldBe` Left "couldn't read geo pos 545907S1801860W"
     describe "Showing geographic positions" $ do
         it "shows the N/E position formatted in DMS with symbols" $
-            show (latLongDecimal 55.60583333 13.00055556) `shouldBe` "55°36'21.0\"N,13°0'2.0\"E"
+            show (latLongDecimal 55.60583333 13.00055556) `shouldBe` "55°36'21.000\"N,13°0'2.000\"E"
         it "shows the S/E position formatted in DMS with symbols" $
-            show (latLongDecimal (-1.28305556) 36.81666) `shouldBe` "1°16'59.0\"S,36°48'59.976\"E"
+            show (latLongDecimal (-1.28305556) 36.81666) `shouldBe` "1°16'59.000\"S,36°48'59.976\"E"
         it "shows the N/W position formatted in DMS with symbols" $
             show (latLongDecimal 47.60611 (-122.33194)) `shouldBe`
             "47°36'21.996\"N,122°19'54.984\"W"

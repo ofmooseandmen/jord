@@ -25,6 +25,7 @@ module Data.Geo.Jord.Angle
     , negate'
     , normalise
     -- * Trigonometric functions
+    , asin'
     , atan2'
     , cos'
     , sin'
@@ -50,6 +51,7 @@ import Data.Geo.Jord.Quantity
 import Data.Maybe
 import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
+import Text.Printf
 import Text.Read hiding (get, look, pfail)
 
 -- | An angle with a resolution of a milliseconds of a degree.
@@ -66,9 +68,15 @@ instance Read Angle where
 -- | Angle is shown degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
     show a =
-        show (getDegrees a) ++
+        s ++
+        show d ++
         "°" ++
-        show (getMinutes a) ++ "'" ++ show (getSeconds a) ++ "." ++ show (getMilliseconds a) ++ "\""
+        show (getMinutes a) ++ "'" ++ show (getSeconds a) ++ "." ++ printf "%03d" (getMilliseconds a) ++ "\""
+      where
+        d = getDegrees a
+        s = if d == 0 && milliseconds a < 0
+            then "-"
+            else ""
 
 -- | Add/Subtract 'Angle'.
 instance Quantity Angle where
@@ -153,6 +161,10 @@ isWithin (Angle millis) (Angle low) (Angle high) = millis >= low && millis <= hi
 atan2' :: Double -> Double -> Angle
 atan2' y x = fromRadians (atan2 y x)
 
+-- | @asin' a@ computes arc sine of @a@.
+asin' :: Double -> Angle
+asin' a = fromRadians (asin a)
+
 -- | @cos' a@ returns the cosinus of @a@.
 cos' :: Angle -> Double
 cos' a = cos (toRadians a)
@@ -187,7 +199,7 @@ getSeconds a = field a 1000.0 60.0
 
 -- | @getMilliseconds a@ returns the milliseconds component of @a@.
 getMilliseconds :: Angle -> Int
-getMilliseconds (Angle millis) = mod millis 1000
+getMilliseconds (Angle millis) = mod (abs millis) 1000
 
 field :: Angle -> Double -> Double -> Int
 field (Angle millis) divisor modulo =

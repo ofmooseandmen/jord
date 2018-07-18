@@ -1,4 +1,4 @@
-module Data.Geo.Jord.GreatCircleSpec
+module Data.Geo.Jord.Spherical.GreatCircleSpec
     ( spec
     ) where
 

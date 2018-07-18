@@ -26,11 +26,12 @@ module Data.Geo.Jord.Eval
 import Control.Monad.Fail
 import Data.Bifunctor
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.HorizontalPosition
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.Vector3d
+import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Position
+import Data.Geo.Jord.Spherical.Geodetics
+import Data.Geo.Jord.Spherical.GreatCircle
 import Data.List hiding (delete, insert, lookup)
 import Data.Maybe
 import Prelude hiding (fail, lookup)
@@ -49,8 +50,8 @@ data Value
     | Lls [LatLong] -- ^ list of 'LatLong'
     | LlDec (Double, Double) -- ^ latitude and longitude in decimal degrees
     | LlsDec [(Double, Double)] -- ^ list of latitude and longitude in decimal degrees
-    | NVec Vector3d -- ^ n-vector
-    | NVecs [Vector3d] -- ^ list of n-vectors
+    | NVec NVector -- ^ n-vector
+    | NVecs [NVector] -- ^ list of n-vectors
     deriving (Eq, Show)
 
 -- | 'Either' an error or a 'Value'.
@@ -110,7 +111,7 @@ eval :: String -> Vault -> Result
 eval s r =
     case expr s of
         Left err -> Left err
-        Right (rvec, ex) -> convert (evalExpr ex r) rvec
+        Right (rvec, expr') -> convert (evalExpr expr' r) rvec
 
 convert :: Result -> Bool -> Result
 convert r True = r
@@ -256,7 +257,7 @@ evalExpr (Intersections a b) vault =
             maybe
                 (Right (NVecs []))
                 (\is -> Right (NVecs [fst is, snd is]))
-                (intersections gc1 gc2 :: Maybe (Vector3d, Vector3d))
+                (intersections gc1 gc2 :: Maybe (NVector, NVector))
         r -> Left ("Call error: intersections " ++ showErr r)
 evalExpr (IsInside as) vault =
     let m = map (`evalExpr` vault) as

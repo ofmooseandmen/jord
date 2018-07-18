@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working with north/east/down vectors.
+-- Types and functions for working with north, east, down vectors.
 --
 module Data.Geo.Jord.NEDVector
     ( NEDVector

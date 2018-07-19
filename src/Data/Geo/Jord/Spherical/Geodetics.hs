@@ -30,7 +30,7 @@ import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Position (Geodetic2D(..), northPole)
+import Data.Geo.Jord.Position (HorizontalPosition(..), northPole)
 import Data.Geo.Jord.Quantity
 import Data.List (subsequences)
 import Prelude hiding (fail)
@@ -38,7 +38,7 @@ import Prelude hiding (fail)
 -- | @angularDistance p1 p2 n@ computes the angle between the horizontal positions @p1@ and @p2@.
 -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
 -- signed + if @p1@ is clockwise looking along @n@, - in opposite direction.
-angularDistance :: (Geodetic2D a) => a -> a -> Maybe a -> Angle
+angularDistance :: (HorizontalPosition a) => a -> a -> Maybe a -> Angle
 angularDistance p1 p2 n = angularDistance' (toNVector p1) (toNVector p2) (fmap toNVector n)
 
 -- | Angle between the two given n-vectors.
@@ -53,11 +53,11 @@ angularDistance' v1 v2 n = atan2' sinO cosO
 
 -- | @antipode p@ computes the antipodal horizontal position of @p@:
 -- the horizontal position on the surface of the Earth which is diametrically opposite to @p@.
-antipode :: (Geodetic2D a) => a -> a
+antipode :: (HorizontalPosition a) => a -> a
 antipode p = fromNVector (scale (toNVector p) (-1.0))
 
 -- | 'destination'' using the mean radius of the WGS84 reference ellipsoid.
-destination :: (Geodetic2D a) => a -> Angle -> Length -> a
+destination :: (HorizontalPosition a) => a -> Angle -> Length -> a
 destination p b d = destination' p b d meanEarthRadius
 
 -- | @destination' p b d r@ computes the destination horizontal position from position @p@ having
@@ -65,7 +65,7 @@ destination p b d = destination' p b d meanEarthRadius
 -- before destination is reached) and using the earth radius @r@.
 --
 -- This is known as the direct geodetic problem.
-destination' :: (Geodetic2D a) => a -> Angle -> Length -> Length -> a
+destination' :: (HorizontalPosition a) => a -> Angle -> Length -> Length -> a
 destination' p b d r
     | isZero d = p
     | otherwise = fromNVector (add (scale v (cos' ta)) (scale de (sin' ta)))
@@ -77,23 +77,23 @@ destination' p b d r
     de = add (scale nd (cos' b)) (scale ed (sin' b)) -- unit vector in the direction of the azimuth
 
 -- | 'distance'' using the mean radius of the WGS84 reference ellipsoid.
-distance :: (Geodetic2D a) => a -> a -> Length
+distance :: (HorizontalPosition a) => a -> a -> Length
 distance p1 p2 = distance' p1 p2 meanEarthRadius
 
 -- | @distance' p1 p2@ computes the surface distance (length of geodesic) between the positions @p1@ and @p2@
 -- and using the earth radius @r@.
-distance' :: (Geodetic2D a) => a -> a -> Length -> Length
+distance' :: (HorizontalPosition a) => a -> a -> Length -> Length
 distance' p1 p2 = arcLength (angularDistance p1 p2 Nothing)
 
 -- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
 --  The final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
 -- Returns 180 if both horizontal positions are equals.
-finalBearing :: (Geodetic2D a) => a -> a -> Angle
+finalBearing :: (HorizontalPosition a) => a -> a -> Angle
 finalBearing p1 p2 = normalise (initialBearing p2 p1) (decimalDegrees 180)
 
 -- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 -- Returns 0 if both horizontal positions are equals.
-initialBearing :: (Geodetic2D a) => a -> a -> Angle
+initialBearing :: (HorizontalPosition a) => a -> a -> Angle
 initialBearing p1 p2 = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
   where
     v1 = toNVector p1
@@ -112,7 +112,7 @@ initialBearing p1 p2 = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDe
 --
 -- 'error's if @f < 0 || f > 1.0@
 --
-interpolate :: (Geodetic2D a) => a -> a -> Double -> a
+interpolate :: (HorizontalPosition a) => a -> a -> Double -> a
 interpolate p0 p1 f
     | f < 0 || f > 1 = error ("fraction must be in range [0..1], was " ++ show f)
     | f == 0 = p0
@@ -130,7 +130,7 @@ interpolate p0 p1 f
 --
 -- Always returns 'False' if @ps@ does not at least defines a triangle.
 --
-isInside :: (Eq a, Geodetic2D a) => a -> [a] -> Bool
+isInside :: (Eq a, HorizontalPosition a) => a -> [a] -> Bool
 isInside p ps
     | null ps = False
     | head ps == last ps = isInside p (init ps)
@@ -163,7 +163,7 @@ egdes ps = zip ps ps'
 --     mean [p1, .., antipode p1] == Nothing
 -- @
 --
-mean :: (Geodetic2D a) => [a] -> Maybe a
+mean :: (HorizontalPosition a) => [a] -> Maybe a
 mean [] = Nothing
 mean [p] = Just p
 mean ps =

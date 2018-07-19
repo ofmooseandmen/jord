@@ -13,18 +13,18 @@
 --
 module Data.Geo.Jord.Position
     (
-    -- * The 'Geodetic2D' type
-      Geodetic2D(..)
+    -- * The 'HorizontalPosition' type
+      HorizontalPosition(..)
     -- * The 'Geodetic3D' type
-    , Geodetic3D(..)
-    -- Horizontal & Vertical Positions - 'Geodetic3D'
+    , GeographicPosition(..)
+    -- Horizontal & Vertical Positions - 'GeographicPosition'
     , EcefVector(ex, ey, ez)
-    , LatLongH(getLatLong)
-    , NVectorH(getNVector)
+    , GeodeticPosition(getLatLong)
+    , NVectorPosition(getNVector)
     -- | Smart constructors
     , ecefVector
-    , latLongHeight
-    , nvectorHeight
+    , geodeticPosition
+    , nvectorPosition
     -- | Remarkable positions
     , northPole
     , southPole
@@ -36,14 +36,14 @@ import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 
--- | Horizontal geodetic position.
-class (Eq a) => Geodetic2D a where
-    -- | Converts a 'NVector' into 'Geodetic2D' instance.
+-- | Horizontal position.
+class (Eq a) => HorizontalPosition a where
+    -- | Converts a 'NVector' into 'HorizontalPosition' instance.
     fromNVector :: NVector -> a
-    -- | Converts a 'Geodetic2D' into 'NVector' instance.
+    -- | Converts a 'HorizontalPosition' into 'NVector' instance.
     toNVector :: a -> NVector
 
-instance Geodetic2D LatLong where
+instance HorizontalPosition LatLong where
     fromNVector v = latLong lat lon
       where
         lat = atan2' (nz v) (sqrt (nx v * nx v + ny v * ny v))
@@ -57,7 +57,7 @@ instance Geodetic2D LatLong where
         y' = cl * sin' lon
         z' = sin' lat
 
-instance Geodetic2D NVector where
+instance HorizontalPosition NVector where
     fromNVector v = v
     toNVector v = v
 
@@ -69,75 +69,92 @@ data EcefVector = EcefVector
     { ex :: Double
     , ey :: Double
     , ez :: Double
+    , ee :: Ellipsoid
     } deriving (Eq, Show)
 
--- | 'EcefVector' from given x, y, z.
-ecefVector :: Double -> Double -> Double -> EcefVector
+-- | 'EcefVector' from given x, y, z and ellipsoid.
+ecefVector :: Double -> Double -> Double -> Ellipsoid -> EcefVector
 ecefVector = EcefVector
 
 -- | Geodetic latitude, longitude and height.
-data LatLongH = LatLongH
+data GeodeticPosition = GeodeticPosition
     { getLatLong :: LatLong
-    , llH :: Double -- TODO Height
+    , gpH :: Double -- TODO Height
+    , gpE :: Ellipsoid
     } deriving (Eq)
 
-instance Show LatLongH where
-    show (LatLongH ll h) = "lat/long = " ++ show ll ++ "; height = " ++ show h
+instance Show GeodeticPosition where
+    show (GeodeticPosition ll h e) = "lat/long = " ++ show ll ++ "; height = " ++ show h ++ "; ellipsoid = " ++ show e
 
--- | 'LatLongH' from given 'LatLong' and height.
-latLongHeight :: LatLong -> Double -> LatLongH
-latLongHeight = LatLongH
+-- | 'GeodeticPosition' from given 'LatLong', height and ellipsoid.
+geodeticPosition :: LatLong -> Double -> Ellipsoid -> GeodeticPosition
+geodeticPosition = GeodeticPosition
 
 -- | 'NVector' and height.
-data NVectorH = NVectorH
+data NVectorPosition = NVectorPosition
     { getNVector :: NVector
     , nvH :: Double -- TODO Height
+    , nvE :: Ellipsoid
     } deriving (Eq)
 
-instance Show NVectorH where
-    show (NVectorH nv h) = "n-vector = " ++ show nv ++ "; height = " ++ show h
+instance Show NVectorPosition where
+    show (NVectorPosition nv h e) = "n-vector = " ++ show nv ++ "; height = " ++ show h ++ "; ellipsoid = " ++ show e
 
--- | 'NVectorH' from given 'NVector' and height.
-nvectorHeight :: NVector -> Double -> NVectorH
-nvectorHeight = NVectorH
+-- | 'NVectorPosition' from given 'NVector', height  and ellipsoid.
+nvectorPosition :: NVector -> Double -> Ellipsoid -> NVectorPosition
+nvectorPosition = NVectorPosition
 
--- | Horizontal geodetic position and height.
-class (Eq a) => Geodetic3D a where
-    -- | Converts a 'NVector' into 'Geodetic3D' instance.
-    fromNVectorH :: NVectorH -> a
-    -- | Converts a 'Geodetic3D' into 'NVector' instance.
-    toNVectorH :: a -> NVectorH
+-- | Geographic position.
+class (Eq a) => GeographicPosition a where
+    -- | Converts a 'NVectorPosition' into 'GeographicPosition' instance.
+    fromNVectorPosition :: NVectorPosition -> a
+    -- | Converts a 'GeographicPosition' into 'NVector' instance.
+    toNVectorPosition :: a -> NVectorPosition
     -- | Vertical position.
     height :: a -> Double -- TODO: Height.hs and Length -> Distance
-    -- | @geodeticToEcef a e@ transforms the geodetic 3D position
-    -- to geocentric Earth-Centered Earth-Fixed (ECEF) Cartesian position.
-    -- The geodetic position refers to the reference 'Ellipsoid' @e@.
-    geodeticToEcef :: a -> Ellipsoid -> EcefVector
-    -- | @ecefToGeodetic ev e@ transforms the geocentric Earth-Centered Earth-Fixed (ECEF)
-    -- Cartesian position represented to a geodetic 3D position.
-    -- The geodetic position refers to the reference 'Ellipsoid' @e@.
-    ecefToGeodetic :: EcefVector -> Ellipsoid -> a
+    -- Reference ellipsoid of this position
+    ellipsoid :: a -> Ellipsoid
+    -- | @fromEcefVector ev@ transforms the geocentric Earth-Centered Earth-Fixed (ECEF)
+    -- Cartesian position represented to a 'GeographicPosition'
+    -- The position refers to the reference 'Ellipsoid' of @ev@.
+    fromEcefVector :: EcefVector -> a
+    -- | @geodeticToEcef a@ transforms the 'GeographicPosition'
+    -- to geocentric Earth-Centered Earth-Fixed (ECEF) Cartesian position using
+    -- the reference 'Ellipsoid' of @a@.
+    toEcefVector :: a -> EcefVector
 
-instance Geodetic3D LatLongH where
-    fromNVectorH nv = LatLongH (fromNVector (getNVector nv)) (height nv)
-    toNVectorH llh = NVectorH (toNVector (getLatLong llh)) (height llh)
-    height = llH
-    geodeticToEcef (LatLongH ll' h) = geodeticToEcef' (toNVector ll') h
-    ecefToGeodetic ev e = LatLongH (fromNVector nv' :: LatLong) h
+instance GeographicPosition GeodeticPosition where
+    fromNVectorPosition (NVectorPosition nv h e) = GeodeticPosition (fromNVector nv) h e
+    toNVectorPosition (GeodeticPosition ll h e) = NVectorPosition (toNVector ll) h e
+    height = gpH
+    ellipsoid = gpE
+    fromEcefVector ev = GeodeticPosition (fromNVector nv' :: LatLong) h (ee ev)
       where
-        (nv', h) = ecefToGeodetic' ev e
+        (nv', h) = fromEcef ev
+    toEcefVector (GeodeticPosition ll' h e) = toEcef (toNVector ll') h e
 
-instance Geodetic3D NVectorH where
-    fromNVectorH nv = nv
-    toNVectorH nv = nv
+instance GeographicPosition NVectorPosition where
+    fromNVectorPosition nv = nv
+    toNVectorPosition nv = nv
     height = nvH
-    geodeticToEcef (NVectorH nv' h) = geodeticToEcef' nv' h
-    ecefToGeodetic ev e = NVectorH nv' h
+    ellipsoid = nvE
+    fromEcefVector ev = NVectorPosition nv' h (ee ev)
       where
-        (nv', h) = ecefToGeodetic' ev e
+        (nv', h) = fromEcef ev
+    toEcefVector (NVectorPosition nv' h e) = toEcef nv' h e
 
-geodeticToEcef' :: NVector -> Double -> Ellipsoid -> EcefVector
-geodeticToEcef' p h e = EcefVector ex' ey' ez'
+instance GeographicPosition EcefVector where
+   fromNVectorPosition (NVectorPosition nv' h e) = toEcef nv' h e
+   toNVectorPosition ev = NVectorPosition nv' h (ee ev)
+       where
+         (nv', h) = fromEcef ev
+   height ev = snd (fromEcef ev)
+   ellipsoid = ee
+   fromEcefVector ev = ev
+   toEcefVector ev = ev
+
+toEcef :: NVector -> Double -> Ellipsoid -> EcefVector
+toEcef p h e = EcefVector ex' ey' ez' e
   where
     nv = unit p
     a = toMetres (equatorialRadius e)
@@ -151,8 +168,8 @@ geodeticToEcef' p h e = EcefVector ex' ey' ez'
     ey' = n * m * ny' + h * ny'
     ez' = n * nz' + h * nz'
 
-ecefToGeodetic' :: EcefVector -> Ellipsoid -> (NVector, Double)
-ecefToGeodetic' p'@(EcefVector px py pz) e = (nvec d e2 k p', h)
+fromEcef :: EcefVector -> (NVector, Double)
+fromEcef p'@(EcefVector px py pz e) = (nvec d e2 k p', h)
   where
     e' = eccentricity e
     e2 = e' * e'
@@ -171,7 +188,7 @@ ecefToGeodetic' p'@(EcefVector px py pz) e = (nvec d e2 k p', h)
     h = ((k + e2 - 1.0) / k) * sqrt (d * d + pz * pz)
 
 nvec :: Double -> Double -> Double -> EcefVector -> NVector
-nvec d e2 k (EcefVector px py pz) = nvector nx' ny' nz'
+nvec d e2 k (EcefVector px py pz _) = nvector nx' ny' nz'
   where
     s = 1.0 / sqrt (d * d + pz * pz)
     a = k / (k + e2)
@@ -180,9 +197,9 @@ nvec d e2 k (EcefVector px py pz) = nvector nx' ny' nz'
     nz' = s * pz
 
 -- | Horizontal position of the North Pole.
-northPole :: (Geodetic2D a) => a
+northPole :: (HorizontalPosition a) => a
 northPole = fromNVector (nvector 0.0 0.0 1.0)
 
 -- | Horizontal position of the South Pole.
-southPole :: (Geodetic2D a) => a
+southPole :: (HorizontalPosition a) => a
 southPole = fromNVector (nvector 0.0 0.0 (-1.0))

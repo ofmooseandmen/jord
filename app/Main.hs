@@ -99,10 +99,10 @@ help =
     "    are either parameters in one of the format described below or\n" ++
     "    a call to another function\n" ++
     "\n" ++
-    "    (finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E))\n" ++
+    "    (finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E)\n" ++
     "\n" ++
     "    Top level () can be ommitted: antipode 54N028E\n" ++
-    "\n  Position calculations:\n\n" ++
+    "\n  Position calculations (Spherical Earth):\n\n" ++
     "       antipode pos                   antipodal point of pos\n" ++
     "       crossTrackDistance pos gc      signed distance from pos to great circle gc\n" ++
     "       distance pos1 pos2             surface distance between pos1 and pos2\n" ++

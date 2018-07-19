@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 32a4460dceea4408bbb145567bf4b21b739c391b1d4d259c557e517e5b190045
+-- hash: f8270e0f69d2671db21c878213aee768e78de30260e5c1d5c63a985dee831fcc
 
 name:           jord
 version:        0.3.0.0
@@ -35,7 +35,7 @@ library
       Data.Geo.Jord.Eval
       Data.Geo.Jord.LatLong
       Data.Geo.Jord.Length
-      Data.Geo.Jord.NEDVector
+      Data.Geo.Jord.NEDPosition
       Data.Geo.Jord.NVector
       Data.Geo.Jord.Position
       Data.Geo.Jord.Quantity
@@ -72,7 +72,7 @@ test-suite jord-test
       Data.Geo.Jord.EvalSpec
       Data.Geo.Jord.LatLongSpec
       Data.Geo.Jord.LengthSpec
-      Data.Geo.Jord.NEDVectorSpec
+      Data.Geo.Jord.NEDPositionSpec
       Data.Geo.Jord.PositionSpec
       Data.Geo.Jord.Spherical.GeodeticsSpec
       Data.Geo.Jord.Spherical.GreatCircleSpec

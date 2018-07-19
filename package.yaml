@@ -29,7 +29,7 @@ library:
     - Data.Geo.Jord.Eval
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
-    - Data.Geo.Jord.NEDVector
+    - Data.Geo.Jord.NEDPosition
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Position
     - Data.Geo.Jord.Quantity

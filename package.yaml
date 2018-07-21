@@ -29,10 +29,11 @@ library:
     - Data.Geo.Jord.Eval
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
-    - Data.Geo.Jord.NEDPosition
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Position
     - Data.Geo.Jord.Quantity
+    - Data.Geo.Jord.Ellipsoidal.Geodetics
+    - Data.Geo.Jord.Ellipsoidal.NedVector
     - Data.Geo.Jord.Spherical.Geodetics
     - Data.Geo.Jord.Spherical.GreatCircle
   other-modules:

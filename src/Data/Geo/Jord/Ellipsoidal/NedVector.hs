@@ -6,11 +6,13 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working position in the NED (north, east and down) coordinates system.
+-- Types and functions for working with vectors the NED (north, east and down) coordinates system.
 --
-module Data.Geo.Jord.NEDPosition
-    ( NEDPosition(north, east, down)
-    , nedPosition
+-- TODO: add fromLengthBearingElevation
+--
+module Data.Geo.Jord.Ellipsoidal.NedVector
+    ( NedVector(north, east, down)
+    , nedVector
     , length
     , bearing
     , elevation
@@ -20,32 +22,32 @@ import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Length
 import Prelude hiding (length)
 
--- | North east down (NED) position, also known as local tangent plane (LTP):
+-- | North east down (NED), also known as local tangent plane (LTP):
 -- a vector in the local coordinate frame of a body.
-data NEDPosition = NEDPosition
+data NedVector = NedVector
     { north :: Length
     , east :: Length
     , down :: Length
     } deriving (Show)
 
--- | 'NEDPosition' from given north, east and down.
-nedPosition :: Length -> Length -> Length -> NEDPosition
-nedPosition = NEDPosition
+-- | 'NedVector' from given north, east and down.
+nedVector :: Length -> Length -> Length -> NedVector
+nedVector = NedVector
 
--- | @length v@ computes the length of the NED position @v@.
-length :: NEDPosition -> Length
+-- | @length v@ computes the length of the NED vector @v@.
+length :: NedVector -> Length
 length p = metres (sqrt (n * n + e * e + d * d))
   where
     n = toMetres (north p)
     e = toMetres (east p)
     d = toMetres (down p)
 
--- | @bearing v@ computes the bearing of the NED position @v@ from north.
-bearing :: NEDPosition -> Angle
+-- | @bearing v@ computes the bearing of the NED vector @v@ from north.
+bearing :: NedVector -> Angle
 bearing p =
     let a = atan2' (toMetres (east p)) (toMetres (north p))
      in normalise a (decimalDegrees 360.0)
 
--- | @elevation v@ computes the elevation of the NED position @v@ from horizontal (ie tangent to ellipsoid surface).
-elevation :: NEDPosition -> Angle
+-- | @elevation v@ computes the elevation of the NED vector @v@ from horizontal (ie tangent to ellipsoid surface).
+elevation :: NedVector -> Angle
 elevation p = negate' (asin' (toMetres (down p) / toMetres (length p)))

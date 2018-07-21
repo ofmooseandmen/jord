@@ -19,10 +19,10 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.Eval
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
-    , module Data.Geo.Jord.NEDPosition
     , module Data.Geo.Jord.NVector
     , module Data.Geo.Jord.Position
     , module Data.Geo.Jord.Quantity
+    , module Data.Geo.Jord.Ellipsoidal.NedVector
     , module Data.Geo.Jord.Spherical.Geodetics
     , module Data.Geo.Jord.Spherical.GreatCircle
     , jordVersion
@@ -33,10 +33,10 @@ import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Eval
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.NEDPosition
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Ellipsoidal.NedVector
 import Data.Geo.Jord.Spherical.Geodetics
 import Data.Geo.Jord.Spherical.GreatCircle
 

@@ -21,7 +21,7 @@ spec = do
                     , ecefPosition 3194419.14512197 3194419.14512197 4487348.40860601 wgs84
                     , ecefPosition 4200996.76974058 172460.32072401 4780102.80780980 wgs84
                     ]
-            mapM_ (\(g, e) -> toEcef g `ecefShouldBe` e) (zip refGeodetics refEcefs)
+            mapM_ (\(g, e) -> toEcefPosition g `ecefShouldBe` e) (zip refGeodetics refEcefs)
     describe "ECEF position To geodetic position" $
         it "transforms ECEF position to geodetic position and height" $ do
             let refGeodetics =
@@ -34,7 +34,7 @@ spec = do
                     , ecefPosition 3194419.145121972 3194419.145121971 4487348.408606014 wgs84
                     , ecefPosition 4200996.769831858 172460.320727757 4780102.807914356 wgs84
                     ]
-            mapM_ (\(g, e) -> fromEcef e `shouldBe` g) (zip refGeodetics refEcefs)
+            mapM_ (\(g, e) -> fromEcefPosition e `shouldBe` g) (zip refGeodetics refEcefs)
 
 ecefShouldBe :: (HasCallStack) => EcefPosition -> EcefPosition -> Expectation
 actual `ecefShouldBe` expected = do

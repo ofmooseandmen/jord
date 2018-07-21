@@ -111,50 +111,50 @@ class (Eq a) => GeographicPosition a where
     -- | Converts a 'GeographicPosition' into 'NVector' instance.
     toNVectorPosition :: a -> NVectorPosition
     -- | Vertical position.
-    height :: a -> Double -- TODO: Height.hs and Length
+    height :: a -> Double -- TODO: Height.hs
     -- Reference ellipsoid of this position
     ellipsoid :: a -> Ellipsoid
-    -- | @fromEcef ev@ transforms the geocentric Earth-Centered Earth-Fixed (ECEF)
+    -- | @fromEcefPosition ev@ transforms the geocentric Earth-Centered Earth-Fixed (ECEF)
     -- Cartesian position to a 'GeographicPosition'
     -- The position refers to the reference 'Ellipsoid' of @ev@.
-    fromEcef :: EcefPosition -> a
-    -- | @toEcef a@ transforms a 'GeographicPosition'
+    fromEcefPosition :: EcefPosition -> a
+    -- | @toEcefPosition a@ transforms a 'GeographicPosition'
     -- to geocentric Earth-Centered Earth-Fixed (ECEF) Cartesian position using
     -- the reference 'Ellipsoid' of @a@.
-    toEcef :: a -> EcefPosition
+    toEcefPosition :: a -> EcefPosition
 
 instance GeographicPosition GeodeticPosition where
     fromNVectorPosition (NVectorPosition nv h e) = GeodeticPosition (fromNVector nv) h e
     toNVectorPosition (GeodeticPosition ll h e) = NVectorPosition (toNVector ll) h e
     height = gpH
     ellipsoid = gpE
-    fromEcef ep = GeodeticPosition (fromNVector nv' :: LatLong) h (ee ep)
+    fromEcefPosition ep = GeodeticPosition (fromNVector nv' :: LatLong) h (ee ep)
       where
-        (nv', h) = fromEcef' ep
-    toEcef (GeodeticPosition ll' h e) = toEcef' (toNVector ll') h e
+        (nv', h) = fromEcef ep
+    toEcefPosition (GeodeticPosition ll' h e) = toEcef (toNVector ll') h e
 
 instance GeographicPosition NVectorPosition where
     fromNVectorPosition nv = nv
     toNVectorPosition nv = nv
     height = nvH
     ellipsoid = nvE
-    fromEcef ep = NVectorPosition nv' h (ee ep)
+    fromEcefPosition ep = NVectorPosition nv' h (ee ep)
       where
-        (nv', h) = fromEcef' ep
-    toEcef (NVectorPosition nv' h e) = toEcef' nv' h e
+        (nv', h) = fromEcef ep
+    toEcefPosition (NVectorPosition nv' h e) = toEcef nv' h e
 
 instance GeographicPosition EcefPosition where
-   fromNVectorPosition (NVectorPosition nv' h e) = toEcef' nv' h e
+   fromNVectorPosition (NVectorPosition nv' h e) = toEcef nv' h e
    toNVectorPosition ep = NVectorPosition nv' h (ee ep)
        where
-         (nv', h) = fromEcef' ep
-   height ep = snd (fromEcef' ep)
+         (nv', h) = fromEcef ep
+   height ep = snd (fromEcef ep)
    ellipsoid = ee
-   fromEcef ep = ep
-   toEcef ep = ep
+   fromEcefPosition ep = ep
+   toEcefPosition ep = ep
 
-toEcef' :: NVector -> Double -> Ellipsoid -> EcefPosition
-toEcef' p h e = EcefPosition ex' ey' ez' e
+toEcef :: NVector -> Double -> Ellipsoid -> EcefPosition
+toEcef p h e = EcefPosition ex' ey' ez' e
   where
     nv = unit p
     a = toMetres (equatorialRadius e)
@@ -168,8 +168,8 @@ toEcef' p h e = EcefPosition ex' ey' ez' e
     ey' = n * m * ny' + h * ny'
     ez' = n * nz' + h * nz'
 
-fromEcef' :: EcefPosition -> (NVector, Double)
-fromEcef' p'@(EcefPosition px py pz e) = (nvec d e2 k p', h)
+fromEcef :: EcefPosition -> (NVector, Double)
+fromEcef p'@(EcefPosition px py pz e) = (nvec d e2 k p', h)
   where
     e' = eccentricity e
     e2 = e' * e'

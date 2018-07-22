@@ -8,8 +8,12 @@ import Test.HUnit
 import Test.Hspec
 
 spec :: Spec
-spec = do
-    describe "Geodetic position to ECEF position" $
+spec =
+    describe "Position transformation between coordinates systems" $ do
+        it "transforms NVector position to ECEF position" $ do
+            let nvp = nvectorPosition (nvector 0.5 0.5 0.7071) 0 wgs84
+            toEcefPosition nvp `shouldBe`
+                ecefPosition 3194434.411029306 3194434.411029306 4487326.819249299 wgs84
         it "transforms geodetic position and height to ECEF position" $ do
             let refGeodetics =
                     [ geodeticPosition (latLongDecimal 39.379 (-48.013)) 4702059.834 wgs84
@@ -22,7 +26,6 @@ spec = do
                     , ecefPosition 4200996.76974058 172460.32072401 4780102.80780980 wgs84
                     ]
             mapM_ (\(g, e) -> toEcefPosition g `ecefShouldBe` e) (zip refGeodetics refEcefs)
-    describe "ECEF position To geodetic position" $
         it "transforms ECEF position to geodetic position and height" $ do
             let refGeodetics =
                     [ geodeticPosition (latLongDecimal 39.379 (-48.013)) 4702059.833901506 wgs84

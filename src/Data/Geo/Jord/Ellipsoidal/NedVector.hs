@@ -28,7 +28,7 @@ data NedVector = NedVector
     { north :: Length
     , east :: Length
     , down :: Length
-    } deriving (Show)
+    } deriving (Eq, Show)
 
 -- | 'NedVector' from given north, east and down.
 nedVector :: Length -> Length -> Length -> NedVector

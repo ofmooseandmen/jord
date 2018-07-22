@@ -14,6 +14,7 @@ module Data.Geo.Jord.NVector
     , cross
     , dot
     , norm
+    , rotate
     , scale
     , unit
     ) where
@@ -64,6 +65,14 @@ dot a b = nx a * nx b + ny a * ny b + nz a * nz b
 norm :: NVector -> Double
 norm a = sqrt ((nx a * nx a) + (ny a * ny a) + (nz a * nz a))
 
+-- | @rotate nv rm@ applies rotation matrix @rm@ to 'NVector' @nv@.
+rotate :: NVector -> [NVector] -> NVector
+rotate nv rm
+    | length rm /= 3 = error ("Invalid rotation matrix" ++ show rm)
+    | otherwise = nvector nx' ny' nz'
+       where
+           [nx', ny', nz'] = map (dot nv) rm
+
 -- | Multiplies each component of the given 'NVector' by the given value.
 scale :: NVector -> Double -> NVector
 scale a s = NVector x y z
@@ -74,6 +83,8 @@ scale a s = NVector x y z
 
 -- | Normalises the given 'NVector'.
 unit :: NVector -> NVector
-unit a = scale a s
+unit a
+    | s == 1.0 = a
+    | otherwise = scale a s
   where
     s = 1.0 / norm a

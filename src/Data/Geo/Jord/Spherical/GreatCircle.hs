@@ -24,7 +24,6 @@ module Data.Geo.Jord.Spherical.GreatCircle
     , crossTrackDistance
     , crossTrackDistance'
     , intersections
-    , isInside
     ) where
 
 import Control.Monad.Fail

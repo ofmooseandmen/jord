@@ -26,12 +26,15 @@ library:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
     - Data.Geo.Jord.Ellipsoid
+    - Data.Geo.Jord.Ellipsoidal
     - Data.Geo.Jord.Eval
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Position
+    - Data.Geo.Jord.Positions
     - Data.Geo.Jord.Quantity
+    - Data.Geo.Jord.Spherical
     - Data.Geo.Jord.Ellipsoidal.Geodetics
     - Data.Geo.Jord.Ellipsoidal.NedVector
     - Data.Geo.Jord.Spherical.Geodetics

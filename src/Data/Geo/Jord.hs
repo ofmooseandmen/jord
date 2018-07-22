@@ -23,6 +23,7 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.Positions
     , module Data.Geo.Jord.Spherical
     , module Data.Geo.Jord.Quantity
+    , module Data.Geo.Jord.Transform
     , jordVersion
     ) where
 
@@ -35,6 +36,7 @@ import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Positions
 import Data.Geo.Jord.Spherical
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Transform
 
 -- | version.
 jordVersion :: String

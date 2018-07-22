@@ -1,4 +1,4 @@
-module Data.Geo.Jord.Ellipsoidal.NedVectorSpec
+module Data.Geo.Jord.NedVectorSpec
     ( spec
     ) where
 

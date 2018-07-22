@@ -12,9 +12,8 @@
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
 module Data.Geo.Jord.Position
-    (
     -- * The 'HorizontalPosition' type
-      HorizontalPosition(..)
+    ( HorizontalPosition(..)
     -- * The 'Geodetic3D' type
     , GeographicPosition(..)
     -- Horizontal & Vertical Positions - 'GeographicPosition'
@@ -37,8 +36,10 @@ import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 
 -- | Horizontal position.
-class (Eq a) => HorizontalPosition a where
+class (Eq a) =>
+      HorizontalPosition a
     -- | Converts a 'NVector' into 'HorizontalPosition' instance.
+    where
     fromNVector :: NVector -> a
     -- | Converts a 'HorizontalPosition' into 'NVector' instance.
     toNVector :: a -> NVector
@@ -105,8 +106,10 @@ nvectorPosition :: NVector -> Double -> Ellipsoid -> NVectorPosition
 nvectorPosition = NVectorPosition
 
 -- | Geographic position.
-class (Eq a) => GeographicPosition a where
+class (Eq a) =>
+      GeographicPosition a
     -- | Converts a 'NVectorPosition' into 'GeographicPosition' instance.
+    where
     fromNVectorPosition :: NVectorPosition -> a
     -- | Converts a 'GeographicPosition' into 'NVector' instance.
     toNVectorPosition :: a -> NVectorPosition
@@ -144,14 +147,14 @@ instance GeographicPosition NVectorPosition where
     toEcefPosition (NVectorPosition nv' h e) = toEcef nv' h e
 
 instance GeographicPosition EcefPosition where
-   fromNVectorPosition (NVectorPosition nv' h e) = toEcef nv' h e
-   toNVectorPosition ep = NVectorPosition nv' h (ee ep)
-       where
-         (nv', h) = fromEcef ep
-   height ep = snd (fromEcef ep)
-   ellipsoid = ee
-   fromEcefPosition ep = ep
-   toEcefPosition ep = ep
+    fromNVectorPosition (NVectorPosition nv' h e) = toEcef nv' h e
+    toNVectorPosition ep = NVectorPosition nv' h (ee ep)
+      where
+        (nv', h) = fromEcef ep
+    height ep = snd (fromEcef ep)
+    ellipsoid = ee
+    fromEcefPosition ep = ep
+    toEcefPosition ep = ep
 
 toEcef :: NVector -> Double -> Ellipsoid -> EcefPosition
 toEcef p h e = EcefPosition ex' ey' ez' e

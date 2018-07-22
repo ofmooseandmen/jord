@@ -1,6 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module Data.Geo.Jord.Spherical
     ( SGeodetics(angularDistance, antipode, destination, finalBearing,
            height, initialBearing, interpolate, insideSurface,
@@ -13,30 +10,7 @@ import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Positions
 import Data.Geo.Jord.Quantity
-
--- | Spherical transformation: 'NVector' <-> 'EcefPosition'.
-instance CTransform NVector Length where
-    fromEcef (GeoPos p r) = GeoPos (fst (fromEcef' p r)) r
-    toEcef (GeoPos v r) = GeoPos (toEcef' v 0.0 r) r
-
--- | Spherical transformation: 'LatLong' <-> 'EcefPosition'.
-instance CTransform LatLong Length where
-    fromEcef p = unvec 0.0 (fromEcef p :: (GeoPos NVector Length))
-    toEcef = toEcef . vec
-
--- | Spherical transformation: 'NVectorPosition' <-> 'EcefPosition'.
-instance CTransform NVectorPosition Length where
-    fromEcef (GeoPos p r) = GeoPos (NVectorPosition nv h) r
-      where
-        (nv, h) = fromEcef' p r
-    toEcef (GeoPos (NVectorPosition v h) r) = GeoPos (toEcef' v h r) r
-
--- | Spherical transformation: 'AngularPosition' <-> 'EcefPosition'.
-instance CTransform AngularPosition Length where
-    fromEcef (GeoPos p r) = GeoPos (AngularPosition (fromNVector nv) h) r
-      where
-        (nv, h) = fromEcef' p r
-    toEcef = toEcef . vec
+import Data.Geo.Jord.Transform
 
 -- TODO: add crossTrackDistance and intersections to this class
 -- | Spherical geodetics calculations.
@@ -81,19 +55,14 @@ instance SGeodetics NVector where
         ta = central d r -- central angle
         de = add (scale nd (cos' b)) (scale ed (sin' b)) -- unit vector in the direction of the azimuth
     height _ = 0.0
-    initialBearing (GeoPos v1 _) (GeoPos v2 _) =
-        normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
+    initialBearing (GeoPos v1 _) (GeoPos v2 _) = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
       where
         gc1 = cross v1 v2 -- great circle through p1 & p2
         gc2 = cross v1 northPole -- great circle through p1 & north pole
     -- | TODO : different radius ???
     _interpolate (GeoPos v0 r) (GeoPos v1 _) f = GeoPos (interpolate' v0 v1 f) r
     _insideSurface (GeoPos v _) ps =
-        let aSum =
-                foldl
-                    (\a v' -> add a (uncurry angularDistance' v' (Just v)))
-                    (decimalDegrees 0)
-                    (egdes (map (sub v . pos) ps))
+        let aSum = foldl (\a v' -> add a (uncurry angularDistance' v' (Just v))) (decimalDegrees 0) (egdes (map (sub v . pos) ps))
          in abs (toDecimalDegrees aSum) > 180.0
 
 -- | Spherical geodetics calculations on 'LatLong's.
@@ -113,8 +82,7 @@ instance SGeodetics NVectorPosition where
     _destination p b d = unvec (height p) (_destination (vec p) b d)
     height (GeoPos (NVectorPosition _ h) _) = h
     initialBearing p1 p2 = initialBearing (vec p1) (vec p2)
-    _interpolate p0@(GeoPos (NVectorPosition _ h0) _) p1@(GeoPos (NVectorPosition _ h1) _) f =
-        unvec h (_interpolate (vec p0) (vec p1) f)
+    _interpolate p0@(GeoPos (NVectorPosition _ h0) _) p1@(GeoPos (NVectorPosition _ h1) _) f = unvec h (_interpolate (vec p0) (vec p1) f)
       where
         h = h0 + (h1 - h0) * f
     _insideSurface p ps = _insideSurface (vec p) (fmap vec ps)
@@ -126,8 +94,7 @@ instance SGeodetics AngularPosition where
     _destination p b d = unvec (height p) (_destination (vec p) b d)
     height (GeoPos (AngularPosition _ h) _) = h
     initialBearing p1 p2 = initialBearing (vec p1) (vec p2)
-    _interpolate p0@(GeoPos (AngularPosition _ h0) _) p1@(GeoPos (AngularPosition _ h1) _) f =
-        unvec h (_interpolate (vec p0) (vec p1) f)
+    _interpolate p0@(GeoPos (AngularPosition _ h0) _) p1@(GeoPos (AngularPosition _ h1) _) f = unvec h (_interpolate (vec p0) (vec p1) f)
       where
         h = h0 + (h1 - h0) * f
     _insideSurface p ps = _insideSurface (vec p) (fmap vec ps)
@@ -145,15 +112,15 @@ instance SGeodetics EcefPosition where
     _destination p b d = toEcef (_destination v b d)
       where
         v = fromEcef p :: (GeoPos NVectorPosition Length)
-    height (GeoPos p r) = snd (fromEcef' p r)
+    height (GeoPos p r) = snd (fromEcefSpherical p r)
     initialBearing p1 p2 = initialBearing v1 v2
       where
         v1 = fromEcef p1 :: (GeoPos NVector Length)
         v2 = fromEcef p2 :: (GeoPos NVector Length)
-    _interpolate (GeoPos e0 r0) (GeoPos e1 r1) f = GeoPos (toEcef' iv h r0) r0
+    _interpolate (GeoPos e0 r0) (GeoPos e1 r1) f = GeoPos (toEcefSpherical iv h r0) r0
       where
-        (v0, h0) = fromEcef' e0 r0
-        (v1, h1) = fromEcef' e1 r1
+        (v0, h0) = fromEcefSpherical e0 r0
+        (v1, h1) = fromEcefSpherical e1 r1
         h = h0 + (h1 - h0) * f
         iv = interpolate' v0 v1 f
     _insideSurface p ps = _insideSurface v vs
@@ -177,40 +144,3 @@ interpolate' v0 v1 f = unit (add v0 (scale (sub v1 v0) f))
 -- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
 egdes :: [NVector] -> [(NVector, NVector)]
 egdes ps = zip ps (tail ps ++ [head ps])
-
-toEcef' :: NVector -> Double -> Length -> EcefPosition
-toEcef' v h r = EcefPosition ex' ey' ez'
-  where
-    uv = unit v
-    a = toMetres r
-    nx' = nx uv
-    ny' = ny uv
-    nz' = nz uv
-    n = a / sqrt (nx' * nx' + ny' * ny' + nz' * nz')
-    ex' = metres (n * nx' + h * nx')
-    ey' = metres (n * ny' + h * ny')
-    ez' = metres (n * nz' + h * nz')
-
-fromEcef' :: EcefPosition -> Length -> (NVector, Double)
-fromEcef' (EcefPosition x y z) r = (nvec d px py pz, h)
-  where
-    a = toMetres r
-    a2 = a * a
-    px = toMetres x
-    py = toMetres y
-    pz = toMetres z
-    p = (px * px + py * py) / a2
-    q = (1 / a2) * (pz * pz)
-    r' = (p + q) / 6.0
-    u = 2.0 * r'
-    k = sqrt (u + u)
-    d = k * sqrt (px * px + py * py) / k
-    h = ((k - 1.0) / k) * sqrt (d * d + pz * pz)
-
-nvec :: Double -> Double -> Double -> Double -> NVector
-nvec d px py pz = nvector nx' ny' nz'
-  where
-    s = 1.0 / sqrt (d * d + pz * pz)
-    nx' = s * px
-    ny' = s * py
-    nz' = s * pz

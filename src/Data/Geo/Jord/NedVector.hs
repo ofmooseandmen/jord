@@ -9,6 +9,7 @@
 -- Types and functions for working with vectors the NED (north, east and down) coordinates system.
 --
 -- TODO: add fromLengthBearingElevation
+-- TODO: nedVectorMetres
 --
 module Data.Geo.Jord.NedVector
     ( NedVector(north, east, down)

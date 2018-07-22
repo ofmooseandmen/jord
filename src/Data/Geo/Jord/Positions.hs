@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 -- |
 -- Module:      Data.Geo.Jord.Positions
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -18,21 +16,16 @@ module Data.Geo.Jord.Positions
     , NVectorPosition(..)
     , EcefPosition(..)
     , GeoPos(..)
-    , VTransform(..)
-    , CTransform(..)
     , elevatedLatLong
     , elevatedNVector
     , ecefPosition
     , ecefPositionMetres
-    , sphericalPos
-    , ellipsoidalPos
-    , fromNVector
-    , fromLatLong
+    , spherical
+    , ellipsoidal
     , northPole
     , southPole
     ) where
 
-import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
@@ -76,47 +69,11 @@ data GeoPos a b = GeoPos
     , model :: b
     } deriving (Eq, Show)
 
-sphericalPos :: a -> Length -> GeoPos a Length
-sphericalPos = GeoPos
+spherical :: a -> Length -> GeoPos a Length
+spherical = GeoPos
 
-ellipsoidalPos :: a -> Ellipsoid -> GeoPos a Ellipsoid
-ellipsoidalPos = GeoPos
-
-class VTransform a where
-    vec :: GeoPos a b -> GeoPos NVector b
-    unvec :: Double -> GeoPos NVector b -> GeoPos a b
-
-instance VTransform LatLong where
-    vec (GeoPos ll m) = GeoPos (fromLatLong ll) m
-    unvec _ (GeoPos nv m) = GeoPos (fromNVector nv) m
-
-instance VTransform NVectorPosition where
-    vec (GeoPos (NVectorPosition nv _) m) = GeoPos nv m
-    unvec h (GeoPos nv m) = GeoPos (NVectorPosition nv h) m
-
-instance VTransform AngularPosition where
-    vec (GeoPos (AngularPosition ll _) m) = GeoPos (fromLatLong ll) m
-    unvec h (GeoPos nv m) = GeoPos (AngularPosition (fromNVector nv) h) m
-
-class CTransform a b where
-    toEcef :: GeoPos a b -> GeoPos EcefPosition b
-    fromEcef :: GeoPos EcefPosition b -> GeoPos a b
-
-fromNVector :: NVector -> LatLong
-fromNVector v = latLong lat lon
-  where
-    lat = atan2' (nz v) (sqrt (nx v * nx v + ny v * ny v))
-    lon = atan2' (ny v) (nx v)
-
-fromLatLong :: LatLong -> NVector
-fromLatLong g = nvector x' y' z'
-  where
-    lat = latitude g
-    lon = longitude g
-    cl = cos' lat
-    x' = cl * cos' lon
-    y' = cl * sin' lon
-    z' = sin' lat
+ellipsoidal :: a -> Ellipsoid -> GeoPos a Ellipsoid
+ellipsoidal = GeoPos
 
 -- | Horizontal position of the North Pole.
 northPole :: NVector

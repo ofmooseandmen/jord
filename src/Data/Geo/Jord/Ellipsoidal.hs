@@ -1,13 +1,12 @@
 module Data.Geo.Jord.Ellipsoidal
-    ( EGeodetics(delta, destination, geodeticHeight)
+    ( EGeodetics(delta, endPosition, geodeticHeight)
     ) where
 
-import Data.Geo.Jord.Ellipsoidal.NedVector
+import Data.Geo.Jord.Ellipsoid
+import Data.Geo.Jord.NedVector
 import Data.Geo.Jord.Positions
 
--- class ETransform a where
-
 class EGeodetics a where
-    delta :: GeoPos a -> GeoPos a -> NedVector
-    destination :: GeoPos a -> NedVector -> GeoPos a -- TODO find other name
-    geodeticHeight :: GeoPos a -> Double
+    delta :: GeoPos a Ellipsoid -> GeoPos a Ellipsoid -> NedVector
+    endPosition :: GeoPos a Ellipsoid -> NedVector -> GeoPos a Ellipsoid -- TODO find a better name
+    geodeticHeight :: GeoPos a Ellipsoid -> Double

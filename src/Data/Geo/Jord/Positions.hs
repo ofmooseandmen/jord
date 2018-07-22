@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 -- |
 -- Module:      Data.Geo.Jord.Positions
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -16,12 +18,18 @@ module Data.Geo.Jord.Positions
     , NVectorPosition(..)
     , EcefPosition(..)
     , GeoPos(..)
+    , VTransform(..)
+    , CTransform(..)
     , elevatedLatLong
     , elevatedNVector
     , ecefPosition
     , ecefPositionMetres
+    , sphericalPos
+    , ellipsoidalPos
     , fromNVector
     , fromLatLong
+    , northPole
+    , southPole
     ) where
 
 import Data.Geo.Jord.Angle
@@ -51,12 +59,6 @@ data EcefPosition = EcefPosition
     , ez :: Length
     } deriving (Eq, Show)
 
--- | A geographic position.
-data GeoPos a = GeoPos
-    { pos :: a
-    , ellipsoid :: Ellipsoid
-    } deriving (Eq, Show)
-
 elevatedLatLong :: LatLong -> Double -> AngularPosition
 elevatedLatLong = AngularPosition
 
@@ -68,6 +70,37 @@ ecefPosition = EcefPosition
 
 ecefPositionMetres :: Double -> Double -> Double -> EcefPosition
 ecefPositionMetres x y z = EcefPosition (metres x) (metres y) (metres z)
+
+data GeoPos a b = GeoPos
+    { pos :: a
+    , model :: b
+    } deriving (Eq, Show)
+
+sphericalPos :: a -> Length -> GeoPos a Length
+sphericalPos = GeoPos
+
+ellipsoidalPos :: a -> Ellipsoid -> GeoPos a Ellipsoid
+ellipsoidalPos = GeoPos
+
+class VTransform a where
+    vec :: GeoPos a b -> GeoPos NVector b
+    unvec :: Double -> GeoPos NVector b -> GeoPos a b
+
+instance VTransform LatLong where
+    vec (GeoPos ll m) = GeoPos (fromLatLong ll) m
+    unvec _ (GeoPos nv m) = GeoPos (fromNVector nv) m
+
+instance VTransform NVectorPosition where
+    vec (GeoPos (NVectorPosition nv _) m) = GeoPos nv m
+    unvec h (GeoPos nv m) = GeoPos (NVectorPosition nv h) m
+
+instance VTransform AngularPosition where
+    vec (GeoPos (AngularPosition ll _) m) = GeoPos (fromLatLong ll) m
+    unvec h (GeoPos nv m) = GeoPos (AngularPosition (fromNVector nv) h) m
+
+class CTransform a b where
+    toEcef :: GeoPos a b -> GeoPos EcefPosition b
+    fromEcef :: GeoPos EcefPosition b -> GeoPos a b
 
 fromNVector :: NVector -> LatLong
 fromNVector v = latLong lat lon
@@ -84,3 +117,11 @@ fromLatLong g = nvector x' y' z'
     x' = cl * cos' lon
     y' = cl * sin' lon
     z' = sin' lat
+
+-- | Horizontal position of the North Pole.
+northPole :: NVector
+northPole = nvector 0.0 0.0 1.0
+
+-- | Horizontal position of the South Pole.
+southPole :: NVector
+southPole = nvector 0.0 0.0 (-1.0)

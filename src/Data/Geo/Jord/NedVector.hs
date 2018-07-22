@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.NEDVector
+-- Module:      Data.Geo.Jord.NedVector
 -- Copyright:   (c) 2018 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -10,7 +10,7 @@
 --
 -- TODO: add fromLengthBearingElevation
 --
-module Data.Geo.Jord.Ellipsoidal.NedVector
+module Data.Geo.Jord.NedVector
     ( NedVector(north, east, down)
     , nedVector
     , length

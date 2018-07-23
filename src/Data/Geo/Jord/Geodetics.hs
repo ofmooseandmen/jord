@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
+--
+-- TODO: doc
+--
 module Data.Geo.Jord.Geodetics
     ( BearingDistance(..)
     , Geodetics(delta, destination)
@@ -18,13 +21,12 @@ import Data.Geo.Jord.Transform
 -- | Bearing and distance between 2 spherical positions.
 newtype BearingDistance =
     BearingDistance (Angle, Length)
+    deriving (Eq, Show)
 
 instance Norm BearingDistance Length where
     norm (BearingDistance (_, l)) = l
 
-class (Norm c Length) =>
-      Geodetics a b c
-    where
+class (Norm c Length) => Geodetics a b c where
     delta :: GeoPos a b -> GeoPos a b -> c
     destination :: GeoPos a b -> c -> GeoPos a b
     destination p0 d
@@ -36,7 +38,8 @@ class (Norm c Length) =>
 -- | Spherical geodetics calculations on 'NVector's.
 instance Geodetics NVector Length BearingDistance where
     delta p1 p2 = BearingDistance (initialBearing p1 p2, surfaceDistance p1 p2)
-    _destination (GeoPos v r) (BearingDistance (b, d)) = GeoPos (add (scale v (cos' ta)) (scale de (sin' ta))) r
+    _destination (GeoPos v r) (BearingDistance (b, d)) =
+        GeoPos (add (scale v (cos' ta)) (scale de (sin' ta))) r
       where
         ed = unit (cross northPole v) -- east direction vector at v
         nd = cross v ed -- north direction vector at v

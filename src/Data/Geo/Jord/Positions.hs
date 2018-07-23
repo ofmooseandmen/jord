@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 -- |
 -- Module:      Data.Geo.Jord.Positions
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -10,6 +12,10 @@
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
+--
+-- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
+--
+-- TODO: doc
 --
 module Data.Geo.Jord.Positions
     ( AngularPosition(..)
@@ -32,6 +38,7 @@ import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Quantity (Norm(..))
 
 -- | An earth position defined by its latitude, longitude and height.
 data AngularPosition = AngularPosition
@@ -48,11 +55,21 @@ data NVectorPosition = NVectorPosition
 -- | An earth position expressed in the Earth Centered, Earth Fixed (ECEF) coordinates system.
 --
 -- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
+--
+-- Note: on a spherical model earth, an n-vector is equivalent to a normalised version of an (ECEF) cartesian coordinate.
 data EcefPosition = EcefPosition
     { ex :: Length
     , ey :: Length
     , ez :: Length
     } deriving (Eq, Show)
+
+-- | 'NedVector' norm.
+instance Norm EcefPosition Length where
+    norm a = metres (sqrt (x * x + y * y + z * z))
+      where
+        x = toMetres (ex a)
+        y = toMetres (ey a)
+        z = toMetres (ez a)
 
 angularPos :: LatLong -> Double -> AngularPosition
 angularPos = AngularPosition

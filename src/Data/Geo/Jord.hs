@@ -13,6 +13,8 @@
 --
 -- See <http://www.movable-type.co.uk/scripts/latlong-vectors.html Vector-based geodesy>
 --
+-- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
+--
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.Ellipsoid

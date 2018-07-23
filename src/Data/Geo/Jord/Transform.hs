@@ -14,6 +14,10 @@
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
+-- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
+--
+-- TODO: doc
+--
 module Data.Geo.Jord.Transform
     ( VTransform(..)
     , ETransform(..)
@@ -32,6 +36,7 @@ import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Positions
+import Data.Geo.Jord.Quantity (norm)
 
 -- | Transformation between positions and 'NVector'.
 class VTransform a where
@@ -97,14 +102,16 @@ instance ETransform AngularPosition Ellipsoid where
     fromEcef (GeoPos p e) = GeoPos (AngularPosition (nvectorToLatLong nv) h) e
       where
         (nv, h) = ecefToNVectorEllipsoidal p e
-    toEcef (GeoPos (AngularPosition ll h) e) = GeoPos (nvectorToEcefEllipsoidal (latLongToNVector ll) h e) e
+    toEcef (GeoPos (AngularPosition ll h) e) =
+        GeoPos (nvectorToEcefEllipsoidal (latLongToNVector ll) h e) e
 
 -- | Spherical transformation: 'AngularPosition' <-> 'EcefPosition'.
 instance ETransform AngularPosition Length where
     fromEcef (GeoPos p r) = GeoPos (AngularPosition (nvectorToLatLong nv) h) r
       where
         (nv, h) = ecefToNVectorSpherical p r
-    toEcef (GeoPos (AngularPosition ll h) r) = GeoPos (nvectorToEcefSpherical (latLongToNVector ll) h r) r
+    toEcef (GeoPos (AngularPosition ll h) r) =
+        GeoPos (nvectorToEcefSpherical (latLongToNVector ll) h r) r
 
 -- | height of a geographic position.
 class HTransform a b where
@@ -151,11 +158,12 @@ ecefToNVectorEllipsoidal (EcefPosition x y z) e = (nvecEllipsoidal d e2 k px py 
     e2 = e' * e'
     e4 = e2 * e2
     a = toMetres (equatorialRadius e)
+    a2 = a * a
     px = toMetres x
     py = toMetres y
     pz = toMetres z
-    p = (px * px + py * py) / (a * a)
-    q = ((1 - e2) / (a * a)) * (pz * pz)
+    p = (px * px + py * py) / a2
+    q = ((1 - e2) / a2) * (pz * pz)
     r = (p + q - e4) / 6.0
     s = (e4 * p * q) / (4.0 * r * r * r)
     t = (1.0 + s + sqrt (s * (2.0 + s))) ** (1 / 3)
@@ -176,9 +184,9 @@ nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
     nz' = s * pz
 
 nvectorToEcefEllipsoidal :: NVector -> Double -> Ellipsoid -> EcefPosition
-nvectorToEcefEllipsoidal p h e = EcefPosition ex' ey' ez'
+nvectorToEcefEllipsoidal v h e = EcefPosition ex' ey' ez'
   where
-    nv = unit p
+    nv = unit v
     a = toMetres (equatorialRadius e)
     b = toMetres (polarRadius e)
     nx' = nx nv
@@ -191,38 +199,19 @@ nvectorToEcefEllipsoidal p h e = EcefPosition ex' ey' ez'
     ez' = metres (n * nz' + h * nz')
 
 ecefToNVectorSpherical :: EcefPosition -> Length -> (NVector, Double)
-ecefToNVectorSpherical (EcefPosition x y z) r = (nvecSpherical d px py pz, h)
+ecefToNVectorSpherical p r = (NVector x y z, h)
   where
-    a = toMetres r
-    a2 = a * a
-    px = toMetres x
-    py = toMetres y
-    pz = toMetres z
-    p = (px * px + py * py) / a2
-    q = (1 / a2) * (pz * pz)
-    r' = (p + q) / 6.0
-    u = 2.0 * r'
-    k = sqrt (u + u)
-    d = k * sqrt (px * px + py * py) / k
-    h = ((k - 1.0) / k) * sqrt (d * d + pz * pz)
-
-nvecSpherical :: Double -> Double -> Double -> Double -> NVector
-nvecSpherical d px py pz = NVector nx' ny' nz'
-  where
-    s = 1.0 / sqrt (d * d + pz * pz)
-    nx' = s * px
-    ny' = s * py
-    nz' = s * pz
+    n = toMetres (norm p)
+    x = toMetres (ex p) / n
+    y = toMetres (ey p) / n
+    z = toMetres (ez p) / n
+    h = n - toMetres r
 
 nvectorToEcefSpherical :: NVector -> Double -> Length -> EcefPosition
-nvectorToEcefSpherical v h r = EcefPosition ex' ey' ez'
+nvectorToEcefSpherical v h r = EcefPosition x y z
   where
-    uv = unit v
-    a = toMetres r
-    nx' = nx uv
-    ny' = ny uv
-    nz' = nz uv
-    n = a / sqrt (nx' * nx' + ny' * ny' + nz' * nz')
-    ex' = metres (n * nx' + h * nx')
-    ey' = metres (n * ny' + h * ny')
-    ez' = metres (n * nz' + h * nz')
+    nv = unit v
+    n = h + toMetres r
+    x = metres (n * nx nv)
+    y = metres (n * ny nv)
+    z = metres (n * nz nv)

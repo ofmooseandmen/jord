@@ -10,8 +10,10 @@ module Data.Geo.Jord.Geodetics
     ) where
 
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.NedVector
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Positions
 import Data.Geo.Jord.Quantity
@@ -34,6 +36,37 @@ class (Norm c Length) => Geodetics a b c where
         | otherwise = _destination p0 d
     -- private (not exported)
     _destination :: GeoPos a b -> c -> GeoPos a b
+
+-- | Ellipsoidal geodetics calculations on 'NVector's.
+instance Geodetics NVector Ellipsoid NedVector where
+     delta p1 p2 = delta (toEcef p1) (toEcef p2)
+
+-- | Ellipsoidal geodetics calculations on 'LatLong's.
+instance Geodetics LatLong Ellipsoid NedVector where
+    delta p1 p2 = delta (toEcef p1) (toEcef p2)
+
+-- | Ellipsoidal geodetics calculations on 'NVector's.
+instance Geodetics NVectorPosition Ellipsoid NedVector where
+     delta p1 p2 = delta (toEcef p1) (toEcef p2)
+
+-- | Ellipsoidal geodetics calculations on 'NVector's.
+instance Geodetics AngularPosition Ellipsoid NedVector where
+    delta p1 p2 = delta (toEcef p1) (toEcef p2)
+
+-- | Ellipsoidal geodetics calculations on 'EcefPosition's.
+instance Geodetics EcefPosition Ellipsoid NedVector where
+     -- TODO: how to handle different ellipsoids...
+     delta (GeoPos p1 e1) (GeoPos p2 _) = nedVectorMetres (nx r) (ny r) (nz r)
+       where
+         nv1 = NVector (toMetres (ex p1)) (toMetres (ey p1)) (toMetres (ez p1))
+         nv2 = NVector (toMetres (ex p2)) (toMetres (ey p2)) (toMetres (ez p2))
+         dpe = sub nv2 nv1
+         n1 = fst (ecefToNVectorEllipsoidal p1 e1)
+         np = northPole
+         d = scale n1 (-1) -- down (pointing opposite to n-vector)
+         e = unit (cross np n1) -- east (pointing perpendicular to the plane)
+         n = cross e d -- north (by right hand rule)
+         r = rotate dpe [n, e, d]
 
 -- | Spherical geodetics calculations on 'NVector's.
 instance Geodetics NVector Length BearingDistance where

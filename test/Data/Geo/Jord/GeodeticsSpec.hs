@@ -6,7 +6,19 @@ import Data.Geo.Jord
 import Test.Hspec
 
 spec :: Spec
-spec =
+spec = do
+    describe "Geodetic Problems - Ellipsoidal" $ do
+        describe "delta (second or reverse problem)" $ do
+            it "computes NED Vector between LatLong positions" $ do
+                let p1 = ellipsoidal84 (latLongDecimal 49.66618 3.45063)
+                let p2 = ellipsoidal84 (latLongDecimal 48.88667 2.37472)
+                let d = delta p1 p2
+                d `shouldBe` nedVectorMetres (-86125.88) (-78900.087) 1069.198
+            it "computes NED Vector between angular positions" $ do
+                let p1 = ellipsoidal84 (angularPos (latLongDecimal 49.66618 3.45063) 0)
+                let p2 = ellipsoidal84 (angularPos (latLongDecimal 48.88667 2.37472) 0)
+                let d = delta p1 p2
+                d `shouldBe` nedVectorMetres (-86125.88) (-78900.087) 1069.198
     describe "Geodetic Problems - Spherical" $ do
         describe "destination (first or direct problem)" $ do
             it "return the given point if distance is 0 meter" $ do

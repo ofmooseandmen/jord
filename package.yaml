@@ -26,7 +26,7 @@ library:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
     - Data.Geo.Jord.Ellipsoid
-    - Data.Geo.Jord.Ellipsoidal
+    - Data.Geo.Jord.Geodetics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
     - Data.Geo.Jord.NedVector

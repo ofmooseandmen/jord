@@ -1,6 +1,6 @@
 branches:
   except:
-  - ecef
+  - ellipsoidal
 
 sudo: false
 

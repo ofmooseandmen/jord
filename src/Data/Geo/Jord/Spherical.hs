@@ -1,6 +1,6 @@
 module Data.Geo.Jord.Spherical
-    ( SGeodetics(angularDistance, antipode, destination, finalBearing,
-           height, initialBearing, interpolate, insideSurface,
+    ( SGeodetics(angularDistance, antipode, finalBearing,
+           initialBearing, interpolate, insideSurface,
            surfaceDistance)
     ) where
 
@@ -13,17 +13,12 @@ import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Transform
 
 -- TODO: add crossTrackDistance and intersections to this class
--- | Spherical geodetics calculations.
+-- | Geodetics calculations assuming a spherical earth model.
 class (Eq a) => SGeodetics a where
     angularDistance :: GeoPos a Length -> GeoPos a Length -> Maybe (GeoPos a Length) -> Angle
     antipode :: GeoPos a Length -> GeoPos a Length
-    destination :: GeoPos a Length -> Angle -> Length -> GeoPos a Length
-    destination p b d
-        | isZero d = p
-        | otherwise = _destination p b d
     finalBearing :: GeoPos a Length -> GeoPos a Length -> Angle
     finalBearing p1 p2 = normalise (initialBearing p1 p2) (decimalDegrees 180)
-    height :: GeoPos a Length -> Double
     initialBearing :: GeoPos a Length -> GeoPos a Length -> Angle
     interpolate :: GeoPos a Length -> GeoPos a Length -> Double -> GeoPos a Length
     interpolate p0 p1 f
@@ -40,7 +35,6 @@ class (Eq a) => SGeodetics a where
     surfaceDistance :: GeoPos a Length -> GeoPos a Length -> Length
     surfaceDistance p1 p2 = arcLength (angularDistance p1 p2 Nothing) (model p1)
     -- private (not exported)
-    _destination :: GeoPos a Length -> Angle -> Length -> GeoPos a Length
     _insideSurface :: GeoPos a Length -> [GeoPos a Length] -> Bool
     _interpolate :: GeoPos a Length -> GeoPos a Length -> Double -> GeoPos a Length
 
@@ -48,13 +42,6 @@ class (Eq a) => SGeodetics a where
 instance SGeodetics NVector where
     angularDistance (GeoPos v1 _) (GeoPos v2 _) n = angularDistance' v1 v2 (fmap pos n)
     antipode (GeoPos v r) = GeoPos (scale v (-1.0)) r
-    _destination (GeoPos v r) b d = GeoPos (add (scale v (cos' ta)) (scale de (sin' ta))) r
-      where
-        ed = unit (cross northPole v) -- east direction vector at v
-        nd = cross v ed -- north direction vector at v
-        ta = central d r -- central angle
-        de = add (scale nd (cos' b)) (scale ed (sin' b)) -- unit vector in the direction of the azimuth
-    height _ = 0.0
     initialBearing (GeoPos v1 _) (GeoPos v2 _) = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
       where
         gc1 = cross v1 v2 -- great circle through p1 & p2
@@ -67,37 +54,31 @@ instance SGeodetics NVector where
 
 -- | Spherical geodetics calculations on 'LatLong's.
 instance SGeodetics LatLong where
-    angularDistance p1 p2 n = angularDistance (vec p1) (vec p2) (fmap vec n)
-    antipode = unvec 0.0 . antipode . vec
-    _destination p b d = unvec 0.0 (_destination (vec p) b d)
-    height _ = 0.0
-    initialBearing p1 p2 = initialBearing (vec p1) (vec p2)
-    _interpolate p0 p1 f = unvec 0.0 (_interpolate (vec p0) (vec p1) f)
-    _insideSurface p ps = _insideSurface (vec p) (fmap vec ps)
+    angularDistance p1 p2 n = angularDistance (toNVector p1) (toNVector p2) (fmap toNVector n)
+    antipode = fromNVector 0.0 . antipode . toNVector
+    initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
+    _interpolate p0 p1 f = fromNVector 0.0 (_interpolate (toNVector p0) (toNVector p1) f)
+    _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
 
 -- | Spherical geodetics calculations on 'NVectorPosition's.
 instance SGeodetics NVectorPosition where
-    angularDistance p1 p2 n = angularDistance (vec p1) (vec p2) (fmap vec n)
-    antipode p = unvec (height p) . antipode . vec $ p
-    _destination p b d = unvec (height p) (_destination (vec p) b d)
-    height (GeoPos (NVectorPosition _ h) _) = h
-    initialBearing p1 p2 = initialBearing (vec p1) (vec p2)
-    _interpolate p0@(GeoPos (NVectorPosition _ h0) _) p1@(GeoPos (NVectorPosition _ h1) _) f = unvec h (_interpolate (vec p0) (vec p1) f)
+    angularDistance p1 p2 n = angularDistance (toNVector p1) (toNVector p2) (fmap toNVector n)
+    antipode p = fromNVector (height p) . antipode . toNVector $ p
+    initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
+    _interpolate p0@(GeoPos (NVectorPosition _ h0) _) p1@(GeoPos (NVectorPosition _ h1) _) f = fromNVector h (_interpolate (toNVector p0) (toNVector p1) f)
       where
         h = h0 + (h1 - h0) * f
-    _insideSurface p ps = _insideSurface (vec p) (fmap vec ps)
+    _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
 
 -- | Spherical geodetics calculations on 'AngularPosition's.
 instance SGeodetics AngularPosition where
-    angularDistance p1 p2 n = angularDistance (vec p1) (vec p2) (fmap vec n)
-    antipode p = unvec (height p) . antipode . vec $ p
-    _destination p b d = unvec (height p) (_destination (vec p) b d)
-    height (GeoPos (AngularPosition _ h) _) = h
-    initialBearing p1 p2 = initialBearing (vec p1) (vec p2)
-    _interpolate p0@(GeoPos (AngularPosition _ h0) _) p1@(GeoPos (AngularPosition _ h1) _) f = unvec h (_interpolate (vec p0) (vec p1) f)
+    angularDistance p1 p2 n = angularDistance (toNVector p1) (toNVector p2) (fmap toNVector n)
+    antipode p = fromNVector (height p) . antipode . toNVector $ p
+    initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
+    _interpolate p0@(GeoPos (AngularPosition _ h0) _) p1@(GeoPos (AngularPosition _ h1) _) f = fromNVector h (_interpolate (toNVector p0) (toNVector p1) f)
       where
         h = h0 + (h1 - h0) * f
-    _insideSurface p ps = _insideSurface (vec p) (fmap vec ps)
+    _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
 
 -- | Spherical geodetics calculations on 'EcefPosition's.
 instance SGeodetics EcefPosition where
@@ -109,18 +90,14 @@ instance SGeodetics EcefPosition where
     antipode p = toEcef . antipode $ v
       where
         v = fromEcef p :: (GeoPos NVectorPosition Length)
-    _destination p b d = toEcef (_destination v b d)
-      where
-        v = fromEcef p :: (GeoPos NVectorPosition Length)
-    height (GeoPos p r) = snd (fromEcefSpherical p r)
     initialBearing p1 p2 = initialBearing v1 v2
       where
         v1 = fromEcef p1 :: (GeoPos NVector Length)
         v2 = fromEcef p2 :: (GeoPos NVector Length)
-    _interpolate (GeoPos e0 r0) (GeoPos e1 r1) f = GeoPos (toEcefSpherical iv h r0) r0
+    _interpolate (GeoPos e0 r0) (GeoPos e1 r1) f = GeoPos (nvectorToEcefSpherical iv h r0) r0
       where
-        (v0, h0) = fromEcefSpherical e0 r0
-        (v1, h1) = fromEcefSpherical e1 r1
+        (v0, h0) = ecefToNVectorSpherical e0 r0
+        (v1, h1) = ecefToNVectorSpherical e1 r1
         h = h0 + (h1 - h0) * f
         iv = interpolate' v0 v1 f
     _insideSurface p ps = _insideSurface v vs

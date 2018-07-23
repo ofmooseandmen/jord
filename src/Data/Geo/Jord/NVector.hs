@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 -- |
 -- Module:      Data.Geo.Jord.NVector
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -9,11 +11,9 @@
 -- Types and functions for working with n-vectors.
 --
 module Data.Geo.Jord.NVector
-    ( NVector(nx, ny, nz)
-    , nvector
+    ( NVector(..)
     , cross
     , dot
-    , norm
     , rotate
     , scale
     , unit
@@ -45,9 +45,9 @@ instance Quantity NVector where
         z = nz a - nz b
     zero = NVector 0 0 0
 
--- | 'NVector' from given x, y, z.
-nvector :: Double -> Double -> Double -> NVector
-nvector = NVector
+-- | 'NVector' norm.
+instance Norm NVector Double where
+  norm a = sqrt ((nx a * nx a) + (ny a * ny a) + (nz a * nz a))
 
 -- | Computes the cross product of the two given 'NVector's.
 cross :: NVector -> NVector -> NVector
@@ -61,15 +61,11 @@ cross a b = NVector x y z
 dot :: NVector -> NVector -> Double
 dot a b = nx a * nx b + ny a * ny b + nz a * nz b
 
--- | Computes the norm of the given 'NVector'.
-norm :: NVector -> Double
-norm a = sqrt ((nx a * nx a) + (ny a * ny a) + (nz a * nz a))
-
 -- | @rotate nv rm@ applies rotation matrix @rm@ to 'NVector' @nv@.
 rotate :: NVector -> [NVector] -> NVector
 rotate nv rm
     | length rm /= 3 = error ("Invalid rotation matrix" ++ show rm)
-    | otherwise = nvector nx' ny' nz'
+    | otherwise = NVector nx' ny' nz'
        where
            [nx', ny', nz'] = map (dot nv) rm
 

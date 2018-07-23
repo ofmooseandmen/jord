@@ -16,12 +16,14 @@ module Data.Geo.Jord.Positions
     , NVectorPosition(..)
     , EcefPosition(..)
     , GeoPos(..)
-    , elevatedLatLong
-    , elevatedNVector
-    , ecefPosition
-    , ecefPositionMetres
+    , angularPos
+    , nvectorPos
+    , ecefPos
+    , ecefPosMetres
     , spherical
+    , spherical84
     , ellipsoidal
+    , ellipsoidal84
     , northPole
     , southPole
     ) where
@@ -52,17 +54,17 @@ data EcefPosition = EcefPosition
     , ez :: Length
     } deriving (Eq, Show)
 
-elevatedLatLong :: LatLong -> Double -> AngularPosition
-elevatedLatLong = AngularPosition
+angularPos :: LatLong -> Double -> AngularPosition
+angularPos = AngularPosition
 
-elevatedNVector :: NVector -> Double -> NVectorPosition
-elevatedNVector = NVectorPosition
+nvectorPos :: NVector -> Double -> NVectorPosition
+nvectorPos = NVectorPosition
 
-ecefPosition :: Length -> Length -> Length -> EcefPosition
-ecefPosition = EcefPosition
+ecefPos :: Length -> Length -> Length -> EcefPosition
+ecefPos = EcefPosition
 
-ecefPositionMetres :: Double -> Double -> Double -> EcefPosition
-ecefPositionMetres x y z = EcefPosition (metres x) (metres y) (metres z)
+ecefPosMetres :: Double -> Double -> Double -> EcefPosition
+ecefPosMetres x y z = EcefPosition (metres x) (metres y) (metres z)
 
 data GeoPos a b = GeoPos
     { pos :: a
@@ -72,13 +74,19 @@ data GeoPos a b = GeoPos
 spherical :: a -> Length -> GeoPos a Length
 spherical = GeoPos
 
+spherical84 :: a -> GeoPos a Length
+spherical84 p = GeoPos p (meanRadius wgs84)
+
 ellipsoidal :: a -> Ellipsoid -> GeoPos a Ellipsoid
 ellipsoidal = GeoPos
 
+ellipsoidal84 :: a -> GeoPos a Ellipsoid
+ellipsoidal84 p = GeoPos p wgs84
+
 -- | Horizontal position of the North Pole.
 northPole :: NVector
-northPole = nvector 0.0 0.0 1.0
+northPole = NVector 0.0 0.0 1.0
 
 -- | Horizontal position of the South Pole.
 southPole :: NVector
-southPole = nvector 0.0 0.0 (-1.0)
+southPole = NVector 0.0 0.0 (-1.0)

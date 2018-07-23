@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
@@ -15,13 +16,14 @@
 --
 module Data.Geo.Jord.Transform
     ( VTransform(..)
-    , CTransform(..)
-    , fromNVector
-    , fromLatLong
-    , fromEcefEllipsoidal
-    , toEcefEllipsoidal
-    , fromEcefSpherical
-    , toEcefSpherical
+    , ETransform(..)
+    , HTransform(..)
+    , nvectorToLatLong
+    , latLongToNVector
+    , nvectorToEcefEllipsoidal
+    , ecefToNVectorEllipsoidal
+    , nvectorToEcefSpherical
+    , ecefToNVectorSpherical
     ) where
 
 import Data.Geo.Jord.Angle
@@ -33,85 +35,107 @@ import Data.Geo.Jord.Positions
 
 -- | Transformation between positions and 'NVector'.
 class VTransform a where
-    vec :: GeoPos a b -> GeoPos NVector b -- ^ 'GeoPos' to 'NVector'
-    unvec :: Double -> GeoPos NVector b -> GeoPos a b -- ^ 'NVector' and height to 'GeoPos'
+    toNVector :: GeoPos a b -> GeoPos NVector b -- ^ 'GeoPos' to 'NVector'.
+    fromNVector :: Double -> GeoPos NVector b -> GeoPos a b -- ^ 'NVector' and height to 'GeoPos'.
 
--- | 'LatLong' <-> 'NVector'
+-- | 'LatLong' <-> 'NVector'.
 instance VTransform LatLong where
-    vec (GeoPos ll m) = GeoPos (fromLatLong ll) m
-    unvec _ (GeoPos nv m) = GeoPos (fromNVector nv) m
+    toNVector (GeoPos ll m) = GeoPos (latLongToNVector ll) m
+    fromNVector _ (GeoPos nv m) = GeoPos (nvectorToLatLong nv) m
 
 -- | 'NVectorPosition' <-> 'NVector'.
 instance VTransform NVectorPosition where
-    vec (GeoPos (NVectorPosition nv _) m) = GeoPos nv m
-    unvec h (GeoPos nv m) = GeoPos (NVectorPosition nv h) m
+    toNVector (GeoPos (NVectorPosition nv _) m) = GeoPos nv m
+    fromNVector h (GeoPos nv m) = GeoPos (NVectorPosition nv h) m
 
 -- | 'AngularPosition' <-> 'NVector'.
 instance VTransform AngularPosition where
-    vec (GeoPos (AngularPosition ll _) m) = GeoPos (fromLatLong ll) m
-    unvec h (GeoPos nv m) = GeoPos (AngularPosition (fromNVector nv) h) m
+    toNVector (GeoPos (AngularPosition ll _) m) = GeoPos (latLongToNVector ll) m
+    fromNVector h (GeoPos nv m) = GeoPos (AngularPosition (nvectorToLatLong nv) h) m
 
 -- | Transformation between 'EcefPosition' and angular or n-vector positions.
-class CTransform a b where
+class ETransform a b where
     toEcef :: GeoPos a b -> GeoPos EcefPosition b
     fromEcef :: GeoPos EcefPosition b -> GeoPos a b
 
 -- | Ellipsoidal transformation: 'NVector' <-> 'EcefPosition'.
-instance CTransform NVector Ellipsoid where
-    fromEcef (GeoPos p e) = GeoPos (fst (fromEcefEllipsoidal p e)) e
-    toEcef (GeoPos v e) = GeoPos (toEcefEllipsoidal v 0.0 e) e
+instance ETransform NVector Ellipsoid where
+    fromEcef (GeoPos p e) = GeoPos (fst (ecefToNVectorEllipsoidal p e)) e
+    toEcef (GeoPos v e) = GeoPos (nvectorToEcefEllipsoidal v 0.0 e) e
 
 -- | Spherical transformation: 'NVector' <-> 'EcefPosition'.
-instance CTransform NVector Length where
-    fromEcef (GeoPos p r) = GeoPos (fst (fromEcefSpherical p r)) r
-    toEcef (GeoPos v r) = GeoPos (toEcefSpherical v 0.0 r) r
+instance ETransform NVector Length where
+    fromEcef (GeoPos p r) = GeoPos (fst (ecefToNVectorSpherical p r)) r
+    toEcef (GeoPos v r) = GeoPos (nvectorToEcefSpherical v 0.0 r) r
 
 -- | Ellipsoidal transformation: 'LatLong' <-> 'EcefPosition'.
-instance CTransform LatLong Ellipsoid where
-    fromEcef p = unvec 0.0 (fromEcef p :: (GeoPos NVector Ellipsoid))
-    toEcef = toEcef . vec
+instance ETransform LatLong Ellipsoid where
+    fromEcef p = fromNVector 0.0 (fromEcef p :: (GeoPos NVector Ellipsoid))
+    toEcef = toEcef . toNVector
 
 -- | Spherical transformation: 'LatLong' <-> 'EcefPosition'.
-instance CTransform LatLong Length where
-    fromEcef p = unvec 0.0 (fromEcef p :: (GeoPos NVector Length))
-    toEcef = toEcef . vec
+instance ETransform LatLong Length where
+    fromEcef p = fromNVector 0.0 (fromEcef p :: (GeoPos NVector Length))
+    toEcef = toEcef . toNVector
 
 -- | Ellipsoidal transformation: 'NVectorPosition' <-> 'EcefPosition'.
-instance CTransform NVectorPosition Ellipsoid where
+instance ETransform NVectorPosition Ellipsoid where
     fromEcef (GeoPos p e) = GeoPos (NVectorPosition nv h) e
       where
-        (nv, h) = fromEcefEllipsoidal p e
-    toEcef (GeoPos (NVectorPosition v h) e) = GeoPos (toEcefEllipsoidal v h e) e
+        (nv, h) = ecefToNVectorEllipsoidal p e
+    toEcef (GeoPos (NVectorPosition v h) e) = GeoPos (nvectorToEcefEllipsoidal v h e) e
 
 -- | Spherical transformation: 'NVectorPosition' <-> 'EcefPosition'.
-instance CTransform NVectorPosition Length where
+instance ETransform NVectorPosition Length where
     fromEcef (GeoPos p r) = GeoPos (NVectorPosition nv h) r
       where
-        (nv, h) = fromEcefSpherical p r
-    toEcef (GeoPos (NVectorPosition v h) r) = GeoPos (toEcefSpherical v h r) r
+        (nv, h) = ecefToNVectorSpherical p r
+    toEcef (GeoPos (NVectorPosition v h) r) = GeoPos (nvectorToEcefSpherical v h r) r
 
 -- | Ellipsoidal transformation: 'AngularPosition' <-> 'EcefPosition'.
-instance CTransform AngularPosition Ellipsoid where
-    fromEcef (GeoPos p e) = GeoPos (AngularPosition (fromNVector nv) h) e
+instance ETransform AngularPosition Ellipsoid where
+    fromEcef (GeoPos p e) = GeoPos (AngularPosition (nvectorToLatLong nv) h) e
       where
-        (nv, h) = fromEcefEllipsoidal p e
-    toEcef (GeoPos (AngularPosition ll h) e) = GeoPos (toEcefEllipsoidal (fromLatLong ll) h e) e
+        (nv, h) = ecefToNVectorEllipsoidal p e
+    toEcef (GeoPos (AngularPosition ll h) e) = GeoPos (nvectorToEcefEllipsoidal (latLongToNVector ll) h e) e
 
 -- | Spherical transformation: 'AngularPosition' <-> 'EcefPosition'.
-instance CTransform AngularPosition Length where
-    fromEcef (GeoPos p r) = GeoPos (AngularPosition (fromNVector nv) h) r
+instance ETransform AngularPosition Length where
+    fromEcef (GeoPos p r) = GeoPos (AngularPosition (nvectorToLatLong nv) h) r
       where
-        (nv, h) = fromEcefSpherical p r
-    toEcef (GeoPos (AngularPosition ll h) r) = GeoPos (toEcefSpherical (fromLatLong ll) h r) r
+        (nv, h) = ecefToNVectorSpherical p r
+    toEcef (GeoPos (AngularPosition ll h) r) = GeoPos (nvectorToEcefSpherical (latLongToNVector ll) h r) r
 
-fromNVector :: NVector -> LatLong
-fromNVector v = latLong lat lon
+-- | height of a geographic position.
+class HTransform a b where
+    height :: GeoPos a b -> Double
+
+instance HTransform NVector b where
+    height _ = 0.0
+
+instance HTransform LatLong b where
+    height _ = 0.0
+
+instance HTransform NVectorPosition b where
+    height (GeoPos (NVectorPosition _ h) _) = h
+
+instance HTransform AngularPosition b where
+    height (GeoPos (AngularPosition _ h) _) = h
+
+instance HTransform EcefPosition Ellipsoid where
+    height (GeoPos p e) = snd (ecefToNVectorEllipsoidal p e)
+
+instance HTransform EcefPosition Length where
+    height (GeoPos p r) = snd (ecefToNVectorSpherical p r)
+
+nvectorToLatLong :: NVector -> LatLong
+nvectorToLatLong v = latLong lat lon
   where
     lat = atan2' (nz v) (sqrt (nx v * nx v + ny v * ny v))
     lon = atan2' (ny v) (nx v)
 
-fromLatLong :: LatLong -> NVector
-fromLatLong g = nvector x' y' z'
+latLongToNVector :: LatLong -> NVector
+latLongToNVector g = NVector x' y' z'
   where
     lat = latitude g
     lon = longitude g
@@ -120,8 +144,8 @@ fromLatLong g = nvector x' y' z'
     y' = cl * sin' lon
     z' = sin' lat
 
-fromEcefEllipsoidal :: EcefPosition -> Ellipsoid -> (NVector, Double)
-fromEcefEllipsoidal (EcefPosition x y z) e = (nvecEllipsoidal d e2 k px py pz, h)
+ecefToNVectorEllipsoidal :: EcefPosition -> Ellipsoid -> (NVector, Double)
+ecefToNVectorEllipsoidal (EcefPosition x y z) e = (nvecEllipsoidal d e2 k px py pz, h)
   where
     e' = eccentricity e
     e2 = e' * e'
@@ -143,7 +167,7 @@ fromEcefEllipsoidal (EcefPosition x y z) e = (nvecEllipsoidal d e2 k px py pz, h
     h = ((k + e2 - 1.0) / k) * sqrt (d * d + pz * pz)
 
 nvecEllipsoidal :: Double -> Double -> Double -> Double -> Double -> Double -> NVector
-nvecEllipsoidal d e2 k px py pz = nvector nx' ny' nz'
+nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
   where
     s = 1.0 / sqrt (d * d + pz * pz)
     a = k / (k + e2)
@@ -151,8 +175,8 @@ nvecEllipsoidal d e2 k px py pz = nvector nx' ny' nz'
     ny' = s * a * py
     nz' = s * pz
 
-toEcefEllipsoidal :: NVector -> Double -> Ellipsoid -> EcefPosition
-toEcefEllipsoidal p h e = EcefPosition ex' ey' ez'
+nvectorToEcefEllipsoidal :: NVector -> Double -> Ellipsoid -> EcefPosition
+nvectorToEcefEllipsoidal p h e = EcefPosition ex' ey' ez'
   where
     nv = unit p
     a = toMetres (equatorialRadius e)
@@ -166,8 +190,8 @@ toEcefEllipsoidal p h e = EcefPosition ex' ey' ez'
     ey' = metres (n * m * ny' + h * ny')
     ez' = metres (n * nz' + h * nz')
 
-fromEcefSpherical :: EcefPosition -> Length -> (NVector, Double)
-fromEcefSpherical (EcefPosition x y z) r = (nvecSpherical d px py pz, h)
+ecefToNVectorSpherical :: EcefPosition -> Length -> (NVector, Double)
+ecefToNVectorSpherical (EcefPosition x y z) r = (nvecSpherical d px py pz, h)
   where
     a = toMetres r
     a2 = a * a
@@ -183,15 +207,15 @@ fromEcefSpherical (EcefPosition x y z) r = (nvecSpherical d px py pz, h)
     h = ((k - 1.0) / k) * sqrt (d * d + pz * pz)
 
 nvecSpherical :: Double -> Double -> Double -> Double -> NVector
-nvecSpherical d px py pz = nvector nx' ny' nz'
+nvecSpherical d px py pz = NVector nx' ny' nz'
   where
     s = 1.0 / sqrt (d * d + pz * pz)
     nx' = s * px
     ny' = s * py
     nz' = s * pz
 
-toEcefSpherical :: NVector -> Double -> Length -> EcefPosition
-toEcefSpherical v h r = EcefPosition ex' ey' ez'
+nvectorToEcefSpherical :: NVector -> Double -> Length -> EcefPosition
+nvectorToEcefSpherical v h r = EcefPosition ex' ey' ez'
   where
     uv = unit v
     a = toMetres r

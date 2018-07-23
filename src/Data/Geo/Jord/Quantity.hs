@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 -- |
 -- Module:      Data.Geo.Jord.Quantity
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -6,11 +8,16 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Defines the class 'Quantity' for something that can be added or subtracted.
+-- Classes for working with quantities.
 --
 module Data.Geo.Jord.Quantity
-    ( Quantity(..)
+    ( Norm(..)
+    , Quantity(..)
     ) where
+
+-- | Norm of a vector: stricly positive _size_ or _length_ of vectorr @a@.
+class Norm a b where
+  norm :: a -> b
 
 -- | Something that can be added or subtracted.
 class (Eq a) => Quantity a where

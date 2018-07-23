@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 -- |
 -- Module:      Data.Geo.Jord.NedVector
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -9,19 +11,17 @@
 -- Types and functions for working with vectors the NED (north, east and down) coordinates system.
 --
 -- TODO: add fromLengthBearingElevation
--- TODO: nedVectorMetres
 --
 module Data.Geo.Jord.NedVector
-    ( NedVector(north, east, down)
-    , nedVector
-    , length
+    ( NedVector(..)
+    , nedVectorMetres
     , bearing
     , elevation
     ) where
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Length
-import Prelude hiding (length)
+import Data.Geo.Jord.Quantity
 
 -- | North east down (NED), also known as local tangent plane (LTP):
 -- a vector in the local coordinate frame of a body.
@@ -31,24 +31,24 @@ data NedVector = NedVector
     , down :: Length
     } deriving (Eq, Show)
 
--- | 'NedVector' from given north, east and down.
-nedVector :: Length -> Length -> Length -> NedVector
-nedVector = NedVector
+-- | 'NedVector' norm.
+instance Norm NedVector Length where
+    norm a = metres (sqrt (n * n + e * e + d * d))
+      where
+        n = toMetres (north a)
+        e = toMetres (east a)
+        d = toMetres (down a)
 
--- | @length v@ computes the length of the NED vector @v@.
-length :: NedVector -> Length
-length p = metres (sqrt (n * n + e * e + d * d))
-  where
-    n = toMetres (north p)
-    e = toMetres (east p)
-    d = toMetres (down p)
+-- | 'NedVector' from given north, east and down in metres.
+nedVectorMetres :: Double -> Double -> Double -> NedVector
+nedVectorMetres n e d = NedVector (metres n) (metres e) (metres d)
 
 -- | @bearing v@ computes the bearing of the NED vector @v@ from north.
 bearing :: NedVector -> Angle
-bearing p =
-    let a = atan2' (toMetres (east p)) (toMetres (north p))
+bearing v =
+    let a = atan2' (toMetres (east v)) (toMetres (north v))
      in normalise a (decimalDegrees 360.0)
 
 -- | @elevation v@ computes the elevation of the NED vector @v@ from horizontal (ie tangent to ellipsoid surface).
 elevation :: NedVector -> Angle
-elevation p = negate' (asin' (toMetres (down p) / toMetres (length p)))
+elevation v = negate' (asin' (toMetres (down v) / toMetres (norm v)))

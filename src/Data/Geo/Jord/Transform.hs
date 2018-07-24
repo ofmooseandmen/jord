@@ -23,6 +23,8 @@ module Data.Geo.Jord.Transform
     , ETransform(..)
     , ecefToNVectorSpherical
     , ecefToNVectorEllipsoidal
+    , geodeticHeight
+    , sphericalHeight
     ) where
 
 import Data.Geo.Jord.Angle
@@ -187,3 +189,9 @@ nvectorToEcefSpherical (v, h) r = EcefPosition x y z
     x = metres (n * nx nv)
     y = metres (n * ny nv)
     z = metres (n * nz nv)
+
+geodeticHeight :: EcefPosition -> Ellipsoid -> Double
+geodeticHeight p e= snd (ecefToNVectorEllipsoidal p e)
+
+sphericalHeight :: EcefPosition -> Length -> Double
+sphericalHeight p r = snd (ecefToNVectorSpherical p r)

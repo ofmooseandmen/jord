@@ -42,18 +42,22 @@ class (Norm c Length) => Geodetics a b c where
 -- | Ellipsoidal geodetics calculations on 'NVector's.
 instance Geodetics NVector Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'LatLong's.
 instance Geodetics LatLong Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'NVector' 'AngularPosition's.
 instance Geodetics (AngularPosition NVector) Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'LatLong' 'AngularPosition's.
 instance Geodetics (AngularPosition LatLong) Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'EcefPosition's.
 instance Geodetics EcefPosition Ellipsoid NedVector where
@@ -68,6 +72,21 @@ instance Geodetics EcefPosition Ellipsoid NedVector where
         e' = unit (cross np n1) -- east (pointing perpendicular to the plane)
         n' = cross e' d' -- north (by right hand rule)
         r = rotate dpe [n', e', d']
+    _destination p0@(EcefPosition x y z) d e =
+        ecefPosMetres (toMetres x + nx c) (toMetres y + ny c) (toMetres z + nz c)
+      where
+        nv = NVector (toMetres (north d)) (toMetres (east d)) (toMetres (down d)) -- NED delta to vector in coordinate frame of n-vector
+        n1 = fst (ecefToNVectorEllipsoidal p0 e) -- local (n-vector) coordinate frame
+        a = northPole -- axis vector pointing to 90°
+        d' = scale n1 (-1) -- down (pointing opposite to n-vector)
+        e' = unit (cross a n1) -- east (pointing perpendicular to the plane)
+        n' = cross e' d' -- north (by right hand rule)
+        r =
+            [ NVector (nx n') (nx e') (nx d')
+            , NVector (ny n') (ny e') (ny d')
+            , NVector (nz n') (nz e') (nz d')
+            ] -- rotation matrix is built from n-vector coordinate frame axes (using column vectors)
+        c = rotate nv r -- apply rotation to nv to get delta in cartesian (ECEF) coordinate reference frame
 
 -- | Spherical geodetics calculations on 'NVector's.
 instance Geodetics NVector Length BearingDistance where

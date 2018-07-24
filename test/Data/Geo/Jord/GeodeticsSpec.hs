@@ -8,6 +8,15 @@ import Test.Hspec
 spec :: Spec
 spec = do
     describe "Geodetic Problems - Ellipsoidal" $ do
+        describe "destination (first or direct problem)" $ do
+            it "return the given point if NED vector norm = 0" $ do
+                let p0 = readLatLong "531914N0014347W"
+                let d = nedVectorMetres 0 0 0
+                destination p0 d wgs84 `shouldBe` p0
+            it "return the given point if NED vector norm = 0" $ do
+                let p0 = latLongDecimal 49.66618 3.45063
+                let d = nedVectorMetres 86126 (-78900) 1069
+                destination p0 d wgs84 `shouldBe` latLongDecimal 48.88667 2.37472
         describe "delta (second or reverse problem)" $ do
             it "computes NED Vector between LatLong positions" $ do
                 let p1 = latLongDecimal 49.66618 3.45063

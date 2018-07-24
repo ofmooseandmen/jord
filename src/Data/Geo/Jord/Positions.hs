@@ -21,20 +21,14 @@ module Data.Geo.Jord.Positions
     ( AngularPosition(..)
     , NVectorPosition(..)
     , EcefPosition(..)
-    , GeoPos(..)
     , angularPos
     , nvectorPos
     , ecefPos
     , ecefPosMetres
-    , spherical
-    , spherical84
-    , ellipsoidal
-    , ellipsoidal84
     , northPole
     , southPole
     ) where
 
-import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -82,23 +76,6 @@ ecefPos = EcefPosition
 
 ecefPosMetres :: Double -> Double -> Double -> EcefPosition
 ecefPosMetres x y z = EcefPosition (metres x) (metres y) (metres z)
-
-data GeoPos a b = GeoPos
-    { pos :: a
-    , model :: b
-    } deriving (Eq, Show)
-
-spherical :: a -> Length -> GeoPos a Length
-spherical = GeoPos
-
-spherical84 :: a -> GeoPos a Length
-spherical84 p = GeoPos p (meanRadius wgs84)
-
-ellipsoidal :: a -> Ellipsoid -> GeoPos a Ellipsoid
-ellipsoidal = GeoPos
-
-ellipsoidal84 :: a -> GeoPos a Ellipsoid
-ellipsoidal84 p = GeoPos p wgs84
 
 -- | Horizontal position of the North Pole.
 northPole :: NVector

@@ -1,27 +1,38 @@
 {-# LANGUAGE FlexibleInstances #-}
+
 --
 -- TODO: doc
 --
 module Data.Geo.Jord.Spherical
     ( SGeodetics(angularDistance, antipode, finalBearing, initialBearing,
            interpolate, insideSurface, mean, surfaceDistance)
+    , northPole
+    , southPole
     ) where
 
 import Data.Fixed
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Positions
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Transform
 import Data.List (subsequences)
 
+-- | Horizontal position of the North Pole.
+northPole :: NVector
+northPole = NVector 0.0 0.0 1.0
+
+-- | Horizontal position of the South Pole.
+southPole :: NVector
+southPole = NVector 0.0 0.0 (-1.0)
+
 -- TODO: add crossTrackDistance and intersections to this class
 -- | Geodetics calculations assuming a spherical earth model.
 --
--- 'EcefPosition' are not directly supported by this class, theyr need to be converted
--- first to a 'NVector' and height using 'toEcef'
+-- No instance of class 'SGeodetics' for 'EcefPosition' is provided as the conversion requires
+-- the mean earth radius. Conversion with 'toEcef' is therefore required beforehand.
 class (Eq a) => SGeodetics a where
     -- | @angularDistance p1 p2 n@ computes the angle between the horizontal positions @p1@ and @p2@.
     -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],

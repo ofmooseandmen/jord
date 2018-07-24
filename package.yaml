@@ -25,13 +25,14 @@ library:
   exposed-modules:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
+    - Data.Geo.Jord.AngularPosition
+    - Data.Geo.Jord.EcefPosition
     - Data.Geo.Jord.Ellipsoid
     - Data.Geo.Jord.Geodetics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
     - Data.Geo.Jord.NedVector
     - Data.Geo.Jord.NVector
-    - Data.Geo.Jord.Positions
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Spherical
     - Data.Geo.Jord.Transform

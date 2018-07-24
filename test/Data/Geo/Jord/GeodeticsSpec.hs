@@ -15,8 +15,8 @@ spec = do
                 destination p0 d wgs84 `shouldBe` p0
             it "return the given point if NED vector norm = 0" $ do
                 let p0 = latLongDecimal 49.66618 3.45063
-                let d = nedVectorMetres 86126 (-78900) 1069
-                destination p0 d wgs84 `shouldBe` latLongDecimal 48.88667 2.37472
+                let d = nedVectorMetres (-86126) (-78900) 1069
+                destination p0 d wgs84 `shouldBe` latLongDecimal 48.8866688 2.37472111
         describe "delta (second or reverse problem)" $ do
             it "computes NED Vector between LatLong positions" $ do
                 let p1 = latLongDecimal 49.66618 3.45063

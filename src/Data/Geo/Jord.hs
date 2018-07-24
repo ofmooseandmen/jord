@@ -21,6 +21,7 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.EcefPosition
     , module Data.Geo.Jord.Ellipsoid
     , module Data.Geo.Jord.Geodetics
+    , module Data.Geo.Jord.GreatCircle
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NedVector
@@ -36,6 +37,7 @@ import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.EcefPosition
 import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Geodetics
+import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NedVector

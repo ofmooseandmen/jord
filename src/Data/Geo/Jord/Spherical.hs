@@ -28,7 +28,6 @@ northPole = NVector 0.0 0.0 1.0
 southPole :: NVector
 southPole = NVector 0.0 0.0 (-1.0)
 
--- TODO: add crossTrackDistance and intersections to this class
 -- | Geodetics calculations assuming a spherical earth model.
 --
 -- No instance of class 'SGeodetics' for 'EcefPosition' is provided as the conversion requires

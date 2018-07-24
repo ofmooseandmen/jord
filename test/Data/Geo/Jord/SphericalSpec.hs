@@ -10,15 +10,13 @@ spec :: Spec
 spec = do
     describe "Antipode" $ do
         it "returns the antipodal point" $ do
-            let p = angularPos (readLatLong "484137N0061105E") 15000
-            let e = angularPos (latLongDecimal (-48.6936111) (-173.8152777)) 15000
+            let p = latLongPos (readLatLong "484137N0061105E") 15000
+            let e = latLongPos (latLongDecimal (-48.6936111) (-173.8152777)) 15000
             antipode p `shouldBe` e
         it "returns the south pole when called with the north pole" $
-            antipode (fromNVector northPole 0.0) `shouldBe`
-            latLongDecimal (-90.0) (-180.0)
+            antipode (fromNVector northPole 0.0) `shouldBe` latLongDecimal (-90.0) (-180.0)
         it "returns the north pole when called with the south pole" $
-            antipode (fromNVector southPole 0.0) `shouldBe`
-            latLongDecimal 90.0 (-180.0)
+            antipode (fromNVector southPole 0.0) `shouldBe` latLongDecimal 90.0 (-180.0)
     describe "Surface Distance" $ do
         it "returns 0 if both points are equal" $ do
             let p = readLatLong "500359N1795959W"
@@ -27,8 +25,9 @@ spec = do
             let p1 = readLatLong "500359N0054253W"
             let p2 = readLatLong "583838N0030412W"
             surfaceDistance p1 p2 (meanRadius wgs84) `shouldBe` metres 968854.868
-        it "handles singularity at the pole" $ do
-            surfaceDistance northPole southPole (meanRadius wgs84) `shouldBe` kilometres 20015.114351
+        it "handles singularity at the pole" $
+            surfaceDistance northPole southPole (meanRadius wgs84) `shouldBe`
+                kilometres 20015.114351
         it "handles the discontinuity at the Date Line" $ do
             let p1 = readLatLong "500359N1795959W"
             let p2 = readLatLong "500359N1795959E"
@@ -38,12 +37,12 @@ spec = do
             let p = readLatLong "500359N1795959W"
             initialBearing p p `shouldBe` decimalDegrees 0
         it "returns the initial bearing in compass angle" $ do
-            let p1 = angularPos (readLatLong "500359N0054253W") 12000
-            let p2 = angularPos (readLatLong "583838N0030412W") 5000
+            let p1 = latLongPos (readLatLong "500359N0054253W") 12000
+            let p2 = latLongPos (readLatLong "583838N0030412W") 5000
             initialBearing p1 p2 `shouldBe` decimalDegrees 9.1198181
         it "returns the initial bearing in compass angle" $ do
-            let p1 = angularPos (readLatLong "583838N0030412W") 12000
-            let p2 = angularPos (readLatLong "500359N0054253W") 5000
+            let p1 = latLongPos (readLatLong "583838N0030412W") 12000
+            let p2 = latLongPos (readLatLong "500359N0054253W") 5000
             initialBearing p1 p2 `shouldBe` decimalDegrees 191.2752013
     describe "Interpolate" $ do
         let p1 = readLatLong "44N044E"
@@ -57,10 +56,9 @@ spec = do
         it "returns p0 if f == 0" $ interpolate p1 p2 0.0 `shouldBe` p1
         it "returns p1 if f == 1" $ interpolate p1 p2 1.0 `shouldBe` p2
         it "returns the interpolated position" $ do
-            let p3 = angularPos (readLatLong "53°28'46''N 2°14'43''W") 10000
-            let p4 = angularPos (readLatLong "55°36'21''N 13°02'09''E") 20000
-            interpolate p3 p4 0.5 `shouldBe`
-                angularPos (latLongDecimal 54.7835574 5.1949856) 15000
+            let p3 = latLongPos (readLatLong "53°28'46''N 2°14'43''W") 10000
+            let p4 = latLongPos (readLatLong "55°36'21''N 13°02'09''E") 20000
+            interpolate p3 p4 0.5 `shouldBe` latLongPos (latLongDecimal 54.7835574 5.1949856) 15000
     describe "insideSurface" $ do
         let p1 = latLongDecimal 45 1
         let p2 = latLongDecimal 45 2
@@ -116,9 +114,9 @@ spec = do
             let p = readLatLong "500359N0054253W"
             mean [p] `shouldBe` Just p
         it "returns the geographical mean" $ do
-            let p1 = angularPos (readLatLong "500359N0054253W") 15000
-            let p2 = angularPos (readLatLong "583838N0030412W") 25000
-            let e = angularPos (latLongDecimal 54.3622869 (-4.5306725)) 0
+            let p1 = latLongPos (readLatLong "500359N0054253W") 15000
+            let p2 = latLongPos (readLatLong "583838N0030412W") 25000
+            let e = latLongPos (latLongDecimal 54.3622869 (-4.5306725)) 0
             mean [p1, p2] `shouldBe` Just e
         it "returns Nothing if list contains antipodal points" $ do
             let points =

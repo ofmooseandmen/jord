@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 --
 -- TODO: doc
 --
@@ -88,7 +89,7 @@ class (Eq a) => SGeodetics a where
     mean ps = _mean ps
     -- | @surfaceDistance p1 p2@ computes the surface distance (length of geodesic) between the positions @p1@ and @p2@.
     surfaceDistance :: a -> a -> Length -> Length
-    surfaceDistance p1 p2 r = arcLength (angularDistance p1 p2 Nothing) r
+    surfaceDistance p1 p2 = arcLength (angularDistance p1 p2 Nothing)
     -- private (not exported)
     _insideSurface :: a -> [a] -> Bool
     _interpolate :: a -> a -> Double -> a
@@ -96,14 +97,13 @@ class (Eq a) => SGeodetics a where
 
 -- | Spherical geodetics calculations on 'NVector's.
 instance SGeodetics NVector where
-    angularDistance v1 v2 n = angularDistance' v1 v2 n
+    angularDistance = angularDistance'
     antipode v = scale v (-1.0)
-    initialBearing v1 v2 =
-        normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
+    initialBearing v1 v2 = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
       where
         gc1 = cross v1 v2 -- great circle through p1 & p2
         gc2 = cross v1 northPole -- great circle through p1 & north pole
-    _interpolate v0 v1 f = interpolate' v0 v1 f
+    _interpolate v0 v1 f = unit (add v0 (scale (sub v1 v0) f))
     _insideSurface v vs =
         let aSum =
                 foldl
@@ -127,22 +127,23 @@ instance SGeodetics LatLong where
     initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
     _interpolate p0 p1 f = fromNVector (_interpolate (toNVector p0) (toNVector p1) f) 0.0
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
-    _mean ps = fmap (\v -> fromNVector v 0.0) (_mean (fmap toNVector ps))
+    _mean ps = fmap (`fromNVector` 0.0) (_mean (fmap toNVector ps))
 
--- | Spherical geodetics calculations on 'NVectorPosition's.
-instance SGeodetics NVectorPosition where
-    angularDistance (NVectorPosition v1 _) (NVectorPosition v2 _) n = angularDistance v1 v2 (fmap toNVector n)
-    antipode (NVectorPosition v h) = NVectorPosition (antipode v) h
-    initialBearing (NVectorPosition v1 _) (NVectorPosition v2 _) = initialBearing v1 v2
-    _interpolate (NVectorPosition v0 h0) (NVectorPosition v1 h1) f =
-        NVectorPosition (_interpolate v0 v1 f) h
+-- | Spherical geodetics calculations on 'NVector' 'AngularPosition's.
+instance SGeodetics (AngularPosition NVector) where
+    angularDistance (AngularPosition v1 _) (AngularPosition v2 _) n =
+        angularDistance v1 v2 (fmap toNVector n)
+    antipode p = AngularPosition (antipode (pos p)) (height p)
+    initialBearing (AngularPosition v1 _) (AngularPosition v2 _) = initialBearing v1 v2
+    _interpolate (AngularPosition v0 h0) (AngularPosition v1 h1) f =
+        AngularPosition (_interpolate v0 v1 f) h
       where
         h = h0 + (h1 - h0) * f
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
-    _mean ps = fmap (\v -> NVectorPosition v 0.0) (_mean (fmap toNVector ps))
+    _mean ps = fmap (`AngularPosition` 0.0) (_mean (fmap toNVector ps))
 
--- | Spherical geodetics calculations on 'AngularPosition's.
-instance SGeodetics AngularPosition where
+-- | Spherical geodetics calculations on 'LatLong' 'AngularPosition's.
+instance SGeodetics (AngularPosition LatLong) where
     angularDistance p1 p2 n = angularDistance (toNVector p1) (toNVector p2) (fmap toNVector n)
     antipode (AngularPosition ll h) = fromNVector (antipode (toNVector ll)) h
     initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
@@ -151,7 +152,7 @@ instance SGeodetics AngularPosition where
       where
         h = h0 + (h1 - h0) * f
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
-    _mean ps = fmap (\v -> fromNVector v 0.0) (_mean (fmap toNVector ps))
+    _mean ps = fmap (`fromNVector` 0.0) (_mean (fmap toNVector ps))
 
 -------------
 -- private --
@@ -165,9 +166,6 @@ angularDistance' v1 v2 n = atan2' sinO cosO
     sign = maybe 1 (signum . dot (cross v1 v2)) n
     sinO = sign * norm (cross v1 v2)
     cosO = dot v1 v2
-
-interpolate' :: NVector -> NVector -> Double -> NVector
-interpolate' v0 v1 f = unit (add v0 (scale (sub v1 v0) f))
 
 -- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
 egdes :: [NVector] -> [(NVector, NVector)]

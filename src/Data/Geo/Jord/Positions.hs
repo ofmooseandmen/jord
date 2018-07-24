@@ -19,9 +19,8 @@
 --
 module Data.Geo.Jord.Positions
     ( AngularPosition(..)
-    , NVectorPosition(..)
     , EcefPosition(..)
-    , angularPos
+    , latLongPos
     , nvectorPos
     , ecefPos
     , ecefPosMetres
@@ -34,16 +33,12 @@ import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity (Norm(..))
 
--- | An earth position defined by its latitude, longitude and height.
-data AngularPosition = AngularPosition
-    { getLatLong :: LatLong
-    , apHeight :: Double
-    } deriving (Eq, Show)
-
--- | An earth position defined by its n-vector and height.
-data NVectorPosition = NVectorPosition
-    { getNVector :: NVector
-    , nvpHeight :: Double
+-- | An earth position defined by an horizontal position and height.
+--
+-- horizontal position can be either a 'LatLong' or a 'NVector'.
+data AngularPosition a = AngularPosition
+    { pos :: a
+    , height :: Double
     } deriving (Eq, Show)
 
 -- | An earth position expressed in the Earth Centered, Earth Fixed (ECEF) coordinates system.
@@ -65,11 +60,11 @@ instance Norm EcefPosition Length where
         y = toMetres (ey a)
         z = toMetres (ez a)
 
-angularPos :: LatLong -> Double -> AngularPosition
-angularPos = AngularPosition
+latLongPos :: LatLong -> Double -> AngularPosition LatLong
+latLongPos = AngularPosition
 
-nvectorPos :: NVector -> Double -> NVectorPosition
-nvectorPos = NVectorPosition
+nvectorPos :: NVector -> Double -> AngularPosition NVector
+nvectorPos = AngularPosition
 
 ecefPos :: Length -> Length -> Length -> EcefPosition
 ecefPos = EcefPosition

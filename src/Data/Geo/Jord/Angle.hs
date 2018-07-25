@@ -82,7 +82,6 @@ instance Show Angle where
 instance Quantity Angle where
     add (Angle millis1) (Angle millis2) = Angle (millis1 + millis2)
     sub (Angle millis1) (Angle millis2) = Angle (millis1 - millis2)
-    zero = Angle 0
 
 -- | 'Angle' from given decimal degrees. Any 'Double' is accepted: it must be
 -- validated by the call site when used to represent a latitude or longitude.

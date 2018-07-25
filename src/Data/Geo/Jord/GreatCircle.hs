@@ -28,6 +28,7 @@ import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Spherical
 import Data.Geo.Jord.Transform
+import Data.Geo.Jord.Vector3d
 import Data.Maybe (fromMaybe)
 import Prelude hiding (fail)
 
@@ -91,32 +92,32 @@ class (Eq a, Show a) => GreatCircleGeodetics a where
 instance GreatCircleGeodetics NVector where
     greatCircleE v1 v2
         | v1 == v2 = Left "Invalid Great Circle: positions are equal"
-        | (realToFrac (norm (add v1 v2) :: Double) :: Nano) == 0 =
+        | (realToFrac (vnorm (vadd v1 v2)) :: Nano) == 0 =
             Left "Invalid Great Circle: positions are antipodal"
         | otherwise =
             Right
                 (GreatCircle
-                     (cross v1 v2)
+                     (vcross v1 v2)
                      ("passing by " ++
                       show (fromNVector v1 0.0 :: LatLong) ++
                       " & " ++ show (fromNVector v2 0.0 :: LatLong)))
     greatCircleBearing v b =
         GreatCircle
-            (sub n' e')
+            (vsub n' e')
             ("passing by " ++ show (fromNVector v 0.0 :: LatLong) ++ " heading on " ++ show b)
       where
-        e = cross northPole v -- easting
-        n = cross v e -- northing
-        e' = scale e (cos' b / norm e)
-        n' = scale n (sin' b / norm n)
+        e = vcross northPole v -- easting
+        n = vcross v e -- northing
+        e' = vscale e (cos' b / vnorm e)
+        n' = vscale n (sin' b / vnorm n)
     crossTrackDistance v gc =
         arcLength (sub (angularDistance (normal gc) v Nothing) (decimalDegrees 90))
     intersections gc1 gc2
-        | (norm i :: Double) == 0.0 = Nothing
+        | (vnorm i :: Double) == 0.0 = Nothing
         | otherwise
-        , let ni = unit i = Just (ni, antipode ni)
+        , let ni = vunit i = Just (ni, antipode ni)
       where
-        i = cross (normal gc1) (normal gc2)
+        i = vcross (normal gc1) (normal gc2)
 
 -- | Great Circle geodetics on 'LatLong's.
 instance GreatCircleGeodetics LatLong where

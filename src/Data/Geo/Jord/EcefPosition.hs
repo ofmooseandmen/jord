@@ -19,7 +19,7 @@ module Data.Geo.Jord.EcefPosition
     ) where
 
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.Quantity (Norm(..))
+import Data.Geo.Jord.Vector3d
 
 -- | An earth position expressed in the Earth Centered, Earth Fixed (ECEF) coordinates system.
 --
@@ -32,13 +32,11 @@ data EcefPosition = EcefPosition
     , ez :: Length
     } deriving (Eq, Show)
 
--- | 'NedVector' norm.
-instance Norm EcefPosition Length where
-    norm a = metres (sqrt (x * x + y * y + z * z))
-      where
-        x = toMetres (ex a)
-        y = toMetres (ey a)
-        z = toMetres (ez a)
+instance Vector3d EcefPosition where
+    vecx v = toMetres (ex v)
+    vecy v = toMetres (ey v)
+    vecz v = toMetres (ez v)
+    vector3d = ecefPosMetres
 
 ecefPos :: Length -> Length -> Length -> EcefPosition
 ecefPos = EcefPosition

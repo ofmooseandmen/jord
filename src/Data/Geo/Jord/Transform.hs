@@ -21,8 +21,12 @@
 module Data.Geo.Jord.Transform
     ( VTransform(..)
     , ETransform(..)
-    , ecefToNVectorSpherical
+    , nvectorToLatLong
+    , latLongToNVector
     , ecefToNVectorEllipsoidal
+    , ecefToNVectorSpherical
+    , nvectorToEcefEllipsoidal
+    , nvectorToEcefSpherical
     , geodeticHeight
     , sphericalHeight
     ) where
@@ -34,7 +38,7 @@ import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Quantity (norm)
+import Data.Geo.Jord.Vector3d
 
 -- | Transformation between positions and 'NVector'.
 class VTransform a where
@@ -109,17 +113,23 @@ instance ETransform (AngularPosition LatLong) Length where
         (v, h) = ecefToNVectorSpherical p r
     toEcef (AngularPosition ll h) = nvectorToEcefSpherical (toNVector ll, h)
 
+-- | @nvectorToLatLong v@ transforms 'NVector' @v@ to an equivalent 'LatLong'.
+--
+-- Same as 'toNVector'.
 nvectorToLatLong :: NVector -> LatLong
 nvectorToLatLong v = latLong lat lon
   where
     lat = atan2' (nz v) (sqrt (nx v * nx v + ny v * ny v))
     lon = atan2' (ny v) (nx v)
 
+-- | @latLongToNVector ll@ transforms 'LatLong' @ll@ to an equivalent 'NVector'.
+--
+-- Same as 'fromNVector'.
 latLongToNVector :: LatLong -> NVector
-latLongToNVector g = NVector x' y' z'
+latLongToNVector ll = NVector x' y' z'
   where
-    lat = latitude g
-    lon = longitude g
+    lat = latitude ll
+    lon = longitude ll
     cl = cos' lat
     x' = cl * cos' lon
     y' = cl * sin' lon
@@ -160,7 +170,7 @@ nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
 nvectorToEcefEllipsoidal :: (NVector, Double) -> Ellipsoid -> EcefPosition
 nvectorToEcefEllipsoidal (v, h) e = EcefPosition ex' ey' ez'
   where
-    nv = unit v
+    nv = vunit v
     a = toMetres (equatorialRadius e)
     b = toMetres (polarRadius e)
     nx' = nx nv
@@ -173,22 +183,17 @@ nvectorToEcefEllipsoidal (v, h) e = EcefPosition ex' ey' ez'
     ez' = metres (n * nz' + h * nz')
 
 ecefToNVectorSpherical :: EcefPosition -> Length -> (NVector, Double)
-ecefToNVectorSpherical p r = (NVector x y z, h)
+ecefToNVectorSpherical p r = (v, h)
   where
-    n = toMetres (norm p)
-    x = toMetres (ex p) / n
-    y = toMetres (ey p) / n
-    z = toMetres (ez p) / n
-    h = n - toMetres r
+    v = vunit (NVector (vecx p) (vecy p) (vecz p))
+    h = (vnorm p) - toMetres r
 
 nvectorToEcefSpherical :: (NVector, Double) -> Length -> EcefPosition
-nvectorToEcefSpherical (v, h) r = EcefPosition x y z
+nvectorToEcefSpherical (v, h) r = EcefPosition (metres (nx e)) (metres (ny e)) (metres (nz e))
   where
-    nv = unit v
+    nv = vunit v
     n = h + toMetres r
-    x = metres (n * nx nv)
-    y = metres (n * ny nv)
-    z = metres (n * nz nv)
+    e = vscale nv n
 
 geodeticHeight :: EcefPosition -> Ellipsoid -> Double
 geodeticHeight p e= snd (ecefToNVectorEllipsoidal p e)

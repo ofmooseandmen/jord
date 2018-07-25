@@ -9,11 +9,11 @@ spec :: Spec
 spec = do
     describe "Geodetic Problems - Ellipsoidal" $ do
         describe "destination (first or direct problem)" $ do
-            it "return the given point if NED vector norm = 0" $ do
+            it "return the given point if NED vector vnorm = 0" $ do
                 let p0 = readLatLong "531914N0014347W"
                 let d = nedVectorMetres 0 0 0
                 destination p0 d wgs84 `shouldBe` p0
-            it "return the given point if NED vector norm = 0" $ do
+            it "return the given point if NED vector vnorm = 0" $ do
                 let p0 = latLongDecimal 49.66618 3.45063
                 let d = nedVectorMetres (-86126) (-78900) 1069
                 destination p0 d wgs84 `shouldBe` latLongDecimal 48.8866688 2.37472111
@@ -47,7 +47,7 @@ spec = do
         describe "delta (second or reverse problem)" $ do
             it "returns (0, 0) if both points are equal" $ do
                 let p = readLatLong "500359N1795959W"
-                delta p p (meanRadius wgs84) `shouldBe` BearingDistance (zero, zero)
+                delta p p (meanRadius wgs84) `shouldBe` BearingDistance (decimalDegrees 0, metres 0)
             it "returns the (initial bearing, surface distance) between 2 LatLong" $ do
                 let p1 = readLatLong "500359N0054253W"
                 let p2 = readLatLong "583838N0030412W"

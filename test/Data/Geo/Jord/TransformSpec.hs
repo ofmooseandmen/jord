@@ -54,9 +54,9 @@ spec = do
             mapM_ (\(a, e) -> toEcef a (meanRadius wgs84) `shouldBe` e) (zip refAngular refEcefs)
         it "transforms ECEF position to angular position" $ do
             let refAngular =
-                    [ latLongPos (latLongDecimal 39.379 (-48.013)) 4702059.834000001
-                    , latLongPos (latLongDecimal 45.0 45.0) 1.0000001639127731e-3
-                    , latLongPos (latLongDecimal 48.8562 2.3508) 67.37000000011176
+                    [ latLongPos (latLongDecimal 39.379 (-48.013)) 4702059.834217537
+                    , latLongPos (latLongDecimal 45.0 45.0) 5.190419033169746e-4
+                    , latLongPos (latLongDecimal 48.8562 2.3508) 67.36971572134644
                     ]
             let refEcefs =
                     [ ecefPosMetres 5725717.354 (-6361955.623) 7025277.914

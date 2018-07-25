@@ -17,11 +17,12 @@ module Data.Geo.Jord.NedVector
     , nedVectorMetres
     , bearing
     , elevation
+    , norm
     ) where
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Vector3d
 
 -- | North east down (NED), also known as local tangent plane (LTP):
 -- a vector in the local coordinate frame of a body.
@@ -31,13 +32,11 @@ data NedVector = NedVector
     , down :: Length
     } deriving (Eq, Show)
 
--- | 'NedVector' norm.
-instance Norm NedVector Length where
-    norm a = metres (sqrt (n * n + e * e + d * d))
-      where
-        n = toMetres (north a)
-        e = toMetres (east a)
-        d = toMetres (down a)
+instance Vector3d NedVector where
+    vecx v = toMetres (north v)
+    vecy v = toMetres (east v)
+    vecz v = toMetres (down v)
+    vector3d = nedVectorMetres
 
 -- | 'NedVector' from given north, east and down in metres.
 nedVectorMetres :: Double -> Double -> Double -> NedVector
@@ -51,4 +50,8 @@ bearing v =
 
 -- | @elevation v@ computes the elevation of the NED vector @v@ from horizontal (ie tangent to ellipsoid surface).
 elevation :: NedVector -> Angle
-elevation v = negate' (asin' (toMetres (down v) / toMetres (norm v)))
+elevation v = negate' (asin' (toMetres (down v) / vnorm v))
+
+-- | @norm v@ computes the norm of the NED vector @v@.
+norm :: NedVector -> Length
+norm v = metres (vnorm v)

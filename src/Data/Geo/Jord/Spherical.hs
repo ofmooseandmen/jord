@@ -18,6 +18,7 @@ import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Transform
+import Data.Geo.Jord.Vector3d
 import Data.List (subsequences)
 
 -- | Horizontal position of the North Pole.
@@ -108,27 +109,27 @@ class (Eq a) => SGeodetics a where
 -- | Spherical geodetics calculations on 'NVector's.
 instance SGeodetics NVector where
     angularDistance = angularDistance'
-    antipode v = scale v (-1.0)
+    antipode v = vscale v (-1.0)
     initialBearing v1 v2 = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
       where
-        gc1 = cross v1 v2 -- great circle through p1 & p2
-        gc2 = cross v1 northPole -- great circle through p1 & north pole
-    _interpolate v0 v1 f = unit (add v0 (scale (sub v1 v0) f))
+        gc1 = vcross v1 v2 -- great circle through p1 & p2
+        gc2 = vcross v1 northPole -- great circle through p1 & north pole
+    _interpolate v0 v1 f = vunit (vadd v0 (vscale (vsub v1 v0) f))
     _insideSurface v vs =
         let aSum =
                 foldl
                     (\a v' -> add a (uncurry angularDistance' v' (Just v)))
                     (decimalDegrees 0)
-                    (egdes (map (sub v) vs))
+                    (egdes (map (vsub v) vs))
          in abs (toDecimalDegrees aSum) > 180.0
     _mean vs =
         if null antipodals
-            then Just (unit (foldl add zero vs))
+            then Just (vunit (foldl vadd vzero vs))
             else Nothing
       where
         ts = filter (\l -> length l == 2) (subsequences vs)
         antipodals =
-            filter (\t -> (realToFrac (norm (add (head t) (last t)) :: Double) :: Nano) == 0) ts
+            filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
 
 -- | Spherical geodetics calculations on 'LatLong's.
 instance SGeodetics LatLong where
@@ -173,9 +174,9 @@ instance SGeodetics (AngularPosition LatLong) where
 angularDistance' :: NVector -> NVector -> Maybe NVector -> Angle
 angularDistance' v1 v2 n = atan2' sinO cosO
   where
-    sign = maybe 1 (signum . dot (cross v1 v2)) n
-    sinO = sign * norm (cross v1 v2)
-    cosO = dot v1 v2
+    sign = maybe 1 (signum . vdot (vcross v1 v2)) n
+    sinO = sign * vnorm (vcross v1 v2)
+    cosO = vdot v1 v2
 
 -- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
 egdes :: [NVector] -> [(NVector, NVector)]

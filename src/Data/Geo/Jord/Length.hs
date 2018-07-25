@@ -55,7 +55,6 @@ instance Show Length where
 instance Quantity Length where
     add a b = Length (millimetres a + millimetres b)
     sub a b = Length (millimetres a - millimetres b)
-    zero = Length 0
 
 -- | 'Length' from given amount of nautical miles.
 nauticalMiles :: Double -> Length

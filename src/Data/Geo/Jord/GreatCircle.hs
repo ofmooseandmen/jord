@@ -99,12 +99,12 @@ instance GreatCircleGeodetics NVector where
                 (GreatCircle
                      (vcross v1 v2)
                      ("passing by " ++
-                      show (fromNVector v1 0.0 :: LatLong) ++
-                      " & " ++ show (fromNVector v2 0.0 :: LatLong)))
+                      show (fromNVector v1 zero :: LatLong) ++
+                      " & " ++ show (fromNVector v2 zero :: LatLong)))
     greatCircleBearing v b =
         GreatCircle
             (vsub n' e')
-            ("passing by " ++ show (fromNVector v 0.0 :: LatLong) ++ " heading on " ++ show b)
+            ("passing by " ++ show (fromNVector v zero :: LatLong) ++ " heading on " ++ show b)
       where
         e = vcross northPole v -- easting
         n = vcross v e -- northing
@@ -124,7 +124,7 @@ instance GreatCircleGeodetics LatLong where
     greatCircleE p1 p2 = greatCircleE (toNVector p1) (toNVector p2)
     greatCircleBearing p = greatCircleBearing (toNVector p)
     crossTrackDistance p = crossTrackDistance (toNVector p)
-    intersections gc1 gc2 = fmap (\(p1, p2) -> (fromNVector p1 0.0, fromNVector p2 0.0)) is
+    intersections gc1 gc2 = fmap (\(p1, p2) -> (fromNVector p1 zero, fromNVector p2 zero)) is
       where
         is = intersections gc1 gc2 :: Maybe (NVector, NVector)
 
@@ -133,7 +133,7 @@ instance GreatCircleGeodetics (AngularPosition NVector) where
     greatCircleE p1 p2 = greatCircleE (toNVector p1) (toNVector p2)
     greatCircleBearing p = greatCircleBearing (toNVector p)
     crossTrackDistance p = crossTrackDistance (toNVector p)
-    intersections gc1 gc2 = fmap (\(p1, p2) -> (fromNVector p1 0.0, fromNVector p2 0.0)) is
+    intersections gc1 gc2 = fmap (\(p1, p2) -> (fromNVector p1 zero, fromNVector p2 zero)) is
       where
         is = intersections gc1 gc2 :: Maybe (NVector, NVector)
 
@@ -142,6 +142,6 @@ instance GreatCircleGeodetics (AngularPosition LatLong) where
     greatCircleE p1 p2 = greatCircleE (toNVector p1) (toNVector p2)
     greatCircleBearing p = greatCircleBearing (toNVector p)
     crossTrackDistance p = crossTrackDistance (toNVector p)
-    intersections gc1 gc2 = fmap (\(p1, p2) -> (fromNVector p1 0.0, fromNVector p2 0.0)) is
+    intersections gc1 gc2 = fmap (\(p1, p2) -> (fromNVector p1 zero, fromNVector p2 zero)) is
       where
         is = intersections gc1 gc2 :: Maybe (NVector, NVector)

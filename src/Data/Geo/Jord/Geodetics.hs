@@ -29,6 +29,7 @@ import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.NedVector
+import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Spherical
 import Data.Geo.Jord.Transform
 import Data.Geo.Jord.Vector3d
@@ -131,7 +132,7 @@ instance Geodetics NVector Length BearingDistance where
 -- deltas are expressed as 'BearingDistance's.
 instance Geodetics LatLong Length BearingDistance where
     delta p1 p2 = delta (toNVector p1) (toNVector p2)
-    _destination p0 d r = fromNVector (_destination (toNVector p0) d r) 0.0
+    _destination p0 d r = fromNVector (_destination (toNVector p0) d r) zero
 
 -- | Spherical geodetics calculations on 'NVector' 'AngularPosition's.
 --

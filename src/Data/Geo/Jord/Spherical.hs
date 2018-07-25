@@ -146,11 +146,11 @@ instance SGeodetics NVector where
 -- | Spherical geodetics calculations on 'LatLong's.
 instance SGeodetics LatLong where
     angularDistance p1 p2 n = angularDistance (toNVector p1) (toNVector p2) (fmap toNVector n)
-    antipode ll = fromNVector (antipode (toNVector ll)) 0.0
+    antipode ll = fromNVector (antipode (toNVector ll)) zero
     initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
-    _interpolate p0 p1 f = fromNVector (_interpolate (toNVector p0) (toNVector p1) f) 0.0
+    _interpolate p0 p1 f = fromNVector (_interpolate (toNVector p0) (toNVector p1) f) zero
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
-    _mean ps = fmap (`fromNVector` 0.0) (_mean (fmap toNVector ps))
+    _mean ps = fmap (`fromNVector` zero) (_mean (fmap toNVector ps))
 
 -- | Spherical geodetics calculations on 'NVector' 'AngularPosition's.
 instance SGeodetics (AngularPosition NVector) where
@@ -159,11 +159,9 @@ instance SGeodetics (AngularPosition NVector) where
     antipode p = AngularPosition (antipode (pos p)) (height p)
     initialBearing (AngularPosition v1 _) (AngularPosition v2 _) = initialBearing v1 v2
     _interpolate (AngularPosition v0 h0) (AngularPosition v1 h1) f =
-        AngularPosition (_interpolate v0 v1 f) h
-      where
-        h = h0 + (h1 - h0) * f
+        AngularPosition (_interpolate v0 v1 f) (lrph h0 h1 f)
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
-    _mean ps = fmap (`AngularPosition` 0.0) (_mean (fmap toNVector ps))
+    _mean ps = fmap (`AngularPosition` zero) (_mean (fmap toNVector ps))
 
 -- | Spherical geodetics calculations on 'LatLong' 'AngularPosition's.
 instance SGeodetics (AngularPosition LatLong) where
@@ -171,11 +169,9 @@ instance SGeodetics (AngularPosition LatLong) where
     antipode (AngularPosition ll h) = fromNVector (antipode (toNVector ll)) h
     initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
     _interpolate (AngularPosition ll0 h0) (AngularPosition ll1 h1) f =
-        fromNVector (_interpolate (toNVector ll0) (toNVector ll1) f) h
-      where
-        h = h0 + (h1 - h0) * f
+        fromNVector (_interpolate (toNVector ll0) (toNVector ll1) f) (lrph h0 h1 f)
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
-    _mean ps = fmap (`fromNVector` 0.0) (_mean (fmap toNVector ps))
+    _mean ps = fmap (`fromNVector` zero) (_mean (fmap toNVector ps))
 
 -------------
 -- private --
@@ -193,3 +189,10 @@ angularDistance' v1 v2 n = atan2' sinO cosO
 -- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
 egdes :: [NVector] -> [(NVector, NVector)]
 egdes ps = zip ps (tail ps ++ [head ps])
+
+lrph :: Length -> Length -> Double -> Length
+lrph h0 h1 f = metres h
+  where
+    h0' = toMetres h0
+    h1' = toMetres h1
+    h = h0' + (h1' - h0') * f

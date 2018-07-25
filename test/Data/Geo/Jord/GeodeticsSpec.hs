@@ -24,20 +24,20 @@ spec = do
                 let d = delta p1 p2 wgs84
                 d `shouldBe` nedVectorMetres (-86125.88) (-78900.087) 1069.198
             it "computes NED Vector between angular positions" $ do
-                let p1 = latLongPos (latLongDecimal 49.66618 3.45063) 0
-                let p2 = latLongPos (latLongDecimal 48.88667 2.37472) 0
+                let p1 = latLongPos (latLongDecimal 49.66618 3.45063) zero
+                let p2 = latLongPos (latLongDecimal 48.88667 2.37472) zero
                 let d = delta p1 p2 wgs84
                 d `shouldBe` nedVectorMetres (-86125.88) (-78900.087) 1069.198
     describe "Geodetic Problems - Spherical" $ do
         describe "destination (first or direct problem)" $ do
             it "return the given point if distance is 0 meter" $ do
                 let p0 = readLatLong "531914N0014347W"
-                let d = BearingDistance (decimalDegrees 96.0217, metres 0)
+                let d = BearingDistance (decimalDegrees 96.0217, zero)
                 destination p0 d (meanRadius wgs84) `shouldBe` p0
             it "return the angular position along great-circle at distance and bearing" $ do
-                let p0 = latLongPos (readLatLong "531914N0014347W") 15000.0
+                let p0 = latLongPos (readLatLong "531914N0014347W") (metres 15000.0)
                 let d = BearingDistance (decimalDegrees 96.0217, metres 124800)
-                let p1 = latLongPos (latLongDecimal 53.1882691 0.1332744) 15000.0
+                let p1 = latLongPos (latLongDecimal 53.1882691 0.1332744) (metres 15000.0)
                 destination p0 d (meanRadius wgs84) `shouldBe` p1
             it "return the ECEF position along great-circle at distance and bearing" $ do
                 let p0 = ecefPosMetres 3825345.17 (-115519.77) 5103962.93
@@ -47,7 +47,7 @@ spec = do
         describe "delta (second or reverse problem)" $ do
             it "returns (0, 0) if both points are equal" $ do
                 let p = readLatLong "500359N1795959W"
-                delta p p (meanRadius wgs84) `shouldBe` BearingDistance (decimalDegrees 0, metres 0)
+                delta p p (meanRadius wgs84) `shouldBe` BearingDistance (zero, zero)
             it "returns the (initial bearing, surface distance) between 2 LatLong" $ do
                 let p1 = readLatLong "500359N0054253W"
                 let p2 = readLatLong "583838N0030412W"

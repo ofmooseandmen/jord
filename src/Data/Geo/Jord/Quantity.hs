@@ -15,3 +15,4 @@ module Data.Geo.Jord.Quantity
 -- | Something that can be added or subtracted.
 class (Eq a) => Quantity a where
     add, sub :: a -> a -> a
+    zero :: a

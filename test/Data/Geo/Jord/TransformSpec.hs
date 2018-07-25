@@ -14,9 +14,9 @@ spec = do
                 ecefPosMetres 3194434.411029306 3194434.411029306 4487326.819249299
         it "transforms angular position to ECEF position" $ do
             let refAngular =
-                    [ latLongPos (latLongDecimal 39.379 (-48.013)) 4702059.834
-                    , latLongPos (latLongDecimal 45.0 45.0) 0
-                    , latLongPos (latLongDecimal 48.8562 2.3508) 67.36972232195099
+                    [ latLongPos (latLongDecimal 39.379 (-48.013)) (metres 4702059.834)
+                    , latLongPos (latLongDecimal 45.0 45.0) zero
+                    , latLongPos (latLongDecimal 48.8562 2.3508) (metres 67.36972232195099)
                     ]
             let refEcefs =
                     [ ecefPosMetres 5733855.77488171 (-6370998.38026088) 7008137.51062469
@@ -26,9 +26,9 @@ spec = do
             mapM_ (\(a, e) -> toEcef a wgs84 `shouldBe` e) (zip refAngular refEcefs)
         it "transforms ECEF position to angular position" $ do
             let refAngular =
-                    [ latLongPos (latLongDecimal 39.379 (-48.013)) 4702059.834050887
-                    , latLongPos (latLongDecimal 45.0 45.0) 3.423524451828947e-5
-                    , latLongPos (latLongDecimal 48.8562 2.3508) 67.36990469945641
+                    [ latLongPos (latLongDecimal 39.379 (-48.013)) (metres 4702059.834050887)
+                    , latLongPos (latLongDecimal 45.0 45.0) zero
+                    , latLongPos (latLongDecimal 48.8562 2.3508) (metres 67.36990469945641)
                     ]
             let refEcefs =
                     [ ecefPosMetres 5733855.774881717 (-6370998.380260889) 7008137.510624695
@@ -42,9 +42,9 @@ spec = do
             toEcef p (meanRadius wgs84) `shouldBe` ecefPosMetres 3185519.66 3185519.66 4504961.903
         it "transforms angular position to ECEF position" $ do
             let refAngular =
-                    [ latLongPos (latLongDecimal 39.379 (-48.013)) 4702059.834
-                    , latLongPos (latLongDecimal 45.0 45.0) 0
-                    , latLongPos (latLongDecimal 48.8562 2.3508) 67.36972232195099
+                    [ latLongPos (latLongDecimal 39.379 (-48.013)) (metres 4702059.834)
+                    , latLongPos (latLongDecimal 45.0 45.0) zero
+                    , latLongPos (latLongDecimal 48.8562 2.3508) (metres 67.36972232195099)
                     ]
             let refEcefs =
                     [ ecefPosMetres 5725717.354 (-6361955.623) 7025277.914
@@ -54,9 +54,9 @@ spec = do
             mapM_ (\(a, e) -> toEcef a (meanRadius wgs84) `shouldBe` e) (zip refAngular refEcefs)
         it "transforms ECEF position to angular position" $ do
             let refAngular =
-                    [ latLongPos (latLongDecimal 39.379 (-48.013)) 4702059.834217537
-                    , latLongPos (latLongDecimal 45.0 45.0) 5.190419033169746e-4
-                    , latLongPos (latLongDecimal 48.8562 2.3508) 67.36971572134644
+                    [ latLongPos (latLongDecimal 39.379 (-48.013)) (metres 4702059.834217537)
+                    , latLongPos (latLongDecimal 45.0 45.0) (metres 1e-3)
+                    , latLongPos (latLongDecimal 48.8562 2.3508) (metres 67.36972232195099)
                     ]
             let refEcefs =
                     [ ecefPosMetres 5725717.354 (-6361955.623) 7025277.914

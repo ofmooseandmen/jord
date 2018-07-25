@@ -17,6 +17,7 @@ module Data.Geo.Jord.AngularPosition
     ) where
 
 import Data.Geo.Jord.LatLong
+import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 
 -- | An earth position defined by an horizontal position and height.
@@ -24,13 +25,13 @@ import Data.Geo.Jord.NVector
 -- horizontal position can be either a 'LatLong' or a 'NVector'.
 data AngularPosition a = AngularPosition
     { pos :: a
-    , height :: Double
+    , height :: Length
     } deriving (Eq, Show)
 
 -- | 'AngularPosition' from a 'LatLong' and height.
-latLongPos :: LatLong -> Double -> AngularPosition LatLong
+latLongPos :: LatLong -> Length -> AngularPosition LatLong
 latLongPos = AngularPosition
 
 -- | 'AngularPosition' from a 'NVector' and height.
-nvectorPos :: NVector -> Double -> AngularPosition NVector
+nvectorPos :: NVector -> Length -> AngularPosition NVector
 nvectorPos = AngularPosition

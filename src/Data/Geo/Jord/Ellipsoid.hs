@@ -32,6 +32,8 @@ eccentricity e = sqrt (1.0 - (b * b) / (a * a))
     b = semiMinorAxis a (inverseFlattening e)
 
 -- | Computes the mean radius of the given 'Ellipsoid'.
+--
+-- This radius can be used for geodetic calculations assuming a spherical earth model.
 meanRadius :: Ellipsoid -> Length
 meanRadius e = metres ((2.0 * a + b) / 3.0)
   where

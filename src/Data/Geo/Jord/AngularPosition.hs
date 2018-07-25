@@ -27,8 +27,10 @@ data AngularPosition a = AngularPosition
     , height :: Double
     } deriving (Eq, Show)
 
+-- | 'AngularPosition' from a 'LatLong' and height.
 latLongPos :: LatLong -> Double -> AngularPosition LatLong
 latLongPos = AngularPosition
 
+-- | 'AngularPosition' from a 'NVector' and height.
 nvectorPos :: NVector -> Double -> AngularPosition NVector
 nvectorPos = AngularPosition

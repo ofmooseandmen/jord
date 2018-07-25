@@ -8,7 +8,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Geodetic calculations assuming a _spherical_ earth model.
+-- Geodetic calculations assuming a __spherical__ earth model.
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -39,7 +39,7 @@ northPole = NVector 0.0 0.0 1.0
 southPole :: NVector
 southPole = NVector 0.0 0.0 (-1.0)
 
--- | Geodetics calculations assuming a spherical earth model.
+-- | Geodetic calculations assuming a spherical earth model.
 --
 -- No instance of class 'SGeodetics' for 'EcefPosition' is provided as the conversion requires
 -- the mean earth radius. Conversion with 'toEcef' is therefore required beforehand.
@@ -111,9 +111,11 @@ class (Eq a) => SGeodetics a where
     -- | @surfaceDistance p1 p2@ computes the surface distance (length of geodesic) between the positions @p1@ and @p2@.
     surfaceDistance :: a -> a -> Length -> Length
     surfaceDistance p1 p2 = arcLength (angularDistance p1 p2 Nothing)
-    -- private (not exported)
+    -- | private (not exported): called by 'insideSurface' after [a] has been checked.
     _insideSurface :: a -> [a] -> Bool
+    -- | private (not exported): 'interpolate' after f has been checked.
     _interpolate :: a -> a -> Double -> a
+    -- | private (not exported): called by 'mean' after [a] has been checked.
     _mean :: [a] -> Maybe a
 
 -- | Spherical geodetics calculations on 'NVector's.

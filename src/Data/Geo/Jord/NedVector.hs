@@ -32,7 +32,6 @@ data NedVector = NedVector
     , down :: Length
     } deriving (Eq, Show)
 
--- | instance of 'Vector3d'.
 instance Vector3d NedVector where
     vecx v = toMetres (north v)
     vecy v = toMetres (east v)

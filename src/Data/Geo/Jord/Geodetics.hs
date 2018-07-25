@@ -38,15 +38,6 @@ newtype BearingDistance =
     BearingDistance (Angle, Length)
     deriving (Eq, Show)
 
-class IsZero a where
-    isZero :: a -> Bool
-
-instance IsZero BearingDistance where
-    isZero (BearingDistance (_, l)) = toMetres l == 0.0
-
-instance IsZero NedVector where
-    isZero v = vnorm v == 0.0
-
 -- | Class 'Geodetics' defines two functions each solving a geodetic problem.
 class (IsZero c) => Geodetics a b c where
     -- | @delta p1 p2 m@ computes the delta between @p1@ and @p2@ using the earth model @m@.
@@ -167,3 +158,13 @@ instance Geodetics EcefPosition Length BearingDistance where
     _destination p0 d r = toEcef (_destination v d r) r
       where
         v = fromEcef p0 r :: NVector
+
+-- | Is somethinh zero?
+class IsZero a where
+    isZero :: a -> Bool
+
+instance IsZero BearingDistance where
+    isZero (BearingDistance (_, l)) = toMetres l == 0.0
+
+instance IsZero NedVector where
+    isZero v = vnorm v == 0.0

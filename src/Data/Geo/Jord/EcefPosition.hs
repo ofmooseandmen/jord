@@ -29,7 +29,6 @@ data EcefPosition = EcefPosition
     , ez :: Length
     } deriving (Eq, Show)
 
--- | instance of 'Vector3d'.
 instance Vector3d EcefPosition where
     vecx v = toMetres (ex v)
     vecy v = toMetres (ey v)

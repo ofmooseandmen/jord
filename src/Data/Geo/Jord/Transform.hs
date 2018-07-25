@@ -60,8 +60,8 @@ instance VTransform (AngularPosition LatLong) where
 
 -- | Transformation between 'EcefPosition' and angular or n-vector positions.
 class ETransform a b where
-    toEcef :: a -> b -> EcefPosition
-    fromEcef :: EcefPosition -> b -> a
+    toEcef :: a -> b -> EcefPosition -- ^ position and earth model to to 'EcefPosition'.
+    fromEcef :: EcefPosition -> b -> a -- ^ 'EcefPosition' and earth model to position.
 
 -- | Ellipsoidal transformation: 'NVector' <-> 'EcefPosition'.
 instance ETransform NVector Ellipsoid where
@@ -122,7 +122,7 @@ nvectorToLatLong v = latLong lat lon
 
 -- | @latLongToNVector ll@ transforms 'LatLong' @ll@ to an equivalent 'NVector'.
 --
--- Same as 'fromNVector'.
+-- See also 'fromNVector'.
 latLongToNVector :: LatLong -> NVector
 latLongToNVector ll = NVector x' y' z'
   where
@@ -135,6 +135,8 @@ latLongToNVector ll = NVector x' y' z'
 
 -- | @ecefToNVectorEllipsoidal p e@ transforms 'EcefPosition' @p@ to an equivalent 'NVector' and geodetic height
 -- using ellipsoid @e@.
+--
+-- See also 'fromEcef'
 ecefToNVectorEllipsoidal :: EcefPosition -> Ellipsoid -> (NVector, Double)
 ecefToNVectorEllipsoidal (EcefPosition x y z) e = (nvecEllipsoidal d e2 k px py pz, h)
   where
@@ -169,6 +171,8 @@ nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
 
 -- | @nvectorToEcefEllipsoidal (n, h) e@ transforms 'NVector' @n@ and geodetic height @h@
 -- to an equivalent 'EcefPosition' using ellipsoid @e@.
+--
+-- See also 'toEcef'
 nvectorToEcefEllipsoidal :: (NVector, Double) -> Ellipsoid -> EcefPosition
 nvectorToEcefEllipsoidal (v, h) e = EcefPosition ex' ey' ez'
   where
@@ -186,6 +190,8 @@ nvectorToEcefEllipsoidal (v, h) e = EcefPosition ex' ey' ez'
 
 -- | @ecefToNVectorSpherical p r@ transforms 'EcefPosition' @p@ to an equivalent 'NVector' and height
 -- using mean earth radius @r@.
+--
+-- See also 'fromEcef'
 ecefToNVectorSpherical :: EcefPosition -> Length -> (NVector, Double)
 ecefToNVectorSpherical p r = (v, h)
   where
@@ -194,6 +200,8 @@ ecefToNVectorSpherical p r = (v, h)
 
 -- | @nvectorToEcefSpherical (n, h) r@ transforms 'NVector' @n@ and height @h@
 -- to an equivalent 'EcefPosition' using mean earth radius @r@.
+--
+-- See also 'toEcef'
 nvectorToEcefSpherical :: (NVector, Double) -> Length -> EcefPosition
 nvectorToEcefSpherical (v, h) r = EcefPosition (metres (nx e)) (metres (ny e)) (metres (nz e))
   where
@@ -203,7 +211,7 @@ nvectorToEcefSpherical (v, h) r = EcefPosition (metres (nx e)) (metres (ny e)) (
 
 -- | @geodeticHeight p e@ computes the geodetic height of 'EcefPosition' @p@ using ellipsoid @e@.
 --
--- The geodetic height (or ellipsoidal height) is _not_ the mean sea level (MSL) height.
+-- The geodetic height (or ellipsoidal height) is __not__ the mean sea level (MSL) height.
 geodeticHeight :: EcefPosition -> Ellipsoid -> Double
 geodeticHeight p e = snd (ecefToNVectorEllipsoidal p e)
 

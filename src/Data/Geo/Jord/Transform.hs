@@ -16,8 +16,6 @@
 --
 -- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
 --
--- TODO: doc
---
 module Data.Geo.Jord.Transform
     ( VTransform(..)
     , ETransform(..)
@@ -135,6 +133,8 @@ latLongToNVector ll = NVector x' y' z'
     y' = cl * sin' lon
     z' = sin' lat
 
+-- | @ecefToNVectorEllipsoidal p e@ transforms 'EcefPosition' @p@ to an equivalent 'NVector' and geodetic height
+-- using ellipsoid @e@.
 ecefToNVectorEllipsoidal :: EcefPosition -> Ellipsoid -> (NVector, Double)
 ecefToNVectorEllipsoidal (EcefPosition x y z) e = (nvecEllipsoidal d e2 k px py pz, h)
   where
@@ -167,6 +167,8 @@ nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
     ny' = s * a * py
     nz' = s * pz
 
+-- | @nvectorToEcefEllipsoidal (n, h) e@ transforms 'NVector' @n@ and geodetic height @h@
+-- to an equivalent 'EcefPosition' using ellipsoid @e@.
 nvectorToEcefEllipsoidal :: (NVector, Double) -> Ellipsoid -> EcefPosition
 nvectorToEcefEllipsoidal (v, h) e = EcefPosition ex' ey' ez'
   where
@@ -182,12 +184,16 @@ nvectorToEcefEllipsoidal (v, h) e = EcefPosition ex' ey' ez'
     ey' = metres (n * m * ny' + h * ny')
     ez' = metres (n * nz' + h * nz')
 
+-- | @ecefToNVectorSpherical p r@ transforms 'EcefPosition' @p@ to an equivalent 'NVector' and height
+-- using mean earth radius @r@.
 ecefToNVectorSpherical :: EcefPosition -> Length -> (NVector, Double)
 ecefToNVectorSpherical p r = (v, h)
   where
     v = vunit (NVector (vecx p) (vecy p) (vecz p))
-    h = (vnorm p) - toMetres r
+    h = vnorm p - toMetres r
 
+-- | @nvectorToEcefSpherical (n, h) r@ transforms 'NVector' @n@ and height @h@
+-- to an equivalent 'EcefPosition' using mean earth radius @r@.
 nvectorToEcefSpherical :: (NVector, Double) -> Length -> EcefPosition
 nvectorToEcefSpherical (v, h) r = EcefPosition (metres (nx e)) (metres (ny e)) (metres (nz e))
   where
@@ -195,8 +201,12 @@ nvectorToEcefSpherical (v, h) r = EcefPosition (metres (nx e)) (metres (ny e)) (
     n = h + toMetres r
     e = vscale nv n
 
+-- | @geodeticHeight p e@ computes the geodetic height of 'EcefPosition' @p@ using ellipsoid @e@.
+--
+-- The geodetic height (or ellipsoidal height) is _not_ the mean sea level (MSL) height.
 geodeticHeight :: EcefPosition -> Ellipsoid -> Double
-geodeticHeight p e= snd (ecefToNVectorEllipsoidal p e)
+geodeticHeight p e = snd (ecefToNVectorEllipsoidal p e)
 
+-- | @sphericalHeight p e@ computes the height of 'EcefPosition' @p@ using mean earth radius @r@.
 sphericalHeight :: EcefPosition -> Length -> Double
 sphericalHeight p r = snd (ecefToNVectorSpherical p r)

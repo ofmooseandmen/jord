@@ -42,8 +42,7 @@ spec = do
             show (decimalDegrees 154.915) `shouldBe` "154°54'54.000\""
         it "shows -154.915 as -154°54'54.000\"" $
             show (decimalDegrees (-154.915)) `shouldBe` "-154°54'54.000\""
-        it "show 0.5245 as 0°31'28.800\"" $
-            show (decimalDegrees 0.5245) `shouldBe` "0°31'28.200\""
+        it "show 0.5245 as 0°31'28.800\"" $ show (decimalDegrees 0.5245) `shouldBe` "0°31'28.200\""
         it "show -0.5245 as -0°31'28.800\"" $
             show (decimalDegrees (-0.5245)) `shouldBe` "-0°31'28.200\""
     describe "Angle from decimal degrees" $ do

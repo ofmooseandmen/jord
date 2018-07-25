@@ -40,10 +40,10 @@ import Data.Geo.Jord.Geodetics
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.NedVector
 import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Spherical
+import Data.Geo.Jord.NedVector
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Spherical
 import Data.Geo.Jord.Transform
 
 -- | version.

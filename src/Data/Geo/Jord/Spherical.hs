@@ -1,7 +1,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 
+-- |
+-- Module:      Data.Geo.Jord.Spherical
+-- Copyright:   (c) 2018 Cedric Liegeois
+-- License:     BSD3
+-- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
+-- Stability:   experimental
+-- Portability: portable
 --
--- TODO: doc
+-- Geodetic calculations assuming a _spherical_ earth model.
+--
+-- All functions are implemented using the vector-based approached described in
+-- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
 module Data.Geo.Jord.Spherical
     ( SGeodetics(angularDistance, antipode, finalBearing, initialBearing,

@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 -- |
 -- Module:      Data.Geo.Jord.Quantity
 -- Copyright:   (c) 2018 Cedric Liegeois

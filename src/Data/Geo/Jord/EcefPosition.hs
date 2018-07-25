@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 -- |
 -- Module:      Data.Geo.Jord.EcefPosition
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -14,7 +12,6 @@
 --
 module Data.Geo.Jord.EcefPosition
     ( EcefPosition(..)
-    , ecefPos
     , ecefPosMetres
     ) where
 
@@ -32,14 +29,15 @@ data EcefPosition = EcefPosition
     , ez :: Length
     } deriving (Eq, Show)
 
+-- | instance of 'Vector3d'.
 instance Vector3d EcefPosition where
     vecx v = toMetres (ex v)
     vecy v = toMetres (ey v)
     vecz v = toMetres (ez v)
     vector3d = ecefPosMetres
 
-ecefPos :: Length -> Length -> Length -> EcefPosition
-ecefPos = EcefPosition
-
+-- | 'EcefPosition' from given x, y and z length in _metres_.
+--
+-- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
 ecefPosMetres :: Double -> Double -> Double -> EcefPosition
 ecefPosMetres x y z = EcefPosition (metres x) (metres y) (metres z)

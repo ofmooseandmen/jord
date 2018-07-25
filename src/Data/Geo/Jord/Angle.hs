@@ -71,12 +71,14 @@ instance Show Angle where
         s ++
         show d ++
         "°" ++
-        show (getMinutes a) ++ "'" ++ show (getSeconds a) ++ "." ++ printf "%03d" (getMilliseconds a) ++ "\""
+        show (getMinutes a) ++
+        "'" ++ show (getSeconds a) ++ "." ++ printf "%03d" (getMilliseconds a) ++ "\""
       where
         d = getDegrees a
-        s = if d == 0 && milliseconds a < 0
-            then "-"
-            else ""
+        s =
+            if d == 0 && milliseconds a < 0
+                then "-"
+                else ""
 
 -- | Add/Subtract 'Angle'.
 instance Quantity Angle where

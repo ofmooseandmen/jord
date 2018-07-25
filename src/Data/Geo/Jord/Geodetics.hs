@@ -2,8 +2,19 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
+-- |
+-- Module:      Data.Geo.Jord.Geodetics
+-- Copyright:   (c) 2018 Cedric Liegeois
+-- License:     BSD3
+-- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
+-- Stability:   experimental
+-- Portability: portable
 --
--- TODO: doc
+-- Functions to solve the <https://en.wikipedia.org/wiki/Geodesy#Geodetic_problems Geodetic problems>
+-- for both ellipsoidal and spherical earth models.
+--
+-- All functions are implemented using the vector-based approached described in
+-- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
 module Data.Geo.Jord.Geodetics
     ( BearingDistance(..)
@@ -28,16 +39,24 @@ newtype BearingDistance =
     deriving (Eq, Show)
 
 class IsZero a where
-  isZero :: a -> Bool
+    isZero :: a -> Bool
 
 instance IsZero BearingDistance where
-   isZero (BearingDistance (_, l)) = toMetres l == 0.0
+    isZero (BearingDistance (_, l)) = toMetres l == 0.0
 
 instance IsZero NedVector where
-   isZero v = vnorm v == 0.0
+    isZero v = vnorm v == 0.0
 
+-- | Class 'Geodetics' defines two functions each solving a geodetic problem.
 class (IsZero c) => Geodetics a b c where
+    -- | @delta p1 p2 m@ computes the delta between @p1@ and @p2@ using the earth model @m@.
+    --
+    -- This is know as the second (inverse or reverse) geodetic problem.
     delta :: a -> a -> b -> c
+    -- | @destination p0 d m@ computes the destination point from position @p0@ and delta @d@
+    -- using the earth model @m@.
+    --
+    -- This is know as the first (direct or forward) geodetic problem.
     destination :: a -> c -> b -> a
     destination p0 d m
         | isZero d = p0
@@ -46,26 +65,36 @@ class (IsZero c) => Geodetics a b c where
     _destination :: a -> c -> b -> a
 
 -- | Ellipsoidal geodetics calculations on 'NVector's.
+--
+-- deltas are expressed as 'NedVector's relative to the first position.
 instance Geodetics NVector Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
     _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'LatLong's.
+--
+-- deltas are expressed as 'NedVector's relative to the first position.
 instance Geodetics LatLong Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
     _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'NVector' 'AngularPosition's.
+--
+-- deltas are expressed as 'NedVector's relative to the first position.
 instance Geodetics (AngularPosition NVector) Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
     _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'LatLong' 'AngularPosition's.
+--
+-- deltas are expressed as 'NedVector's relative to the first position.
 instance Geodetics (AngularPosition LatLong) Ellipsoid NedVector where
     delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
     _destination p0 d e = fromEcef (_destination (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'EcefPosition's.
+--
+-- deltas are expressed as 'NedVector's relative to the first position.
 instance Geodetics EcefPosition Ellipsoid NedVector where
     delta p1 p2 e = nedVectorMetres (nx r) (ny r) (nz r)
       where
@@ -95,6 +124,8 @@ instance Geodetics EcefPosition Ellipsoid NedVector where
         c = vrotate nv r -- apply rotation to nv to get delta in cartesian (ECEF) coordinate reference frame
 
 -- | Spherical geodetics calculations on 'NVector's.
+--
+-- deltas are expressed as 'BearingDistance's.
 instance Geodetics NVector Length BearingDistance where
     delta p1 p2 r = BearingDistance (initialBearing p1 p2, surfaceDistance p1 p2 r)
     _destination v (BearingDistance (b, d)) r = vadd (vscale v (cos' ta)) (vscale de (sin' ta))
@@ -105,21 +136,29 @@ instance Geodetics NVector Length BearingDistance where
         de = vadd (vscale nd (cos' b)) (vscale ed (sin' b)) -- vunit vector in the direction of the azimuth
 
 -- | Spherical geodetics calculations on 'LatLong's.
+--
+-- deltas are expressed as 'BearingDistance's.
 instance Geodetics LatLong Length BearingDistance where
     delta p1 p2 = delta (toNVector p1) (toNVector p2)
     _destination p0 d r = fromNVector (_destination (toNVector p0) d r) 0.0
 
 -- | Spherical geodetics calculations on 'NVector' 'AngularPosition's.
+--
+-- deltas are expressed as 'BearingDistance's.
 instance Geodetics (AngularPosition NVector) Length BearingDistance where
     delta (AngularPosition v1 _) (AngularPosition v2 _) = delta v1 v2
     _destination (AngularPosition v h) d r = AngularPosition (_destination v d r) h
 
 -- | Spherical geodetics calculations on 'LatLong' 'AngularPosition's.
+--
+-- deltas are expressed as 'BearingDistance's.
 instance Geodetics (AngularPosition LatLong) Length BearingDistance where
     delta p1 p2 = delta (toNVector p1) (toNVector p2)
     _destination (AngularPosition ll h) d r = fromNVector (_destination (toNVector ll) d r) h
 
 -- | Spherical geodetics calculations on 'EcefPosition's.
+--
+-- deltas are expressed as 'BearingDistance's.
 instance Geodetics EcefPosition Length BearingDistance where
     delta p1 p2 r = delta v1 v2 r
       where

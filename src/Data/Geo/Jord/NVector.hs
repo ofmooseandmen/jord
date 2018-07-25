@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 -- |
 -- Module:      Data.Geo.Jord.NVector
 -- Copyright:   (c) 2018 Cedric Liegeois

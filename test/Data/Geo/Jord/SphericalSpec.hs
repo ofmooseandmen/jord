@@ -27,7 +27,7 @@ spec = do
             surfaceDistance p1 p2 (meanRadius wgs84) `shouldBe` metres 968854.868
         it "handles singularity at the pole" $
             surfaceDistance northPole southPole (meanRadius wgs84) `shouldBe`
-                kilometres 20015.114351
+            kilometres 20015.114351
         it "handles the discontinuity at the Date Line" $ do
             let p1 = readLatLong "500359N1795959W"
             let p2 = readLatLong "500359N1795959E"

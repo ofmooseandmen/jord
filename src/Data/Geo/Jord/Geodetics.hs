@@ -43,12 +43,12 @@ newtype BearingDistance =
 class (IsZero c) => Geodetics a b c where
     -- | @delta p1 p2 m@ computes the delta between @p1@ and @p2@ using the earth model @m@.
     --
-    -- This is know as the second (inverse or reverse) geodetic problem.
+    -- This is known as the second (inverse or reverse) geodetic problem.
     delta :: a -> a -> b -> c
     -- | @destination p0 d m@ computes the destination point from position @p0@ and delta @d@
     -- using the earth model @m@.
     --
-    -- This is know as the first (direct or forward) geodetic problem.
+    -- This is known as the first (direct or forward) geodetic problem.
     destination :: a -> c -> b -> a
     destination p0 d m
         | isZero d = p0

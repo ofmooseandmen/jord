@@ -276,7 +276,7 @@ evalExpr (LatLong a b) vault =
         [Right (Ang lat), Right (Ang lon)] ->
             bimap (\e -> "Call error: latLong : " ++ e) (NVec . toNVector) (latLongE lat lon)
         r -> Left ("Call error: latLong " ++ showErr r)
-evalExpr (decimalLatLong a b) _ =
+evalExpr (DecimalLatLong a b) _ =
     bimap (\e -> "Call error: decimalLatLong : " ++ e) (NVec . toNVector) (decimalLatLongE a b)
 evalExpr (ReadLatLong s) _ =
     bimap (\e -> "Call error: readLatLong : " ++ e) (NVec . toNVector) (readLatLongE s)
@@ -443,7 +443,7 @@ data Expr
     | Mean [Expr]
     | LatLong Expr
               Expr
-    | decimalLatLong Double
+    | DecimalLatLong Double
                      Double
     | ReadLatLong String
     | ToDecimalDegrees Expr

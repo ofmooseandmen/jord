@@ -12,10 +12,14 @@
 --
 module Data.Geo.Jord.AngularPosition
     ( AngularPosition(..)
-    , latLongPos
-    , nvectorPos
+    , latLongHeight
+    , decimalLatLongHeight
+    , decimalLatLongHeightE
+    , decimalLatLongHeightF
+    , nvectorHeight
     ) where
 
+import Control.Monad.Fail
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -29,9 +33,27 @@ data AngularPosition a = AngularPosition
     } deriving (Eq, Show)
 
 -- | 'AngularPosition' from a 'LatLong' and height.
-latLongPos :: LatLong -> Length -> AngularPosition LatLong
-latLongPos = AngularPosition
+latLongHeight :: LatLong -> Length -> AngularPosition LatLong
+latLongHeight = AngularPosition
+
+-- | 'AngularPosition' from given latitude and longitude in __decimal degrees__ and height.
+-- 'error's if given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+decimalLatLongHeight :: Double -> Double -> Length -> AngularPosition LatLong
+decimalLatLongHeight lat lon h = latLongHeight (decimalLatLong lat lon) h
+
+-- | 'AngularPosition' from given latitude and longitude in __decimal degrees__ and height.
+-- A 'Left' indicates that the given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+decimalLatLongHeightE :: Double -> Double -> Length -> Either String (AngularPosition LatLong)
+decimalLatLongHeightE lat lon h = fmap (\ll -> latLongHeight ll h) (decimalLatLongE lat lon)
+
+-- | 'AngularPosition' from given latitude and longitude in __decimal degrees__ and height.
+-- 'fail's if given latitude is outisde [-90..90]° and/or
+-- given longitude is outisde [-180..180]°.
+decimalLatLongHeightF :: (MonadFail m) => Double -> Double -> Length -> m (AngularPosition LatLong)
+decimalLatLongHeightF lat lon h = fmap (\ll -> latLongHeight ll h) (decimalLatLongF lat lon)
 
 -- | 'AngularPosition' from a 'NVector' and height.
-nvectorPos :: NVector -> Length -> AngularPosition NVector
-nvectorPos = AngularPosition
+nvectorHeight :: NVector -> Length -> AngularPosition NVector
+nvectorHeight = AngularPosition

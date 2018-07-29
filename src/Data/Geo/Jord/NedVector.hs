@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 -- |
 -- Module:      Data.Geo.Jord.NedVector
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -14,7 +12,8 @@
 --
 module Data.Geo.Jord.NedVector
     ( NedVector(..)
-    , nedVectorMetres
+    , ned
+    , nedMetres
     , bearing
     , elevation
     , norm
@@ -36,11 +35,16 @@ instance Vector3d NedVector where
     vecx v = toMetres (north v)
     vecy v = toMetres (east v)
     vecz v = toMetres (down v)
-    vector3d = nedVectorMetres
+    vector3d = nedMetres
+
+
+-- | 'NedVector' from given north, east and down.
+ned :: Length -> Length -> Length -> NedVector
+ned = NedVector
 
 -- | 'NedVector' from given north, east and down in _metres_.
-nedVectorMetres :: Double -> Double -> Double -> NedVector
-nedVectorMetres n e d = NedVector (metres n) (metres e) (metres d)
+nedMetres :: Double -> Double -> Double -> NedVector
+nedMetres n e d = NedVector (metres n) (metres e) (metres d)
 
 -- | @bearing v@ computes the bearing of the NED vector @v@ from north.
 bearing :: NedVector -> Angle

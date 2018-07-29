@@ -14,8 +14,8 @@
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
 module Data.Geo.Jord.Spherical
-    ( SGeodetics(angularDistance, antipode, finalBearing, initialBearing,
-           interpolate, insideSurface, mean, surfaceDistance)
+    ( SGeodetics(angularDistance, antipode, destination, destination84, finalBearing,
+           initialBearing, interpolate, insideSurface, mean, surfaceDistance, surfaceDistance84)
     , northPole
     , southPole
     ) where
@@ -23,6 +23,7 @@ module Data.Geo.Jord.Spherical
 import Data.Fixed
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Ellipsoid(r84)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -42,7 +43,7 @@ southPole = NVector 0.0 0.0 (-1.0)
 -- | Geodetic calculations assuming a spherical earth model.
 --
 -- No instance of class 'SGeodetics' for 'EcefPosition' is provided as the conversion requires
--- the mean earth radius. Conversion with 'toEcef' is therefore required beforehand.
+-- the mean earth radius. Conversion with 'ecefToNVectorSpherical' is therefore required beforehand.
 class (Eq a) => SGeodetics a where
     -- | @angularDistance p1 p2 n@ computes the angle between the horizontal positions @p1@ and @p2@.
     -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
@@ -51,6 +52,16 @@ class (Eq a) => SGeodetics a where
     -- | @antipode p@ computes the antipodal horizontal position of @p@:
     -- the horizontal position on the surface of the Earth which is diametrically opposite to @p@.
     antipode :: a -> a
+    -- | @destination p b d r@ computes the destination position from position @p@ having
+    -- travelled the distance @d@ on the initial bearing @b@ (bearing will normally vary
+    -- before destination is reached) and using the earth radius @r@.
+    destination :: a -> Angle -> Length -> Length -> a
+    destination p b d r
+        | toMetres d == 0.0 = p
+        | otherwise = _destination p b d r
+    -- 'destination' using the mean radius of the WGS84 reference ellipsoid.
+    destination84 :: a -> Angle -> Length -> a
+    destination84 p b d = destination p b d r84
     -- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
     --  The final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
     -- Returns 180 if both horizontal positions are equals.
@@ -111,6 +122,11 @@ class (Eq a) => SGeodetics a where
     -- | @surfaceDistance p1 p2@ computes the surface distance (length of geodesic) between the positions @p1@ and @p2@.
     surfaceDistance :: a -> a -> Length -> Length
     surfaceDistance p1 p2 = arcLength (angularDistance p1 p2 Nothing)
+    -- | 'surfaceDistance' using the mean radius of the WGS84 reference ellipsoid.
+    surfaceDistance84 :: a -> a -> Length
+    surfaceDistance84 p1 p2 = surfaceDistance p1 p2 r84
+    -- | private (not exported): called by 'destination' if distance is > 0
+    _destination :: a -> Angle -> Length -> Length -> a
     -- | private (not exported): called by 'insideSurface' after [a] has been checked.
     _insideSurface :: a -> [a] -> Bool
     -- | private (not exported): 'interpolate' after f has been checked.
@@ -126,6 +142,12 @@ instance SGeodetics NVector where
       where
         gc1 = vcross v1 v2 -- great circle through p1 & p2
         gc2 = vcross v1 northPole -- great circle through p1 & north pole
+    _destination v b d r = vadd (vscale v (cos' ta)) (vscale de (sin' ta))
+      where
+        ed = vunit (vcross northPole v) -- east direction vector at v
+        nd = vcross v ed -- north direction vector at v
+        ta = central d r -- central angle
+        de = vadd (vscale nd (cos' b)) (vscale ed (sin' b)) -- vunit vector in the direction of the azimuth
     _interpolate v0 v1 f = vunit (vadd v0 (vscale (vsub v1 v0) f))
     _insideSurface v vs =
         let aSum =
@@ -148,6 +170,7 @@ instance SGeodetics LatLong where
     angularDistance p1 p2 n = angularDistance (toNVector p1) (toNVector p2) (fmap toNVector n)
     antipode ll = fromNVector (antipode (toNVector ll)) zero
     initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
+    _destination p b d r = fromNVector (_destination (toNVector p) b d r) zero
     _interpolate p0 p1 f = fromNVector (_interpolate (toNVector p0) (toNVector p1) f) zero
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
     _mean ps = fmap (`fromNVector` zero) (_mean (fmap toNVector ps))
@@ -158,6 +181,7 @@ instance SGeodetics (AngularPosition NVector) where
         angularDistance v1 v2 (fmap toNVector n)
     antipode p = AngularPosition (antipode (pos p)) (height p)
     initialBearing (AngularPosition v1 _) (AngularPosition v2 _) = initialBearing v1 v2
+    _destination (AngularPosition v h) b d r = AngularPosition (_destination v b d r) h
     _interpolate (AngularPosition v0 h0) (AngularPosition v1 h1) f =
         AngularPosition (_interpolate v0 v1 f) (lrph h0 h1 f)
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)
@@ -168,6 +192,7 @@ instance SGeodetics (AngularPosition LatLong) where
     angularDistance p1 p2 n = angularDistance (toNVector p1) (toNVector p2) (fmap toNVector n)
     antipode (AngularPosition ll h) = fromNVector (antipode (toNVector ll)) h
     initialBearing p1 p2 = initialBearing (toNVector p1) (toNVector p2)
+    _destination (AngularPosition ll h) b d r = fromNVector (_destination (toNVector ll) b d r) h
     _interpolate (AngularPosition ll0 h0) (AngularPosition ll1 h1) f =
         fromNVector (_interpolate (toNVector ll0) (toNVector ll1) f) (lrph h0 h1 f)
     _insideSurface p ps = _insideSurface (toNVector p) (fmap toNVector ps)

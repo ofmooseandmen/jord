@@ -26,11 +26,11 @@ $ stack build --test
 import Data.Geo.Jord
 
 -- destination position from 531914N0014347W having travelled 500Nm on a heading of 96.0217°
-destination (readGeoPos "531914N0014347W") (decimalDegrees 96.0217) (nauticalMiles 500)
+destination (readGeoPos "531914N0014347W") (decimalDegrees 96.0217, nauticalMiles 500) (meanRadius wgs84)
 
--- distance between 54°N,154°E and its antipodal position
-let p = latLongDecimal 54 154
-distance p (antipode p)
+-- surface distance between 54°N,154°E and its antipodal position
+let p = decimalLatLong 54 154
+surfaceDistance p (antipode p) (meanRadius wgs84)
 ```
 
 Jord comes with a REPL (built with [haskeline](https://github.com/judah/haskeline)):

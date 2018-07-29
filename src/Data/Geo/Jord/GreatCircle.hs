@@ -22,6 +22,7 @@ import Control.Monad.Fail
 import Data.Fixed
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Ellipsoid(r84)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -78,11 +79,14 @@ class (Eq a, Show a) => GreatCircleGeodetics a where
     -- great circle is therefore important:
     --
     -- @
-    --     let gc1 = greatCircle (latLongDecimal 51 0) (latLongDecimal 52 1)
-    --     let gc2 = greatCircle (latLongDecimal 52 1) (latLongDecimal 51 0)
+    --     let gc1 = greatCircle (decimalLatLong 51 0) (decimalLatLong 52 1)
+    --     let gc2 = greatCircle (decimalLatLong 52 1) (decimalLatLong 51 0)
     --     crossTrackDistance p gc1 == (- crossTrackDistance p gc2)
     -- @
     crossTrackDistance :: a -> GreatCircle -> Length -> Length
+    -- | 'crossTrackDistance' using the mean radius of the WGS84 reference ellipsoid.
+    crossTrackDistance84 :: a -> GreatCircle -> Length
+    crossTrackDistance84 p gc = crossTrackDistance p gc r84
     -- | Computes the intersections between the two given 'GreatCircle's.
     -- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
     -- in which case 'Nothing' is returned.

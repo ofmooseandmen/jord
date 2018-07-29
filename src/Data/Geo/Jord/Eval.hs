@@ -149,7 +149,7 @@ convert r False =
 --
 --     * 'latLong'
 --
---     * 'latLongDecimal'
+--     * 'decimalLatLong'
 --
 --     * 'readLatLong'
 --
@@ -177,7 +177,7 @@ functions =
     , "intersections"
     , "isInside"
     , "latLong"
-    , "latLongDecimal"
+    , "decimalLatLong"
     , "mean"
     , "readLatLong"
     , "toDecimalDegrees"
@@ -276,8 +276,8 @@ evalExpr (LatLong a b) vault =
         [Right (Ang lat), Right (Ang lon)] ->
             bimap (\e -> "Call error: latLong : " ++ e) (NVec . toNVector) (latLongE lat lon)
         r -> Left ("Call error: latLong " ++ showErr r)
-evalExpr (LatLongDecimal a b) _ =
-    bimap (\e -> "Call error: LatLongDecimal : " ++ e) (NVec . toNVector) (latLongDecimalE a b)
+evalExpr (decimalLatLong a b) _ =
+    bimap (\e -> "Call error: decimalLatLong : " ++ e) (NVec . toNVector) (decimalLatLongE a b)
 evalExpr (ReadLatLong s) _ =
     bimap (\e -> "Call error: readLatLong : " ++ e) (NVec . toNVector) (readLatLongE s)
 evalExpr (ToDecimalDegrees e) vault =
@@ -443,7 +443,7 @@ data Expr
     | Mean [Expr]
     | LatLong Expr
               Expr
-    | LatLongDecimal Double
+    | decimalLatLong Double
                      Double
     | ReadLatLong String
     | ToDecimalDegrees Expr
@@ -499,10 +499,10 @@ transform (Call "latLong" [e1, e2]) = do
     gc1 <- transform e1
     gc2 <- transform e2
     return (LatLong gc1 gc2)
-transform (Call "latLongDecimal" [Lit s1, Lit s2]) = do
+transform (Call "decimalLatLong" [Lit s1, Lit s2]) = do
     d1 <- readDouble s1
     d2 <- readDouble s2
-    return (LatLongDecimal d1 d2)
+    return (decimalLatLong d1 d2)
 transform (Call "mean" e) = do
     ps <- mapM transform e
     return (Mean ps)

@@ -12,7 +12,8 @@
 --
 module Data.Geo.Jord.EcefPosition
     ( EcefPosition(..)
-    , ecefPosMetres
+    , ecef
+    , ecefMetres
     ) where
 
 import Data.Geo.Jord.Length
@@ -33,10 +34,16 @@ instance Vector3d EcefPosition where
     vecx v = toMetres (ex v)
     vecy v = toMetres (ey v)
     vecz v = toMetres (ez v)
-    vector3d = ecefPosMetres
+    vector3d = ecefMetres
+
+-- | 'EcefPosition' from given x, y and z length.
+--
+-- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
+ecef :: Length -> Length -> Length -> EcefPosition
+ecef = EcefPosition
 
 -- | 'EcefPosition' from given x, y and z length in _metres_.
 --
 -- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
-ecefPosMetres :: Double -> Double -> Double -> EcefPosition
-ecefPosMetres x y z = EcefPosition (metres x) (metres y) (metres z)
+ecefMetres :: Double -> Double -> Double -> EcefPosition
+ecefMetres x y z = EcefPosition (metres x) (metres y) (metres z)

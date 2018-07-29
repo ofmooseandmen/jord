@@ -13,7 +13,7 @@ spec = do
     -- describe "Expression evaluation" $ do
     --     it "evaluates simple expression" $
     --         case eval "antipode 54N154E" emptyVault of
-    --             (Right (Ll ll)) -> ll `shouldBe` latLongDecimal (-54.0) (-26.0)
+    --             (Right (Ll ll)) -> ll `shouldBe` decimalLatLong (-54.0) (-26.0)
     --             r -> fail (show r)
     --     it "evaluates an expression with one function call" $
     --         case eval "distance 54N154E (antipode 54N154E)" emptyVault of
@@ -30,9 +30,9 @@ spec = do
     --             (Right (Ang a)) -> a `shouldBe` decimalDegrees 126
     --             r -> fail (show r)
     --     it "resolves variables" $ do
-    --         let vault = insert "a" (Ll (latLongDecimal 54.0 154.0)) emptyVault
+    --         let vault = insert "a" (Ll (decimalLatLong 54.0 154.0)) emptyVault
     --         case eval "antipode a" vault of
-    --             (Right (Ll ll)) -> ll `shouldBe` latLongDecimal (-54.0) (-26.0)
+    --             (Right (Ll ll)) -> ll `shouldBe` decimalLatLong (-54.0) (-26.0)
     --             r -> fail (show r)
     --     it "rejects expression with lexical error" $
     --         case eval "finalBearing(destination" emptyVault of

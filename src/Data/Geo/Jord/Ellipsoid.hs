@@ -14,6 +14,7 @@ module Data.Geo.Jord.Ellipsoid
     , meanRadius
     , polarRadius
     , wgs84
+    , r84
     ) where
 
 import Data.Geo.Jord.Length
@@ -50,6 +51,10 @@ polarRadius e = metres (semiMinorAxis a f)
 -- | World Geodetic System WGS84 ellipsoid.
 wgs84 :: Ellipsoid
 wgs84 = Ellipsoid (metres 6378137.0) (1.0 / 298.257223563)
+
+-- | Mean earth radius derived from the 'wgs84' ellipsoid.
+r84 :: Length
+r84 = meanRadius wgs84
 
 -- | semi-major axis (a) in metres.
 semiMajorAxis :: Ellipsoid -> Double

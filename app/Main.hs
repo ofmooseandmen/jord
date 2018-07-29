@@ -120,7 +120,7 @@ main = do
 --     "       greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
 --     "       greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
 --     "       latLong ang ang                geographic position from latitude & longitude\n" ++
---     "       latLongDecimal double double   geographic position from latitude & longitude (DD)\n" ++
+--     "       decimalLatLong double double   geographic position from latitude & longitude (DD)\n" ++
 --     "       readLatLong string             geographic position from string\n" ++
 --     "       toDecimalDegrees pos           latitude and longitude of pos in decimal degrees\n" ++
 --     "       toDecimalDegrees ang           decimal degrees of ang\n" ++

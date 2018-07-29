@@ -10,6 +10,7 @@
 --
 module Data.Geo.Jord.NVector
     ( NVector(..)
+    , nvector
     ) where
 
 import Data.Geo.Jord.Vector3d
@@ -23,6 +24,10 @@ data NVector = NVector
     , ny :: Double
     , nz :: Double
     } deriving (Eq, Show)
+
+-- | Unit 'NVector' from given x, y and z.
+nvector :: Double -> Double -> Double -> NVector
+nvector x y z = vunit (NVector x y z)
 
 instance Vector3d NVector where
     vnorm v = sqrt ((nx v * nx v) + (ny v * ny v) + (nz v * nz v))

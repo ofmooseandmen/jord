@@ -17,7 +17,7 @@
 -- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
 --
 module Data.Geo.Jord.Transform
-    ( VTransform(..)
+    ( NTransform(..)
     , ETransform(..)
     , nvectorToLatLong
     , latLongToNVector
@@ -40,22 +40,22 @@ import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
 -- | Transformation between positions and 'NVector'.
-class VTransform a where
+class NTransform a where
     toNVector :: a -> NVector -- ^ position to 'NVector'.
     fromNVector :: NVector -> Length -> a -- ^ 'NVector' and height to position.
 
 -- | 'LatLong' <-> 'NVector'.
-instance VTransform LatLong where
+instance NTransform LatLong where
     toNVector = latLongToNVector
     fromNVector nv _ = nvectorToLatLong nv
 
 -- | 'AngularPosition' of 'NVector' <-> 'NVector'.
-instance VTransform (AngularPosition NVector) where
+instance NTransform (AngularPosition NVector) where
     toNVector = pos
     fromNVector = AngularPosition
 
 -- | 'AngularPosition' of 'LatLong' <-> 'NVector'.
-instance VTransform (AngularPosition LatLong) where
+instance NTransform (AngularPosition LatLong) where
     toNVector = latLongToNVector . pos
     fromNVector nv = AngularPosition (nvectorToLatLong nv)
 

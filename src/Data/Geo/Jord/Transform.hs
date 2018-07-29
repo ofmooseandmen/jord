@@ -134,7 +134,7 @@ latLongToNVector ll = NVector x' y' z'
 -- using ellipsoid @e@.
 --
 -- See also 'fromEcef'
-ecefToNVectorEllipsoidal :: EcefPosition -> Ellipsoid -> (AngularPosition NVector)
+ecefToNVectorEllipsoidal :: EcefPosition -> Ellipsoid -> AngularPosition NVector
 ecefToNVectorEllipsoidal (EcefPosition x y z) e = nvectorHeight (nvecEllipsoidal d e2 k px py pz) (metres h)
   where
     e' = eccentricity e
@@ -170,7 +170,7 @@ nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
 -- to an equivalent 'EcefPosition' using ellipsoid @e@.
 --
 -- See also 'toEcef'
-nvectorToEcefEllipsoidal :: (AngularPosition NVector) -> Ellipsoid -> EcefPosition
+nvectorToEcefEllipsoidal :: AngularPosition NVector -> Ellipsoid -> EcefPosition
 nvectorToEcefEllipsoidal (AngularPosition v h) e = ecef ex' ey' ez'
   where
     nv = vunit v
@@ -190,7 +190,7 @@ nvectorToEcefEllipsoidal (AngularPosition v h) e = ecef ex' ey' ez'
 -- using mean earth radius @r@.
 --
 -- See also 'fromEcef'
-ecefToNVectorSpherical :: EcefPosition -> Length -> (AngularPosition NVector)
+ecefToNVectorSpherical :: EcefPosition -> Length -> AngularPosition NVector
 ecefToNVectorSpherical p r = nvectorHeight v h
   where
     v = vunit (NVector (vecx p) (vecy p) (vecz p))
@@ -200,7 +200,7 @@ ecefToNVectorSpherical p r = nvectorHeight v h
 -- to an equivalent 'EcefPosition' using mean earth radius @r@.
 --
 -- See also 'toEcef'
-nvectorToEcefSpherical :: (AngularPosition NVector) -> Length -> EcefPosition
+nvectorToEcefSpherical :: AngularPosition NVector -> Length -> EcefPosition
 nvectorToEcefSpherical (AngularPosition v h) r = ecefMetres (nx e) (ny e) (nz e)
   where
     nv = vunit v

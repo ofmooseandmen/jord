@@ -18,8 +18,8 @@
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.AngularPosition
+    , module Data.Geo.Jord.Earth
     , module Data.Geo.Jord.EcefPosition
-    , module Data.Geo.Jord.Ellipsoid
     , module Data.Geo.Jord.Ellipsoidal
     , module Data.Geo.Jord.GreatCircle
     , module Data.Geo.Jord.LatLong
@@ -34,8 +34,8 @@ module Data.Geo.Jord
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
-import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Ellipsoidal
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.LatLong

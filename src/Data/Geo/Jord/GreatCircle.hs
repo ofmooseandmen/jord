@@ -22,7 +22,7 @@ import Control.Monad.Fail
 import Data.Fixed
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
-import Data.Geo.Jord.Ellipsoid(r84)
+import Data.Geo.Jord.Earth(r84)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector

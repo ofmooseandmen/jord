@@ -26,8 +26,8 @@ library:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
     - Data.Geo.Jord.AngularPosition
+    - Data.Geo.Jord.Earth
     - Data.Geo.Jord.EcefPosition
-    - Data.Geo.Jord.Ellipsoid
     - Data.Geo.Jord.Ellipsoidal
     - Data.Geo.Jord.GreatCircle
     - Data.Geo.Jord.LatLong

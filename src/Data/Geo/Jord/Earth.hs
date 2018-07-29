@@ -6,15 +6,19 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for defining and working with reference ellipsoids.
+-- Ellipsoidal and derived spherical earth model.
 --
-module Data.Geo.Jord.Ellipsoid
+module Data.Geo.Jord.Earth
     ( Ellipsoid(..)
     , eccentricity
     , meanRadius
     , polarRadius
     , wgs84
+    , grs80
+    , wgs72
     , r84
+    , r80
+    , r72
     ) where
 
 import Data.Geo.Jord.Length
@@ -52,9 +56,25 @@ polarRadius e = metres (semiMinorAxis a f)
 wgs84 :: Ellipsoid
 wgs84 = Ellipsoid (metres 6378137.0) (1.0 / 298.257223563)
 
+-- | Geodetic Reference System 1980 ellipsoid.
+grs80 :: Ellipsoid
+grs80 = Ellipsoid (metres 6378137.0) (1.0 / 298.257222101)
+
+-- | World Geodetic System WGS72 ellipsoid.
+wgs72 :: Ellipsoid
+wgs72 = Ellipsoid (metres 6378135.0) (1.0 / 298.26)
+
 -- | Mean earth radius derived from the 'wgs84' ellipsoid.
 r84 :: Length
 r84 = meanRadius wgs84
+
+-- | Mean earth radius derived from the 'grs80' ellipsoid.
+r80 :: Length
+r80 = meanRadius grs80
+
+-- | Mean earth radius derived from the 'wgs72' ellipsoid.
+r72 :: Length
+r72 = meanRadius wgs72
 
 -- | semi-major axis (a) in metres.
 semiMajorAxis :: Ellipsoid -> Double

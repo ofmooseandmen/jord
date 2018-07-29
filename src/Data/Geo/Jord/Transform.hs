@@ -31,8 +31,8 @@ module Data.Geo.Jord.Transform
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
-import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector

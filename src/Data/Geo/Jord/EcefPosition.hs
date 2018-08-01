@@ -31,6 +31,9 @@ newtype EcefPosition =
     EcefPosition Vector3d
     deriving (Eq, Show)
 
+instance IsVector3d EcefPosition where
+    vec (EcefPosition v) = v
+
 -- | 'EcefPosition' from given x, y and z length.
 --
 -- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.

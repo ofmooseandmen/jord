@@ -112,16 +112,16 @@ instance ETransform (AngularPosition LatLong) Length where
 --
 -- Same as 'toNVector'.
 nvectorToLatLong :: NVector -> LatLong
-nvectorToLatLong v = latLong lat lon
+nvectorToLatLong (NVector v) = latLong lat lon
   where
-    lat = atan2' (nz v) (sqrt (nx v * nx v + ny v * ny v))
-    lon = atan2' (ny v) (nx v)
+    lat = atan2' (vz v) (sqrt (vx v * vx v + vy v * vy v))
+    lon = atan2' (vy v) (vx v)
 
 -- | @latLongToNVector ll@ transforms 'LatLong' @ll@ to an equivalent 'NVector'.
 --
 -- See also 'fromNVector'.
 latLongToNVector :: LatLong -> NVector
-latLongToNVector ll = NVector x' y' z'
+latLongToNVector ll = NVector (Vector3d x' y' z')
   where
     lat = latitude ll
     lon = longitude ll
@@ -135,16 +135,17 @@ latLongToNVector ll = NVector x' y' z'
 --
 -- See also 'fromEcef'
 ecefToNVectorEllipsoidal :: EcefPosition -> Ellipsoid -> AngularPosition NVector
-ecefToNVectorEllipsoidal (EcefPosition x y z) e = nvectorHeight (nvecEllipsoidal d e2 k px py pz) (metres h)
+ecefToNVectorEllipsoidal (EcefPosition ev) e =
+    nvectorHeight (nvecEllipsoidal d e2 k px py pz) (metres h)
   where
     e' = eccentricity e
     e2 = e' * e'
     e4 = e2 * e2
     a = toMetres (equatorialRadius e)
     a2 = a * a
-    px = toMetres x
-    py = toMetres y
-    pz = toMetres z
+    px = vx ev
+    py = vy ev
+    pz = vz ev
     p = (px * px + py * py) / a2
     q = ((1 - e2) / a2) * (pz * pz)
     r = (p + q - e4) / 6.0
@@ -158,7 +159,7 @@ ecefToNVectorEllipsoidal (EcefPosition x y z) e = nvectorHeight (nvecEllipsoidal
     h = ((k + e2 - 1.0) / k) * sqrt (d * d + pz * pz)
 
 nvecEllipsoidal :: Double -> Double -> Double -> Double -> Double -> Double -> NVector
-nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
+nvecEllipsoidal d e2 k px py pz = NVector (Vector3d nx' ny' nz')
   where
     s = 1.0 / sqrt (d * d + pz * pz)
     a = k / (k + e2)
@@ -171,14 +172,14 @@ nvecEllipsoidal d e2 k px py pz = NVector nx' ny' nz'
 --
 -- See also 'toEcef'
 nvectorToEcefEllipsoidal :: AngularPosition NVector -> Ellipsoid -> EcefPosition
-nvectorToEcefEllipsoidal (AngularPosition v h) e = ecef ex' ey' ez'
+nvectorToEcefEllipsoidal (AngularPosition (NVector nv) h) e = ecef ex' ey' ez'
   where
-    nv = vunit v
+    unv = vunit nv
     a = toMetres (equatorialRadius e)
     b = toMetres (polarRadius e)
-    nx' = nx nv
-    ny' = ny nv
-    nz' = nz nv
+    nx' = vx unv
+    ny' = vy unv
+    nz' = vz unv
     m = (a * a) / (b * b)
     n = b / sqrt ((nx' * nx' * m) + (ny' * ny' * m) + (nz' * nz'))
     h' = toMetres h
@@ -191,21 +192,21 @@ nvectorToEcefEllipsoidal (AngularPosition v h) e = ecef ex' ey' ez'
 --
 -- See also 'fromEcef'
 ecefToNVectorSpherical :: EcefPosition -> Length -> AngularPosition NVector
-ecefToNVectorSpherical p r = nvectorHeight v h
+ecefToNVectorSpherical (EcefPosition ev) r = nvectorHeight (NVector nv) h
   where
-    v = vunit (NVector (vecx p) (vecy p) (vecz p))
-    h = sub (metres (vnorm p)) r
+    nv = vunit ev
+    h = sub (metres (vnorm ev)) r
 
 -- | @nvectorToEcefSpherical (n, h) r@ transforms 'NVector' @n@ and height @h@
 -- to an equivalent 'EcefPosition' using mean earth radius @r@.
 --
 -- See also 'toEcef'
 nvectorToEcefSpherical :: AngularPosition NVector -> Length -> EcefPosition
-nvectorToEcefSpherical (AngularPosition v h) r = ecefMetres (nx e) (ny e) (nz e)
+nvectorToEcefSpherical (AngularPosition (NVector nv) h) r = EcefPosition ev
   where
-    nv = vunit v
+    unv = vunit nv
     n = add h r
-    e = vscale nv (toMetres n)
+    ev = vscale unv (toMetres n)
 
 -- | @geodeticHeight p e@ computes the geodetic height of 'EcefPosition' @p@ using ellipsoid @e@.
 --
@@ -213,6 +214,6 @@ nvectorToEcefSpherical (AngularPosition v h) r = ecefMetres (nx e) (ny e) (nz e)
 geodeticHeight :: EcefPosition -> Ellipsoid -> Length
 geodeticHeight p e = height (ecefToNVectorEllipsoidal p e)
 
--- | @sphericalHeight p e@ computes the height of 'EcefPosition' @p@ using mean earth radius @r@.
+-- | @sphericalHeight p r@ computes the height of 'EcefPosition' @p@ using mean earth radius @r@.
 sphericalHeight :: EcefPosition -> Length -> Length
 sphericalHeight p r = height (ecefToNVectorSpherical p r)

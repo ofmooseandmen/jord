@@ -21,10 +21,9 @@ import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
 import Data.Geo.Jord.LatLong
-import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.NedVector
-import Data.Geo.Jord.Spherical
+import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Transform
 import Data.Geo.Jord.Vector3d
 
@@ -42,56 +41,57 @@ class EGeodetics a where
     -- Position @p0@ must be outside the poles for the north and east directions to be defined.
     target :: a -> NedVector -> Ellipsoid -> a
     target p0 d m
-        | vnorm d == 0 = p0
+        | norm d == zero = p0
         | otherwise = _target p0 d m
     -- private (not exported)
     _target :: a -> NedVector -> Ellipsoid -> a
 
 -- | Ellipsoidal geodetics calculations on 'NVector's.
 instance EGeodetics NVector where
-    delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    delta p1 p2 e = _delta p1 (toEcef p1 e) (toEcef p2 e)
     _target p0 d e = fromEcef (_target (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'LatLong's.
 instance EGeodetics LatLong where
-    delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    delta p1 p2 e = _delta (toNVector p1) (toEcef p1 e) (toEcef p2 e)
     _target p0 d e = fromEcef (_target (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'NVector' 'AngularPosition's.
 instance EGeodetics (AngularPosition NVector) where
-    delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    delta p1 p2 e = _delta (toNVector p1) (toEcef p1 e) (toEcef p2 e)
     _target p0 d e = fromEcef (_target (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'LatLong' 'AngularPosition's.
 instance EGeodetics (AngularPosition LatLong) where
-    delta p1 p2 e = delta (toEcef p1 e) (toEcef p2 e) e
+    delta p1 p2 e = _delta (toNVector p1) (toEcef p1 e) (toEcef p2 e)
     _target p0 d e = fromEcef (_target (toEcef p0 e) d e) e
 
 -- | Ellipsoidal geodetics calculations on 'EcefPosition's.
 instance EGeodetics EcefPosition where
-    delta p1 p2 e = nedMetres (nx r) (ny r) (nz r)
+    delta p1 p2 e = _delta (pos (ecefToNVectorEllipsoidal p1 e)) p1 p2
+    _target p0@(EcefPosition p) (NedVector nv) e =
+        ecefMetres (vx p + vx c) (vy p + vy c) (vz p + vz c)
       where
-        nv1 = NVector (toMetres (ex p1)) (toMetres (ey p1)) (toMetres (ez p1))
-        nv2 = NVector (toMetres (ex p2)) (toMetres (ey p2)) (toMetres (ez p2))
-        dpe = vsub nv2 nv1
-        n1 = pos (ecefToNVectorEllipsoidal p1 e)
-        np = northPole
-        d' = vscale n1 (-1) -- down (pointing opposite to n-vector)
-        e' = vunit (vcross np n1) -- east (pointing perpendicular to the plane)
-        n' = vcross e' d' -- north (by right hand rule)
-        r = vrotate dpe [n', e', d']
-    _target p0@(EcefPosition x y z) d e =
-        ecefMetres (toMetres x + nx c) (toMetres y + ny c) (toMetres z + nz c)
-      where
-        nv = NVector (toMetres (north d)) (toMetres (east d)) (toMetres (down d)) -- NED delta to vector in coordinate frame of n-vector
-        n1 = pos (ecefToNVectorEllipsoidal p0 e) -- local (n-vector) coordinate frame
-        a = northPole -- axis vector pointing to 90°
+        n1 = vec (pos (ecefToNVectorEllipsoidal p0 e)) -- local (n-vector) coordinate frame
+        a = vec northPole -- axis vector pointing to 90°
         d' = vscale n1 (-1) -- down (pointing opposite to n-vector)
         e' = vunit (vcross a n1) -- east (pointing perpendicular to the plane)
         n' = vcross e' d' -- north (by right hand rule)
         r =
-            [ NVector (nx n') (nx e') (nx d')
-            , NVector (ny n') (ny e') (ny d')
-            , NVector (nz n') (nz e') (nz d')
+            [ Vector3d (vx n') (vx e') (vx d')
+            , Vector3d (vy n') (vy e') (vy d')
+            , Vector3d (vz n') (vz e') (vz d')
             ] -- rotation matrix is built from n-vector coordinate frame axes (using column vectors)
+        -- nv is NED delta to vector in coordinate frame of n-vector
         c = vrotate nv r -- apply rotation to nv to get delta in cartesian (ECEF) coordinate reference frame
+
+_delta :: NVector -> EcefPosition -> EcefPosition -> NedVector
+_delta (NVector nv1) (EcefPosition p1) (EcefPosition p2) = NedVector (vrotate dpe rm)
+  where
+    dpe = vsub p2 p1
+      -- rotation matrix to go from Earth Frame to Normal Frame at p1
+    np = vec northPole
+    rd = vscale nv1 (-1) -- down (pointing opposite to n-vector)
+    re = vunit (vcross np nv1) -- east (pointing perpendicular to the plane)
+    rn = vcross re rd -- north (by right hand rule)
+    rm = [rn, re, rd]

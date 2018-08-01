@@ -40,19 +40,19 @@ latLongHeight = AngularPosition
 -- 'error's if given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
 decimalLatLongHeight :: Double -> Double -> Length -> AngularPosition LatLong
-decimalLatLongHeight lat lon h = latLongHeight (decimalLatLong lat lon) h
+decimalLatLongHeight lat lon = latLongHeight (decimalLatLong lat lon)
 
 -- | 'AngularPosition' from given latitude and longitude in __decimal degrees__ and height.
 -- A 'Left' indicates that the given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
 decimalLatLongHeightE :: Double -> Double -> Length -> Either String (AngularPosition LatLong)
-decimalLatLongHeightE lat lon h = fmap (\ll -> latLongHeight ll h) (decimalLatLongE lat lon)
+decimalLatLongHeightE lat lon h = fmap (`latLongHeight` h) (decimalLatLongE lat lon)
 
 -- | 'AngularPosition' from given latitude and longitude in __decimal degrees__ and height.
 -- 'fail's if given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
 decimalLatLongHeightF :: (MonadFail m) => Double -> Double -> Length -> m (AngularPosition LatLong)
-decimalLatLongHeightF lat lon h = fmap (\ll -> latLongHeight ll h) (decimalLatLongF lat lon)
+decimalLatLongHeightF lat lon h = fmap (`latLongHeight` h) (decimalLatLongF lat lon)
 
 -- | 'AngularPosition' from a 'NVector' and height.
 nvectorHeight :: NVector -> Length -> AngularPosition NVector

@@ -22,7 +22,7 @@ import Control.Monad.Fail
 import Data.Fixed
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
-import Data.Geo.Jord.Earth(r84)
+import Data.Geo.Jord.Earth (r84)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -94,23 +94,23 @@ class (Eq a, Show a) => GreatCircleGeodetics a where
 
 -- | Great Circle geodetics on 'NVector's.
 instance GreatCircleGeodetics NVector where
-    greatCircleE v1 v2
+    greatCircleE nv1@(NVector v1) nv2@(NVector v2)
         | v1 == v2 = Left "Invalid Great Circle: positions are equal"
         | (realToFrac (vnorm (vadd v1 v2)) :: Nano) == 0 =
             Left "Invalid Great Circle: positions are antipodal"
         | otherwise =
             Right
                 (GreatCircle
-                     (vcross v1 v2)
+                     (NVector (vcross v1 v2))
                      ("passing by " ++
-                      show (fromNVector v1 zero :: LatLong) ++
-                      " & " ++ show (fromNVector v2 zero :: LatLong)))
-    greatCircleBearing v b =
+                      show (fromNVector nv1 zero :: LatLong) ++
+                      " & " ++ show (fromNVector nv2 zero :: LatLong)))
+    greatCircleBearing nv@(NVector v) b =
         GreatCircle
-            (vsub n' e')
-            ("passing by " ++ show (fromNVector v zero :: LatLong) ++ " heading on " ++ show b)
+            (NVector (vsub n' e'))
+            ("passing by " ++ show (fromNVector nv zero :: LatLong) ++ " heading on " ++ show b)
       where
-        e = vcross northPole v -- easting
+        e = vcross (vec northPole) v -- easting
         n = vcross v e -- northing
         e' = vscale e (cos' b / vnorm e)
         n' = vscale n (sin' b / vnorm n)
@@ -119,9 +119,9 @@ instance GreatCircleGeodetics NVector where
     intersections gc1 gc2
         | (vnorm i :: Double) == 0.0 = Nothing
         | otherwise
-        , let ni = vunit i = Just (ni, antipode ni)
+        , let ni = vunit i = Just (NVector ni, antipode (NVector ni))
       where
-        i = vcross (normal gc1) (normal gc2)
+        i = vcross (vec . normal $ gc1) (vec . normal $ gc2)
 
 -- | Great Circle geodetics on 'LatLong's.
 instance GreatCircleGeodetics LatLong where

@@ -11,6 +11,8 @@
 module Data.Geo.Jord.NVector
     ( NVector(..)
     , nvector
+    , northPole
+    , southPole
     ) where
 
 import Data.Geo.Jord.Vector3d
@@ -19,19 +21,21 @@ import Data.Geo.Jord.Vector3d
 --
 -- Orientation: z-axis points to the North Pole along the Earth's rotation axis,
 -- x-axis points towards the point where latitude = longitude = 0.
-data NVector = NVector
-    { nx :: Double
-    , ny :: Double
-    , nz :: Double
-    } deriving (Eq, Show)
+newtype NVector =
+    NVector Vector3d
+    deriving (Eq, Show)
+
+instance IsVector3d NVector where
+    vec (NVector v) = v
 
 -- | Unit 'NVector' from given x, y and z.
 nvector :: Double -> Double -> Double -> NVector
-nvector x y z = vunit (NVector x y z)
+nvector x y z = NVector (vunit (Vector3d x y z))
 
-instance Vector3d NVector where
-    vnorm v = sqrt ((nx v * nx v) + (ny v * ny v) + (nz v * nz v))
-    vecx = nx
-    vecy = ny
-    vecz = nz
-    vector3d = NVector
+-- | Horizontal position of the North Pole.
+northPole :: NVector
+northPole = NVector (Vector3d 0.0 0.0 1.0)
+
+-- | Horizontal position of the North Pole.
+southPole :: NVector
+southPole = NVector (Vector3d 0.0 0.0 (-1.0))

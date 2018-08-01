@@ -27,7 +27,7 @@ spec = do
             destination p0 (decimalDegrees 96.0217) (metres 124800) r84 `shouldBe` p1
         it "return the ECEF position along great-circle at distance and bearing" $ do
             let p0 = ecefToNVectorSpherical (ecefMetres 3812864.094 (-115142.863) 5121515.161) r84
-            let p1 = ecefMetres 3826406.471 8900.536 5112694.233
+            let p1 = ecefMetres 3826406.4710518294 8900.536398998282 5112694.233184049
             let p = destination84 p0 (decimalDegrees 96.0217) (metres 124800)
             nvectorToEcefSpherical p r84 `shouldBe` p1
     describe "Surface Distance" $ do
@@ -39,8 +39,7 @@ spec = do
             let p2 = readLatLong "583838N0030412W"
             surfaceDistance84 p1 p2 `shouldBe` metres 968854.868
         it "handles singularity at the pole" $
-            surfaceDistance northPole southPole r84 `shouldBe`
-            kilometres 20015.114351
+            surfaceDistance northPole southPole r84 `shouldBe` kilometres 20015.114351
         it "handles the discontinuity at the Date Line" $ do
             let p1 = readLatLong "500359N1795959W"
             let p2 = readLatLong "500359N1795959E"

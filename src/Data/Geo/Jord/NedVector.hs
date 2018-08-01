@@ -14,6 +14,9 @@ module Data.Geo.Jord.NedVector
     ( NedVector(..)
     , ned
     , nedMetres
+    , north
+    , east
+    , down
     , bearing
     , elevation
     , norm
@@ -25,26 +28,29 @@ import Data.Geo.Jord.Vector3d
 
 -- | North east down (NED), also known as local tangent plane (LTP):
 -- a vector in the local coordinate frame of a body.
-data NedVector = NedVector
-    { north :: Length
-    , east :: Length
-    , down :: Length
-    } deriving (Eq, Show)
-
-instance Vector3d NedVector where
-    vecx v = toMetres (north v)
-    vecy v = toMetres (east v)
-    vecz v = toMetres (down v)
-    vector3d = nedMetres
-
+newtype NedVector =
+    NedVector Vector3d
+    deriving (Eq, Show)
 
 -- | 'NedVector' from given north, east and down.
 ned :: Length -> Length -> Length -> NedVector
-ned = NedVector
+ned n e d = NedVector (Vector3d (toMetres n) (toMetres e) (toMetres d))
 
 -- | 'NedVector' from given north, east and down in _metres_.
 nedMetres :: Double -> Double -> Double -> NedVector
-nedMetres n e d = NedVector (metres n) (metres e) (metres d)
+nedMetres n e d = NedVector (Vector3d n e d)
+
+-- | North component of given 'NedVector'.
+north :: NedVector -> Length
+north (NedVector v) = metres (vx v)
+
+-- | East component of given 'NedVector'.
+east :: NedVector -> Length
+east (NedVector v) = metres (vy v)
+
+-- | Down component of given 'NedVector'.
+down :: NedVector -> Length
+down (NedVector v) = metres (vz v)
 
 -- | @bearing v@ computes the bearing of the NED vector @v@ from north.
 bearing :: NedVector -> Angle
@@ -54,8 +60,8 @@ bearing v =
 
 -- | @elevation v@ computes the elevation of the NED vector @v@ from horizontal (ie tangent to ellipsoid surface).
 elevation :: NedVector -> Angle
-elevation v = negate' (asin' (toMetres (down v) / vnorm v))
+elevation (NedVector v) = negate' (asin' (vz v / vnorm v))
 
 -- | @norm v@ computes the norm of the NED vector @v@.
 norm :: NedVector -> Length
-norm v = metres (vnorm v)
+norm (NedVector v) = metres (vnorm v)

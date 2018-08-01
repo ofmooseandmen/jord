@@ -28,10 +28,8 @@ spec = do
         it "converts nautical miles to metres" $ toMetres (nauticalMiles 10.5) `shouldBe` 19446
         it "converts nautical miles to kilometres" $
             toKilometres (nauticalMiles 10.5) `shouldBe` 19.446
-        it "converts feet to metres" $
-            toMetres (feet 25000) `shouldBe` 7620
-        it "converts metres to feet" $
-            toFeet (metres 7620) `shouldBe` 25000
+        it "converts feet to metres" $ toMetres (feet 25000) `shouldBe` 7620
+        it "converts metres to feet" $ toFeet (metres 7620) `shouldBe` 25000
     describe "Adding/Subtracting lengths" $ do
         it "adds lengths" $ add (kilometres 1000) (metres 1000) `shouldBe` metres 1001000
         it "subtracts lengths" $ sub (metres 1000) (nauticalMiles 10.5) `shouldBe` metres (-18446)

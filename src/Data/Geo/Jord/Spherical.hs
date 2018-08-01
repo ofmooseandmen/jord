@@ -14,16 +14,15 @@
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
 module Data.Geo.Jord.Spherical
-    ( SGeodetics(angularDistance, antipode, destination, destination84, finalBearing,
-           initialBearing, interpolate, insideSurface, mean, surfaceDistance, surfaceDistance84)
-    , northPole
-    , southPole
+    ( SGeodetics(angularDistance, antipode, destination, destination84,
+           finalBearing, initialBearing, interpolate, insideSurface, mean,
+           surfaceDistance, surfaceDistance84)
     ) where
 
 import Data.Fixed
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
-import Data.Geo.Jord.Earth(r84)
+import Data.Geo.Jord.Earth (r84)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -31,14 +30,6 @@ import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Transform
 import Data.Geo.Jord.Vector3d
 import Data.List (subsequences)
-
--- | Horizontal position of the North Pole.
-northPole :: NVector
-northPole = NVector 0.0 0.0 1.0
-
--- | Horizontal position of the South Pole.
-southPole :: NVector
-southPole = NVector 0.0 0.0 (-1.0)
 
 -- | Geodetic calculations assuming a spherical earth model.
 --
@@ -136,32 +127,35 @@ class (Eq a) => SGeodetics a where
 
 -- | Spherical geodetics calculations on 'NVector's.
 instance SGeodetics NVector where
-    angularDistance = angularDistance'
-    antipode v = vscale v (-1.0)
-    initialBearing v1 v2 = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
+    angularDistance (NVector v1) (NVector v2) (Just (NVector n)) = angularDistance' v1 v2 (Just n)
+    angularDistance (NVector v1) (NVector v2) Nothing = angularDistance' v1 v2 Nothing
+    antipode (NVector v) = NVector (vscale v (-1.0))
+    initialBearing (NVector v1) (NVector v2) =
+        normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
       where
         gc1 = vcross v1 v2 -- great circle through p1 & p2
-        gc2 = vcross v1 northPole -- great circle through p1 & north pole
-    _destination v b d r = vadd (vscale v (cos' ta)) (vscale de (sin' ta))
+        gc2 = vcross v1 (vec northPole) -- great circle through p1 & north pole
+    _destination (NVector v) b d r = NVector (vadd (vscale v (cos' ta)) (vscale de (sin' ta)))
       where
-        ed = vunit (vcross northPole v) -- east direction vector at v
+        ed = vunit (vcross (vec northPole) v) -- east direction vector at v
         nd = vcross v ed -- north direction vector at v
         ta = central d r -- central angle
         de = vadd (vscale nd (cos' b)) (vscale ed (sin' b)) -- vunit vector in the direction of the azimuth
-    _interpolate v0 v1 f = vunit (vadd v0 (vscale (vsub v1 v0) f))
-    _insideSurface v vs =
+    _interpolate (NVector v0) (NVector v1) f = NVector (vunit (vadd v0 (vscale (vsub v1 v0) f)))
+    _insideSurface (NVector v) vs =
         let aSum =
                 foldl
                     (\a v' -> add a (uncurry angularDistance' v' (Just v)))
                     (decimalDegrees 0)
-                    (egdes (map (vsub v) vs))
+                    (egdes (map (vsub v) (fmap vec vs)))
          in abs (toDecimalDegrees aSum) > 180.0
     _mean vs =
         if null antipodals
-            then Just (vunit (foldl vadd vzero vs))
+            then Just (NVector (vunit (foldl vadd vzero vs')))
             else Nothing
       where
-        ts = filter (\l -> length l == 2) (subsequences vs)
+        vs' = fmap vec vs
+        ts = filter (\l -> length l == 2) (subsequences vs')
         antipodals =
             filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
 
@@ -204,7 +198,7 @@ instance SGeodetics (AngularPosition LatLong) where
 -- | Angle between the two given n-vectors.
 -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
 -- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
-angularDistance' :: NVector -> NVector -> Maybe NVector -> Angle
+angularDistance' :: Vector3d -> Vector3d -> Maybe Vector3d -> Angle
 angularDistance' v1 v2 n = atan2' sinO cosO
   where
     sign = maybe 1 (signum . vdot (vcross v1 v2)) n
@@ -212,7 +206,7 @@ angularDistance' v1 v2 n = atan2' sinO cosO
     cosO = vdot v1 v2
 
 -- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
-egdes :: [NVector] -> [(NVector, NVector)]
+egdes :: [Vector3d] -> [(Vector3d, Vector3d)]
 egdes ps = zip ps (tail ps ++ [head ps])
 
 lrph :: Length -> Length -> Double -> Length

@@ -20,6 +20,7 @@ module Data.Geo.Jord.Ellipsoidal
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
+import Data.Geo.Jord.Frames
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.NedVector
@@ -69,29 +70,17 @@ instance EGeodetics (AngularPosition LatLong) where
 -- | Ellipsoidal geodetics calculations on 'EcefPosition's.
 instance EGeodetics EcefPosition where
     delta p1 p2 e = _delta (pos (ecefToNVectorEllipsoidal p1 e)) p1 p2
+    -- TODO: make method _target' :: NVector -> EcefPosition -> NedVector -> EcefPosition
     _target p0@(EcefPosition p) (NedVector nv) e =
         ecefMetres (vx p + vx c) (vy p + vy c) (vz p + vz c)
       where
         n1 = vec (pos (ecefToNVectorEllipsoidal p0 e)) -- local (n-vector) coordinate frame
-        a = vec northPole -- axis vector pointing to 90°
-        d' = vscale n1 (-1) -- down (pointing opposite to n-vector)
-        e' = vunit (vcross a n1) -- east (pointing perpendicular to the plane)
-        n' = vcross e' d' -- north (by right hand rule)
-        r =
-            [ Vector3d (vx n') (vx e') (vx d')
-            , Vector3d (vy n') (vy e') (vy d')
-            , Vector3d (vz n') (vz e') (vz d')
-            ] -- rotation matrix is built from n-vector coordinate frame axes (using column vectors)
-        -- nv is NED delta to vector in coordinate frame of n-vector
-        c = vrotate nv r -- apply rotation to nv to get delta in cartesian (ECEF) coordinate reference frame
+        rm = frameToEarth n1 FrameN
+        c = vrotate nv rm -- apply rotation to nv to get delta in cartesian (ECEF) coordinate reference frame
 
 _delta :: NVector -> EcefPosition -> EcefPosition -> NedVector
 _delta (NVector nv1) (EcefPosition p1) (EcefPosition p2) = NedVector (vrotate dpe rm)
   where
     dpe = vsub p2 p1
-      -- rotation matrix to go from Earth Frame to Normal Frame at p1
-    np = vec northPole
-    rd = vscale nv1 (-1) -- down (pointing opposite to n-vector)
-    re = vunit (vcross np nv1) -- east (pointing perpendicular to the plane)
-    rn = vcross re rd -- north (by right hand rule)
-    rm = [rn, re, rd]
+    -- rotation matrix to go from Earth Frame to Normal Frame at p1
+    rm = earthToFrame nv1 FrameN

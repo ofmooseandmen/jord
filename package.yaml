@@ -29,6 +29,7 @@ library:
     - Data.Geo.Jord.Earth
     - Data.Geo.Jord.EcefPosition
     - Data.Geo.Jord.Ellipsoidal
+    - Data.Geo.Jord.Frames
     - Data.Geo.Jord.GreatCircle
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length

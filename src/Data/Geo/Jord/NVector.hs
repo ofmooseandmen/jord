@@ -9,7 +9,7 @@
 -- Types and functions for working with n-vectors.
 --
 module Data.Geo.Jord.NVector
-    ( NVector(..)
+    ( NVector
     , nvector
     , northPole
     , southPole

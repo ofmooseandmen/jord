@@ -20,13 +20,12 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.AngularPosition
     , module Data.Geo.Jord.Earth
     , module Data.Geo.Jord.EcefPosition
-    , module Data.Geo.Jord.Ellipsoidal
-    , module Data.Geo.Jord.GreatCircle
+    , module Data.Geo.Jord.Geodetics
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NedVector
     , module Data.Geo.Jord.NVector
-    , module Data.Geo.Jord.Spherical
+    , module Data.Geo.Jord.SGeodetics
     , module Data.Geo.Jord.Quantity
     , module Data.Geo.Jord.Transform
     , jordVersion
@@ -36,14 +35,13 @@ import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
-import Data.Geo.Jord.Ellipsoidal
-import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Geodetics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.NedVector
 import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Spherical
+import Data.Geo.Jord.SGeodetics
 import Data.Geo.Jord.Transform
 
 -- | version.

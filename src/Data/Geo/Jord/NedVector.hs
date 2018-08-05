@@ -11,7 +11,7 @@
 -- TODO: add fromLengthBearingElevation
 --
 module Data.Geo.Jord.NedVector
-    ( NedVector(..)
+    ( NedVector
     , ned
     , nedMetres
     , north
@@ -32,13 +32,16 @@ newtype NedVector =
     NedVector Vector3d
     deriving (Eq, Show)
 
+instance IsVector3d NedVector where
+    vec (NedVector v) = v
+
 -- | 'NedVector' from given north, east and down.
 ned :: Length -> Length -> Length -> NedVector
 ned n e d = NedVector (Vector3d (toMetres n) (toMetres e) (toMetres d))
 
 -- | 'NedVector' from given north, east and down in _metres_.
 nedMetres :: Double -> Double -> Double -> NedVector
-nedMetres n e d = NedVector (Vector3d n e d)
+nedMetres n e d = ned (metres n) (metres e) (metres d)
 
 -- | North component of given 'NedVector'.
 north :: NedVector -> Length

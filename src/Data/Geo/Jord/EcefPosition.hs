@@ -11,7 +11,7 @@
 -- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
 --
 module Data.Geo.Jord.EcefPosition
-    ( EcefPosition(..)
+    ( EcefPosition
     , ecef
     , ecefMetres
     , ex
@@ -44,7 +44,7 @@ ecef x y z = EcefPosition (Vector3d (toMetres x) (toMetres y) (toMetres z))
 --
 -- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
 ecefMetres :: Double -> Double -> Double -> EcefPosition
-ecefMetres x y z = EcefPosition (Vector3d x y z)
+ecefMetres x y z = ecef (metres x) (metres y) (metres z)
 
 -- | x coordinate of the given '$tc'EcefPosition'.
 ex :: EcefPosition -> Length

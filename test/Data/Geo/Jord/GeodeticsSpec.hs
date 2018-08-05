@@ -1,4 +1,4 @@
-module Data.Geo.Jord.EllipsoidalSpec
+module Data.Geo.Jord.GeodeticsSpec
     ( spec
     ) where
 
@@ -15,7 +15,7 @@ spec = do
         it "computes the target point from p0 and NED vector" $ do
             let p0 = decimalLatLong 49.66618 3.45063
             let d = nedMetres (-86126) (-78900) 1069
-            target p0 d wgs84 `shouldBe` decimalLatLong 48.8866688 2.374721388
+            target p0 d wgs84 `shouldBe` decimalLatLong 48.8866688 2.374721111
     describe "delta" $ do
         it "computes NED Vector between LatLong positions" $ do
             let p1 = decimalLatLong 49.66618 3.45063

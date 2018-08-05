@@ -39,25 +39,30 @@ import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
--- | Transformation between positions and 'NVector'.
+-- | Transformation between positions and 'AngularPosition' of 'NVector'.
 class NTransform a where
-    toNVector :: a -> NVector -- ^ position to 'NVector'.
-    fromNVector :: NVector -> Length -> a -- ^ 'NVector' and height to position.
+    toNVector :: a -> AngularPosition NVector -- ^ position to 'AngularPosition' of 'NVector'.
+    fromNVector :: AngularPosition NVector -> a -- ^ 'AngularPosition' of 'NVector' and height to position.
 
--- | 'LatLong' <-> 'NVector'.
+-- | 'NVector' <-> 'AngularPosition' of 'NVector'.
+instance NTransform NVector where
+    toNVector nv = AngularPosition nv zero
+    fromNVector = pos
+
+-- | 'LatLong' <-> 'AngularPosition' of 'NVector'.
 instance NTransform LatLong where
-    toNVector = latLongToNVector
-    fromNVector nv _ = nvectorToLatLong nv
+    toNVector ll = AngularPosition (latLongToNVector ll) zero
+    fromNVector = nvectorToLatLong . pos
 
--- | 'AngularPosition' of 'NVector' <-> 'NVector'.
+-- | 'NTransform' identity.
 instance NTransform (AngularPosition NVector) where
-    toNVector = pos
-    fromNVector = AngularPosition
+    toNVector = id
+    fromNVector = id
 
--- | 'AngularPosition' of 'LatLong' <-> 'NVector'.
+-- | 'AngularPosition' of 'LatLong' <-> 'AngularPosition' of 'NVector'.
 instance NTransform (AngularPosition LatLong) where
-    toNVector = latLongToNVector . pos
-    fromNVector nv = AngularPosition (nvectorToLatLong nv)
+    toNVector (AngularPosition ll h) = AngularPosition (latLongToNVector ll) h
+    fromNVector (AngularPosition nv h) = AngularPosition (nvectorToLatLong nv) h
 
 -- | Transformation between 'EcefPosition' and angular or n-vector positions.
 class ETransform a b where
@@ -76,12 +81,12 @@ instance ETransform NVector Length where
 
 -- | Ellipsoidal transformation: 'LatLong' <-> 'EcefPosition'.
 instance ETransform LatLong Ellipsoid where
-    fromEcef p e = fromNVector (fromEcef p e :: NVector) zero
+    fromEcef p e = fromNVector (nvectorHeight (fromEcef p e :: NVector) zero)
     toEcef = toEcef . toNVector
 
 -- | Spherical transformation: 'LatLong' <-> 'EcefPosition'.
 instance ETransform LatLong Length where
-    fromEcef p r = fromNVector (fromEcef p r :: NVector) zero
+    fromEcef p r = fromNVector (nvectorHeight (fromEcef p r :: NVector) zero)
     toEcef = toEcef . toNVector
 
 -- | Ellipsoidal transformation: 'AngularPosition' of 'NVector' <-> 'EcefPosition'.
@@ -96,24 +101,31 @@ instance ETransform (AngularPosition NVector) Length where
 
 -- | Ellipsoidal transformation: 'AngularPosition' of 'LatLong' <-> 'EcefPosition'.
 instance ETransform (AngularPosition LatLong) Ellipsoid where
-    fromEcef p e = fromNVector (pos nvh) (height nvh)
-      where
-        nvh = ecefToNVectorEllipsoidal p e
-    toEcef (AngularPosition ll h) = nvectorToEcefEllipsoidal (nvectorHeight (toNVector ll) h)
+    fromEcef p e = fromNVector (ecefToNVectorEllipsoidal p e)
+    toEcef = nvectorToEcefEllipsoidal . toNVector
 
 -- | Spherical transformation: 'AngularPosition' of 'LatLong' <-> 'EcefPosition'.
 instance ETransform (AngularPosition LatLong) Length where
-    fromEcef p r = fromNVector (pos nvh) (height nvh)
-      where
-        nvh = ecefToNVectorSpherical p r
-    toEcef (AngularPosition ll h) = nvectorToEcefSpherical (nvectorHeight (toNVector ll) h)
+    fromEcef p r = fromNVector (ecefToNVectorSpherical p r)
+    toEcef = nvectorToEcefSpherical . toNVector
+
+-- | 'ETransform' identity.
+instance ETransform EcefPosition Ellipsoid where
+    fromEcef p _ = p
+    toEcef p _ = p
+
+-- | 'ETransform' identity.
+instance ETransform EcefPosition Length where
+    fromEcef p _ = p
+    toEcef p _ = p
 
 -- | @nvectorToLatLong v@ transforms 'NVector' @v@ to an equivalent 'LatLong'.
 --
 -- Same as 'toNVector'.
 nvectorToLatLong :: NVector -> LatLong
-nvectorToLatLong (NVector v) = latLong lat lon
+nvectorToLatLong nv = latLong lat lon
   where
+    v = vec nv
     lat = atan2' (vz v) (sqrt (vx v * vx v + vy v * vy v))
     lon = atan2' (vy v) (vx v)
 
@@ -121,7 +133,7 @@ nvectorToLatLong (NVector v) = latLong lat lon
 --
 -- See also 'fromNVector'.
 latLongToNVector :: LatLong -> NVector
-latLongToNVector ll = NVector (Vector3d x' y' z')
+latLongToNVector ll = nvector x' y' z'
   where
     lat = latitude ll
     lon = longitude ll
@@ -135,9 +147,10 @@ latLongToNVector ll = NVector (Vector3d x' y' z')
 --
 -- See also 'fromEcef'
 ecefToNVectorEllipsoidal :: EcefPosition -> Ellipsoid -> AngularPosition NVector
-ecefToNVectorEllipsoidal (EcefPosition ev) e =
+ecefToNVectorEllipsoidal ep e =
     nvectorHeight (nvecEllipsoidal d e2 k px py pz) (metres h)
   where
+    ev = vec ep
     e' = eccentricity e
     e2 = e' * e'
     e4 = e2 * e2
@@ -159,7 +172,7 @@ ecefToNVectorEllipsoidal (EcefPosition ev) e =
     h = ((k + e2 - 1.0) / k) * sqrt (d * d + pz * pz)
 
 nvecEllipsoidal :: Double -> Double -> Double -> Double -> Double -> Double -> NVector
-nvecEllipsoidal d e2 k px py pz = NVector (Vector3d nx' ny' nz')
+nvecEllipsoidal d e2 k px py pz = nvector nx' ny' nz'
   where
     s = 1.0 / sqrt (d * d + pz * pz)
     a = k / (k + e2)
@@ -172,14 +185,15 @@ nvecEllipsoidal d e2 k px py pz = NVector (Vector3d nx' ny' nz')
 --
 -- See also 'toEcef'
 nvectorToEcefEllipsoidal :: AngularPosition NVector -> Ellipsoid -> EcefPosition
-nvectorToEcefEllipsoidal (AngularPosition (NVector nv) h) e = ecef ex' ey' ez'
+nvectorToEcefEllipsoidal (AngularPosition nv h) e = ecef ex' ey' ez'
   where
-    unv = vunit nv
+    v = vec nv
+    uv = vunit v
     a = toMetres (equatorialRadius e)
     b = toMetres (polarRadius e)
-    nx' = vx unv
-    ny' = vy unv
-    nz' = vz unv
+    nx' = vx uv
+    ny' = vy uv
+    nz' = vz uv
     m = (a * a) / (b * b)
     n = b / sqrt ((nx' * nx' * m) + (ny' * ny' * m) + (nz' * nz'))
     h' = toMetres h
@@ -192,8 +206,9 @@ nvectorToEcefEllipsoidal (AngularPosition (NVector nv) h) e = ecef ex' ey' ez'
 --
 -- See also 'fromEcef'
 ecefToNVectorSpherical :: EcefPosition -> Length -> AngularPosition NVector
-ecefToNVectorSpherical (EcefPosition ev) r = nvectorHeight (NVector nv) h
+ecefToNVectorSpherical p r = nvectorHeight (nvector (vx nv) (vy nv) (vz nv)) h
   where
+    ev = vec p
     nv = vunit ev
     h = sub (metres (vnorm ev)) r
 
@@ -202,9 +217,9 @@ ecefToNVectorSpherical (EcefPosition ev) r = nvectorHeight (NVector nv) h
 --
 -- See also 'toEcef'
 nvectorToEcefSpherical :: AngularPosition NVector -> Length -> EcefPosition
-nvectorToEcefSpherical (AngularPosition (NVector nv) h) r = EcefPosition ev
+nvectorToEcefSpherical (AngularPosition nv h) r = ecefMetres (vx ev) (vy ev) (vz ev)
   where
-    unv = vunit nv
+    unv = vunit . vec $ nv
     n = add h r
     ev = vscale unv (toMetres n)
 

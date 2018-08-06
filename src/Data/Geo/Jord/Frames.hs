@@ -8,7 +8,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Type and functions for working with delta vectors in difference reference frames.
+-- Type and functions for working with delta vectors in different reference frames.
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -26,7 +26,7 @@ module Data.Geo.Jord.Frames
     -- ** Local frame
     , FrameL
     , wanderAzimuth
-    -- * North-East-Down frame
+    -- ** North-East-Down frame
     , FrameN
     , frameN
     -- * Deltas
@@ -102,7 +102,7 @@ instance Frame FrameB where
         rNB = zyx2R y p r
         n = FrameN o
         rEN = earthToFrame n
-        rm = mmult rEN rNB
+        rm = mmult rEN rNB -- closest frame cancel: N
 
 zyx2R :: Angle -> Angle -> Angle -> [Vector3d]
 zyx2R z y x = [v1, v2, v3]
@@ -275,14 +275,9 @@ transpose' :: [[Double]] -> [[Double]]
 transpose' ([]:_) = []
 transpose' x = map head x : transpose' (map tail x)
 
-mmult :: [Vector3d] -> [Vector3d] -> [Vector3d]
-mmult a b = fmap l2v m
-  where
-    m = mmult' (fmap v2l a) (fmap v2l b)
-
 -- | matrix multiplication (from rosettacode.org).
-mmult' :: [[Double]] -> [[Double]] -> [[Double]]
-mmult' a b = [[sum $ zipWith (*) ar bc | bc <- transpose' b] | ar <- a]
+mmult :: [Vector3d] -> [Vector3d] -> [Vector3d]
+mmult a b = fmap l2v ([[vdot ar bc | bc <- transpose b] | ar <- a])
 
 -- | 'Vector3d' to list of doubles.
 v2l :: Vector3d -> [Double]

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 -- |
 -- Module:      Data.Geo.Jord.Geodetics
 -- Copyright:   (c) 2018 Cedric Liegeois

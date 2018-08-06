@@ -32,10 +32,8 @@ library:
     - Data.Geo.Jord.Geodetics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
-    - Data.Geo.Jord.NedVector
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Quantity
-    - Data.Geo.Jord.SGeodetics
     - Data.Geo.Jord.Transform
     - Data.Geo.Jord.Vector3d
   other-modules:

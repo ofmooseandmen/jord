@@ -38,8 +38,7 @@ spec = do
     describe "Spherical transformation between coordinates systems" $ do
         it "transforms NVector position to ECEF position" $ do
             let p = nvector 0.5 0.5 0.7071
-            toEcef p (meanRadius wgs84) `shouldBe`
-                ecefMetres 3185519.660103391 3185519.660103391 4504961.903318216
+            toEcef p s84 `shouldBe` ecefMetres 3185519.660103391 3185519.660103391 4504961.903318216
         it "transforms angular position to ECEF position" $ do
             let refAngular =
                     [ decimalLatLongHeight 39.379 (-48.013) (metres 4702059.834)
@@ -55,7 +54,7 @@ spec = do
                     , ecefMetres 3812864.094233316 (-115142.863124558) 5121515.160893968
                     , ecefMetres 3826406.4642097903 8900.535428827865 5112694.238306408
                     ]
-            mapM_ (\(a, e) -> toEcef a (meanRadius wgs84) `shouldBe` e) (zip refAngular refEcefs)
+            mapM_ (\(a, e) -> toEcef a s84 `shouldBe` e) (zip refAngular refEcefs)
         it "transforms ECEF position to angular position" $ do
             let refAngular =
                     [ decimalLatLongHeight 39.379 (-48.013) (metres 4702059.834217537)
@@ -67,4 +66,4 @@ spec = do
                     , ecefMetres 3185504.386 3185504.386 4504983.505
                     , ecefMetres 4188328.891 171940.276 4797806.669
                     ]
-            mapM_ (\(a, e) -> fromEcef e (meanRadius wgs84) `shouldBe` a) (zip refAngular refEcefs)
+            mapM_ (\(a, e) -> fromEcef e s84 `shouldBe` a) (zip refAngular refEcefs)

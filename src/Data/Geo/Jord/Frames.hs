@@ -1,6 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module:      Data.Geo.Jord.Frames
@@ -22,7 +20,7 @@ module Data.Geo.Jord.Frames
     , FrameB
     , FrameL
     , FrameN
-    , FrameNF(..)
+    , frameN
     -- * Deltas
     , Delta
     , delta
@@ -121,16 +119,8 @@ instance Frame FrameN where
         rn = vcross re rd -- north (by right hand rule)
         rm = [rn, re, rd]
 
--- | factory class to make 'FrameN' data.
-class FrameNF m where
-    -- | 'frameN p m' returns a 'FrameN' with its origin at @p@ and using earth model @m@.
-    frameN :: (ETransform a m) => a -> m -> FrameN
-
-instance FrameNF Ellipsoid where
-    frameN p e = FrameN (envec p e)
-
-instance FrameNF Length where
-    frameN p r = FrameN (snvec p r)
+frameN :: (ETransform a) => a -> Earth -> FrameN
+frameN p e = FrameN (nvec p e)
 
 -- | delta between position in one of the reference frames.
 newtype Delta =
@@ -190,39 +180,37 @@ norm (Ned v) = metres (vnorm v)
 -- the north, east, and down directions will change (relative to Earth) for different places.
 --
 -- Position @p1@ must be outside the poles for the north and east directions to be defined.
-deltaBetween :: (ETransform a b, FrameNF b) => a -> a -> b -> Ned
-deltaBetween p1 p2 m = nedMetres (vx d) (vy d) (vz d)
+deltaBetween :: (ETransform a) => a -> a -> Earth -> Ned
+deltaBetween p1 p2 e = nedMetres (vx d) (vy d) (vz d)
   where
-    e1 = ecefvec p1 m
-    e2 = ecefvec p2 m
+    e1 = ecefvec p1 e
+    e2 = ecefvec p2 e
     de = vsub e2 e1
     -- rotation matrix to go from Earth Frame to Normal Frame at p1
-    f = frameN p1 m
+    f = frameN p1 e
     rm = earthToFrame f
     d = vrotate de rm
 
 -- | @target p0 f d m@ computes the target position from position @p0@ and delta @d@ using in frame @f@
--- and using earth model @m@.
-target :: (ETransform a b, Frame c) => a -> (a -> b -> c) -> Delta -> b -> a
-target p0 f (Delta d) m = fromEcef (ecefMetres (vx e0 + vx c) (vy e0 + vy c) (vz e0 + vz c)) m
+-- and using earth model @e@.
+target :: (ETransform a, Frame c) => a -> (a -> Earth -> c) -> Delta -> Earth -> a
+target p0 f (Delta d) e = fromEcef (ecefMetres (vx e0 + vx c) (vy e0 + vy c) (vz e0 + vz c)) e
   where
-    e0 = ecefvec p0 m
-    rm = frameToEarth (f p0 m)
+    e0 = ecefvec p0 e
+    rm = frameToEarth (f p0 e)
     c = vrotate d rm
 
--- | @targetN p0 d m@ computes the target position from position @p0@ and north, east, down @d@ using earth model @m@.
-targetN :: (ETransform a b, FrameNF b) => a -> Ned -> b -> a
+-- | @targetN p0 d m@ computes the target position from position @p0@ and north, east, down @d@ using earth model @e@.
+targetN :: (ETransform a) => a -> Ned -> Earth -> a
 targetN p0 (Ned d) = target p0 frameN (Delta d)
 
 -- | ECEF position (as a 'Vector3d') from given position.
-ecefvec :: (ETransform a b) => a -> b -> Vector3d
+ecefvec :: (ETransform a) => a -> Earth -> Vector3d
 ecefvec p m = vec (toEcef p m)
 
-envec :: (ETransform a Ellipsoid) => a -> Ellipsoid -> Vector3d
-envec p e = vec (pos (ecefToNVectorEllipsoidal (toEcef p e) e))
-
-snvec :: (ETransform a Length) => a -> Length -> Vector3d
-snvec p r = vec (pos (ecefToNVectorSpherical (toEcef p r) r))
+-- | NVector (as a 'Vector3d') from given positon.
+nvec :: (ETransform a) => a -> Earth -> Vector3d
+nvec p e = vec (pos (ecefToNVector (toEcef p e) e))
 
 -- | transpose matrix made of 'Vector3d'.
 transpose :: [Vector3d] -> [Vector3d]

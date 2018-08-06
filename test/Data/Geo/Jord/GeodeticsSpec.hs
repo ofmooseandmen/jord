@@ -4,7 +4,7 @@ module Data.Geo.Jord.GeodeticsSpec
 
 import Control.Exception.Base
 import Data.Geo.Jord
-import Data.Maybe(fromJust)
+import Data.Maybe (fromJust)
 import Test.Hspec
 
 spec :: Spec
@@ -27,10 +27,10 @@ spec = do
             let p1 = decimalLatLongHeight 53.1882691 0.1332744 (metres 15000.0)
             destination p0 (decimalDegrees 96.0217) (metres 124800) r84 `shouldBe` p1
         it "return the ECEF position along great-circle at distance and bearing" $ do
-            let p0 = ecefToNVectorSpherical (ecefMetres 3812864.094 (-115142.863) 5121515.161) r84
+            let p0 = ecefToNVector (ecefMetres 3812864.094 (-115142.863) 5121515.161) s84
             let p1 = ecefMetres 3826406.4710518294 8900.536398998282 5112694.233184049
             let p = destination84 p0 (decimalDegrees 96.0217) (metres 124800)
-            nvectorToEcefSpherical p r84 `shouldBe` p1
+            nvectorToEcef p s84 `shouldBe` p1
     describe "Surface Distance" $ do
         it "returns 0 if both points are equal" $ do
             let p = readLatLong "500359N1795959W"

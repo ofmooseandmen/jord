@@ -17,8 +17,16 @@ module Data.Geo.Jord.Frames
     (
     -- * Reference Frames
       Frame(..)
+    -- ** Body frame
     , FrameB
+    , yaw
+    , pitch
+    , roll
+    , frameB
+    -- ** Local frame
     , FrameL
+    , wanderAzimuth
+    -- * North-East-Down frame
     , FrameN
     , frameN
     -- * Deltas
@@ -65,11 +73,49 @@ class Frame a where
 --
 --      * Comments: The frame is fixed to the vehicle.
 --
-data FrameB = FrameB
-    { yaw :: Angle -- ^ body yaw angle (vertical axis)
-    , pitch :: Angle -- ^ body pitch angle (transverse axis)
-    , roll :: Angle -- ^ body roll angle (longitudinal axis)
-    } deriving (Eq, Show)
+data FrameB =
+    FrameB Angle
+           Angle
+           Angle
+           Vector3d
+    deriving (Eq, Show)
+
+-- | body yaw angle (vertical axis).
+yaw :: FrameB -> Angle
+yaw (FrameB a _ _ _) = a
+
+-- | body pitch angle (transverse axis).
+pitch :: FrameB -> Angle
+pitch (FrameB _ a _ _) = a
+
+-- | body roll angle (longitudinal axis).
+roll :: FrameB -> Angle
+roll (FrameB _ _ a _) = a
+
+-- | 'FrameB' from given yaw, pitch, roll, position (origin) and earth model.
+frameB :: (ETransform a) => Angle -> Angle -> Angle -> a -> Earth -> FrameB
+frameB yaw' pitch' roll' p e = FrameB yaw' pitch' roll' (nvec p e)
+
+instance Frame FrameB where
+    earthToFrame (FrameB y p r o) = rm
+      where
+        rNB = zyx2R y p r
+        n = FrameN o
+        rEN = earthToFrame n
+        rm = mmult rEN rNB
+
+zyx2R :: Angle -> Angle -> Angle -> [Vector3d]
+zyx2R z y x = [v1, v2, v3]
+  where
+    cx = cos' x
+    sx = sin' x
+    cy = cos' y
+    sy = sin' y
+    cz = cos' z
+    sz = sin' z
+    v1 = Vector3d (cz * cy) ((-sz) * cx + cz * sy * sx) (sz * sx + cz * sy * cx)
+    v2 = Vector3d (sz * cy) (cz * cx + sz * sy * sx) ((-cz) * sx + sz * sy * cx)
+    v3 = Vector3d (-sy) (cy * sx) (cy * cx)
 
 -- | Local level, Wander azimuth frame.
 --
@@ -88,9 +134,14 @@ data FrameB = FrameB
 -- this angle is called the wander azimuth angle. The L-frame is well suited for general
 -- calculations, as it is non-singular.
 --
-newtype FrameL = FrameL
-    { wanderAzimuth :: Angle
-    } deriving (Eq, Show)
+data FrameL =
+    FrameL Angle
+           Vector3d
+    deriving (Eq, Show)
+
+-- | wander azimuth.
+wanderAzimuth :: FrameL -> Angle
+wanderAzimuth (FrameL a _) = a
 
 -- | North-East-Down (local level) frame.
 --
@@ -119,6 +170,7 @@ instance Frame FrameN where
         rn = vcross re rd -- north (by right hand rule)
         rm = [rn, re, rd]
 
+-- | 'FrameN' from given position (origin) and earth model.
 frameN :: (ETransform a) => a -> Earth -> FrameN
 frameN p e = FrameN (nvec p e)
 
@@ -222,6 +274,15 @@ transpose m = fmap l2v (transpose' xs)
 transpose' :: [[Double]] -> [[Double]]
 transpose' ([]:_) = []
 transpose' x = map head x : transpose' (map tail x)
+
+mmult :: [Vector3d] -> [Vector3d] -> [Vector3d]
+mmult a b = fmap l2v m
+  where
+    m = mmult' (fmap v2l a) (fmap v2l b)
+
+-- | matrix multiplication (from rosettacode.org).
+mmult' :: [[Double]] -> [[Double]] -> [[Double]]
+mmult' a b = [[sum $ zipWith (*) ar bc | bc <- transpose' b] | ar <- a]
 
 -- | 'Vector3d' to list of doubles.
 v2l :: Vector3d -> [Double]

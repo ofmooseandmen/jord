@@ -60,9 +60,9 @@ import Data.Geo.Jord.Vector3d
 
 -- | class for reference frames.
 class Frame a where
-    earthToFrame :: a -> [Vector3d] -- ^ rotation matrix to go from Earth-Fixed frame to frame @a@.
-    frameToEarth :: a -> [Vector3d] -- ^ rotation matrix to go from frame @a@ to Earth-Fixed frame.
-    frameToEarth = transpose . earthToFrame
+    earthToFrame :: a -> [Vector3d]  -- ^ rotation matrix to transform vectors decomposed in Earth-Fixed frame to vectors decomposed in frame @a@: R_aE.
+    earthToFrame = transpose . frameToEarth
+    frameToEarth :: a -> [Vector3d] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame: R_Ea.
 
 -- | Body frame (typically of a vehicle).
 --
@@ -97,12 +97,13 @@ frameB :: (ETransform a) => Angle -> Angle -> Angle -> a -> Earth -> FrameB
 frameB yaw' pitch' roll' p e = FrameB yaw' pitch' roll' (nvec p e)
 
 instance Frame FrameB where
-    earthToFrame (FrameB y p r o) = rm
+    -- | R_EB: frame B to Earth
+    frameToEarth (FrameB y p r o) = rm
       where
         rNB = zyx2R y p r
         n = FrameN o
-        rEN = earthToFrame n
-        rm = mmult rEN rNB -- closest frame cancel: N
+        rEN = frameToEarth n
+        rm = mmult rEN rNB -- closest frames cancel: N
 
 zyx2R :: Angle -> Angle -> Angle -> [Vector3d]
 zyx2R z y x = [v1, v2, v3]
@@ -162,7 +163,8 @@ newtype FrameN =
     deriving (Eq, Show)
 
 instance Frame FrameN where
-    earthToFrame (FrameN o) = rm
+    -- | R_EN: frame N to Earth
+    frameToEarth (FrameN o) = transpose rm
       where
         np = vec northPole
         rd = vscale o (-1) -- down (pointing opposite to n-vector)
@@ -277,7 +279,7 @@ transpose' x = map head x : transpose' (map tail x)
 
 -- | matrix multiplication (from rosettacode.org).
 mmult :: [Vector3d] -> [Vector3d] -> [Vector3d]
-mmult a b = fmap l2v ([[vdot ar bc | bc <- transpose b] | ar <- a])
+mmult a b = fmap l2v [[vdot ar bc | bc <- transpose b] | ar <- a]
 
 -- | 'Vector3d' to list of doubles.
 v2l :: Vector3d -> [Double]

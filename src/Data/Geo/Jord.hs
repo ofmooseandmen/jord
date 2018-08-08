@@ -26,6 +26,7 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NVector
     , module Data.Geo.Jord.Quantity
+    , module Data.Geo.Jord.Rotation
     , module Data.Geo.Jord.Transform
     , module Data.Geo.Jord.Vector3d
     , jordVersion
@@ -41,6 +42,7 @@ import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Rotation
 import Data.Geo.Jord.Transform
 import Data.Geo.Jord.Vector3d
 

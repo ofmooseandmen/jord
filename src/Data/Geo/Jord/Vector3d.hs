@@ -20,6 +20,8 @@ module Data.Geo.Jord.Vector3d
     , vscale
     , vunit
     , vzero
+    , transpose
+    , mdot
     ) where
 
 -- | 3-element vector.
@@ -96,3 +98,27 @@ vunit v
 -- | vector of vnorm 0.
 vzero :: Vector3d
 vzero = Vector3d 0 0 0
+
+-- | transpose __square__ matrix made of 'Vector3d'.
+transpose :: [Vector3d] -> [Vector3d]
+transpose m = fmap ds2v (transpose' xs)
+  where
+    xs = fmap v2ds m
+
+-- | transpose matrix.
+transpose' :: [[Double]] -> [[Double]]
+transpose' ([]:_) = []
+transpose' x = map head x : transpose' (map tail x)
+
+-- | multiplies 2 matrices of 'Vector3d'.
+mdot :: [Vector3d] -> [Vector3d] -> [Vector3d]
+mdot a b = fmap ds2v [[vdot ar bc | bc <- transpose b] | ar <- a]
+
+-- | 'Vector3d' to list of doubles.
+v2ds :: Vector3d -> [Double]
+v2ds (Vector3d x' y' z') = [x', y', z']
+
+-- | list of doubles to 'Vector3d'.
+ds2v :: [Double] -> Vector3d
+ds2v [x', y', z'] = Vector3d x' y' z'
+ds2v xs = error ("Invalid list: " ++ show xs)

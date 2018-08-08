@@ -26,6 +26,7 @@ module Data.Geo.Jord.Frames
     -- ** Local frame
     , FrameL
     , wanderAzimuth
+    , frameL
     -- ** North-East-Down frame
     , FrameN
     , frameN
@@ -33,7 +34,7 @@ module Data.Geo.Jord.Frames
     , Delta
     , delta
     , deltaMetres
-    -- * Delta in the north, east, down frame.
+    -- * Delta in the north, east, down frame
     , Ned
     , ned
     , nedMetres
@@ -45,6 +46,7 @@ module Data.Geo.Jord.Frames
     , norm
     -- * Calculations
     , deltaBetween
+    , nedBetween
     , target
     , targetN
     ) where
@@ -53,16 +55,25 @@ import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
+import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Rotation
 import Data.Geo.Jord.Transform
 import Data.Geo.Jord.Vector3d
 
 -- | class for reference frames.
+--
+-- Supported frames:
+--
+--     * 'FrameB': 'rEF' returns R_EB
+--
+--     * 'FrameL': 'rEF' returns R_EL
+--
+--     * 'FrameN': 'rEF' returns R_EN
+--
 class Frame a where
-    earthToFrame :: a -> [Vector3d]  -- ^ rotation matrix to transform vectors decomposed in Earth-Fixed frame to vectors decomposed in frame @a@: R_aE.
-    earthToFrame = transpose . frameToEarth
-    frameToEarth :: a -> [Vector3d] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame: R_Ea.
+    rEF :: a -> [Vector3d] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
 
 -- | Body frame (typically of a vehicle).
 --
@@ -96,27 +107,15 @@ roll (FrameB _ _ a _) = a
 frameB :: (ETransform a) => Angle -> Angle -> Angle -> a -> Earth -> FrameB
 frameB yaw' pitch' roll' p e = FrameB yaw' pitch' roll' (nvec p e)
 
-instance Frame FrameB where
+instance Frame FrameB
     -- | R_EB: frame B to Earth
-    frameToEarth (FrameB y p r o) = rm
+                                 where
+    rEF (FrameB y p r o) = rm
       where
-        rNB = zyx2R y p r
+        rNB = zyx2r y p r
         n = FrameN o
-        rEN = frameToEarth n
-        rm = mmult rEN rNB -- closest frames cancel: N
-
-zyx2R :: Angle -> Angle -> Angle -> [Vector3d]
-zyx2R z y x = [v1, v2, v3]
-  where
-    cx = cos' x
-    sx = sin' x
-    cy = cos' y
-    sy = sin' y
-    cz = cos' z
-    sz = sin' z
-    v1 = Vector3d (cz * cy) ((-sz) * cx + cz * sy * sx) (sz * sx + cz * sy * cx)
-    v2 = Vector3d (sz * cy) (cz * cx + sz * sy * sx) ((-cz) * sx + sz * sy * cx)
-    v3 = Vector3d (-sy) (cy * sx) (cy * cx)
+        rEN = rEF n
+        rm = mdot rEN rNB -- closest frames cancel: N
 
 -- | Local level, Wander azimuth frame.
 --
@@ -137,12 +136,28 @@ zyx2R z y x = [v1, v2, v3]
 --
 data FrameL =
     FrameL Angle
-           Vector3d
+           LatLong
     deriving (Eq, Show)
 
--- | wander azimuth.
+-- | wander azimuth: angle between x-axis of the frame L and the north direction.
 wanderAzimuth :: FrameL -> Angle
 wanderAzimuth (FrameL a _) = a
+
+instance Frame FrameL
+    -- | R_EL: frame L to Earth
+                                 where
+    rEF (FrameL w o) = rm
+      where
+        r = xyz2r (longitude o) (negate' (latitude o)) w
+        rEe' = [Vector3d 0 0 (-1), Vector3d 0 1 0, Vector3d 1 0 0]
+        rm = mdot rEe' r
+
+-- | 'FrameL' from given wander azimuth, position (origin) and earth model.
+frameL :: (ETransform a) => Angle -> a -> Earth -> FrameL
+frameL w p e = FrameL w ll
+  where
+    v = pos (ecefToNVector (toEcef p e) e)
+    ll = nvectorToLatLong v
 
 -- | North-East-Down (local level) frame.
 --
@@ -162,9 +177,10 @@ newtype FrameN =
     FrameN Vector3d
     deriving (Eq, Show)
 
-instance Frame FrameN where
+instance Frame FrameN
     -- | R_EN: frame N to Earth
-    frameToEarth (FrameN o) = transpose rm
+                                 where
+    rEF (FrameN o) = transpose rm
       where
         np = vec northPole
         rd = vscale o (-1) -- down (pointing opposite to n-vector)
@@ -228,33 +244,40 @@ elevation (Ned v) = negate' (asin' (vz v / vnorm v))
 norm :: Ned -> Length
 norm (Ned v) = metres (vnorm v)
 
--- | @delta p1 p2 m@ computes the exact vector between the two positions @p1@ and @p2@, in north, east, and down.
+-- | @deltaBetween p1 p2 f e@ computes the exact 'Delta' between the two positions @p1@ and @p2@ in frame @f@
+-- using earth model @e@.
+deltaBetween :: (ETransform a, Frame c) => a -> a -> (a -> Earth -> c) -> Earth -> Delta
+deltaBetween p1 p2 f e = deltaMetres (vx d) (vy d) (vz d)
+  where
+    e1 = ecefvec p1 e
+    e2 = ecefvec p2 e
+    de = vsub e2 e1
+    -- rotation matrix to go from Earth Frame to Frame at p1
+    rm = transpose (rEF (f p1 e))
+    d = vrotate de rm
+
+-- | @nedBetween p1 p2 e@ computes the exact 'Ned' vector between the two positions @p1@ and @p2@, in north, east, and down
+-- using earth model @e@.
 --
 -- Produced 'Ned' delta is relative to @p1@: Due to the curvature of Earth and different directions to the North Pole,
 -- the north, east, and down directions will change (relative to Earth) for different places.
 --
 -- Position @p1@ must be outside the poles for the north and east directions to be defined.
-deltaBetween :: (ETransform a) => a -> a -> Earth -> Ned
-deltaBetween p1 p2 e = nedMetres (vx d) (vy d) (vz d)
+nedBetween :: (ETransform a) => a -> a -> Earth -> Ned
+nedBetween p1 p2 e = nedMetres (vx d) (vy d) (vz d)
   where
-    e1 = ecefvec p1 e
-    e2 = ecefvec p2 e
-    de = vsub e2 e1
-    -- rotation matrix to go from Earth Frame to Normal Frame at p1
-    f = frameN p1 e
-    rm = earthToFrame f
-    d = vrotate de rm
+    (Delta d) = deltaBetween p1 p2 frameN e
 
--- | @target p0 f d m@ computes the target position from position @p0@ and delta @d@ using in frame @f@
+-- | @target p0 f d e@ computes the target position from position @p0@ and delta @d@ using in frame @f@
 -- and using earth model @e@.
 target :: (ETransform a, Frame c) => a -> (a -> Earth -> c) -> Delta -> Earth -> a
 target p0 f (Delta d) e = fromEcef (ecefMetres (vx e0 + vx c) (vy e0 + vy c) (vz e0 + vz c)) e
   where
     e0 = ecefvec p0 e
-    rm = frameToEarth (f p0 e)
+    rm = rEF (f p0 e)
     c = vrotate d rm
 
--- | @targetN p0 d m@ computes the target position from position @p0@ and north, east, down @d@ using earth model @e@.
+-- | @targetN p0 d e@ computes the target position from position @p0@ and north, east, down @d@ using earth model @e@.
 targetN :: (ETransform a) => a -> Ned -> Earth -> a
 targetN p0 (Ned d) = target p0 frameN (Delta d)
 
@@ -265,27 +288,3 @@ ecefvec p m = vec (toEcef p m)
 -- | NVector (as a 'Vector3d') from given positon.
 nvec :: (ETransform a) => a -> Earth -> Vector3d
 nvec p e = vec (pos (ecefToNVector (toEcef p e) e))
-
--- | transpose matrix made of 'Vector3d'.
-transpose :: [Vector3d] -> [Vector3d]
-transpose m = fmap l2v (transpose' xs)
-  where
-    xs = fmap v2l m
-
--- | transpose matrix.
-transpose' :: [[Double]] -> [[Double]]
-transpose' ([]:_) = []
-transpose' x = map head x : transpose' (map tail x)
-
--- | matrix multiplication (from rosettacode.org).
-mmult :: [Vector3d] -> [Vector3d] -> [Vector3d]
-mmult a b = fmap l2v [[vdot ar bc | bc <- transpose b] | ar <- a]
-
--- | 'Vector3d' to list of doubles.
-v2l :: Vector3d -> [Double]
-v2l (Vector3d x' y' z') = [x', y', z']
-
--- | list of doubles to 'Vector3d'.
-l2v :: [Double] -> Vector3d
-l2v [x', y', z'] = Vector3d x' y' z'
-l2v xs = error ("Invalid list: " ++ show xs)

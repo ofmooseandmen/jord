@@ -36,7 +36,7 @@ spec = do
                 let p2 = decimalLatLongHeight 48.88667 2.37472 zero
                 let d = nedBetween p1 p2 wgs84
                 d `shouldBe` nedMetres (-86125.88049540376) (-78900.08718759022) 1069.1981930266265
-        describe "deltaBetween" $ do
+        describe "deltaBetween" $
             it "computes delta between angular positions in frame L" $ do
                 let p1 = decimalLatLongHeight 1 2 (metres (-3))
                 let p2 = decimalLatLongHeight 4 5 (metres (-6))

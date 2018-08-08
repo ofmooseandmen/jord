@@ -107,9 +107,8 @@ roll (FrameB _ _ a _) = a
 frameB :: (ETransform a) => Angle -> Angle -> Angle -> a -> Earth -> FrameB
 frameB yaw' pitch' roll' p e = FrameB yaw' pitch' roll' (nvec p e)
 
-instance Frame FrameB
-    -- | R_EB: frame B to Earth
-                                 where
+-- | R_EB: frame B to Earth
+instance Frame FrameB where
     rEF (FrameB y p r o) = rm
       where
         rNB = zyx2r y p r
@@ -143,9 +142,8 @@ data FrameL =
 wanderAzimuth :: FrameL -> Angle
 wanderAzimuth (FrameL a _) = a
 
-instance Frame FrameL
-    -- | R_EL: frame L to Earth
-                                 where
+-- | R_EL: frame L to Earth
+instance Frame FrameL where
     rEF (FrameL w o) = rm
       where
         r = xyz2r (longitude o) (negate' (latitude o)) w
@@ -177,9 +175,8 @@ newtype FrameN =
     FrameN Vector3d
     deriving (Eq, Show)
 
-instance Frame FrameN
-    -- | R_EN: frame N to Earth
-                                 where
+-- | R_EN: frame N to Earth
+instance Frame FrameN where
     rEF (FrameN o) = transpose rm
       where
         np = vec northPole

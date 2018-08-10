@@ -20,6 +20,7 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.AngularPosition
     , module Data.Geo.Jord.Earth
     , module Data.Geo.Jord.EcefPosition
+    , module Data.Geo.Jord.Eval
     , module Data.Geo.Jord.Frames
     , module Data.Geo.Jord.Geodetics
     , module Data.Geo.Jord.LatLong
@@ -36,6 +37,7 @@ import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
+import Data.Geo.Jord.Eval
 import Data.Geo.Jord.Frames
 import Data.Geo.Jord.Geodetics
 import Data.Geo.Jord.LatLong

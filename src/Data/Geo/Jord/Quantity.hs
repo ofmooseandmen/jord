@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Defines the class 'Quantity' for something that can be added or subtracted.
+-- Classes for working with quantities.
 --
 module Data.Geo.Jord.Quantity
     ( Quantity(..)
@@ -15,6 +15,4 @@ module Data.Geo.Jord.Quantity
 -- | Something that can be added or subtracted.
 class (Eq a) => Quantity a where
     add, sub :: a -> a -> a
-    zero :: a -- ^ identity
-    isZero :: a -> Bool -- ^ is identity ?
-    isZero a = a == zero
+    zero :: a

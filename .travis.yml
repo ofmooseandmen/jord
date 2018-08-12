@@ -5,6 +5,13 @@ cache:
   directories:
   - $HOME/.stack
 
+matrix:
+  include:
+    - os: linux
+      env: STACK_YAML=stack.yaml
+    - os: linux
+      env: STACK_YAML=stack-8.2.2.yaml
+
 # Download and unpack the stack executable
 before_install:
   - mkdir -p ~/.local/bin
@@ -12,5 +19,5 @@ before_install:
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 
 script:
-  - stack --no-terminal --skip-ghc-check clean
-  - stack --no-terminal --skip-ghc-check test --coverage --haddock --no-haddock-deps
+  - stack --stack-yaml $STACK_YAML --no-terminal --skip-ghc-check clean
+  - stack --stack-yaml $STACK_YAML --no-terminal --skip-ghc-check test --coverage --haddock --no-haddock-deps

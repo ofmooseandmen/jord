@@ -16,9 +16,9 @@ module Data.Geo.Jord.LatLong
     , latLong
     , latLongE
     , latLongF
-    , latLongDecimal
-    , latLongDecimalE
-    , latLongDecimalF
+    , decimalLatLong
+    , decimalLatLongE
+    , decimalLatLongF
     -- * read
     , readLatLong
     , readLatLongE
@@ -82,23 +82,23 @@ latLongF lat lon =
   where
     e = latLongE lat lon
 
--- | 'LatLong' from given latitude and longitude in decimal degrees.
+-- | 'LatLong' from given latitude and longitude in __decimal degrees__.
 -- 'error's if given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
-latLongDecimal :: Double -> Double -> LatLong
-latLongDecimal lat lon = latLong (decimalDegrees lat) (decimalDegrees lon)
+decimalLatLong :: Double -> Double -> LatLong
+decimalLatLong lat lon = latLong (decimalDegrees lat) (decimalDegrees lon)
 
--- | 'LatLong' from given latitude and longitude in decimal degrees.
+-- | 'LatLong' from given latitude and longitude in __decimal degrees__.
 -- A 'Left' indicates that the given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
-latLongDecimalE :: Double -> Double -> Either String LatLong
-latLongDecimalE lat lon = latLongE (decimalDegrees lat) (decimalDegrees lon)
+decimalLatLongE :: Double -> Double -> Either String LatLong
+decimalLatLongE lat lon = latLongE (decimalDegrees lat) (decimalDegrees lon)
 
--- | 'LatLong' from given latitude and longitude in decimal degrees.
+-- | 'LatLong' from given latitude and longitude in __decimal degrees__.
 -- 'fail's if given latitude is outisde [-90..90]° and/or
 -- given longitude is outisde [-180..180]°.
-latLongDecimalF :: (MonadFail m) => Double -> Double -> m LatLong
-latLongDecimalF lat lon = latLongF (decimalDegrees lat) (decimalDegrees lon)
+decimalLatLongF :: (MonadFail m) => Double -> Double -> m LatLong
+decimalLatLongF lat lon = latLongF (decimalDegrees lat) (decimalDegrees lon)
 
 -- | Obtains a 'LatLong' from the given string formatted as either:
 --

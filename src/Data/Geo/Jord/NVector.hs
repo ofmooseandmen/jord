@@ -9,71 +9,33 @@
 -- Types and functions for working with n-vectors.
 --
 module Data.Geo.Jord.NVector
-    ( NVector(nx, ny, nz)
+    ( NVector
     , nvector
-    , cross
-    , dot
-    , norm
-    , scale
-    , unit
+    , northPole
+    , southPole
     ) where
 
-import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Vector3d
 
 -- | Represents a position as the normal vector to the sphere.
 --
 -- Orientation: z-axis points to the North Pole along the Earth's rotation axis,
 -- x-axis points towards the point where latitude = longitude = 0.
-data NVector = NVector
-    { nx :: Double
-    , ny :: Double
-    , nz :: Double
-    } deriving (Eq, Show)
+newtype NVector =
+    NVector Vector3d
+    deriving (Eq, Show)
 
--- | Add and subtract 'NVector's.
-instance Quantity NVector where
-    add a b = NVector x y z
-      where
-        x = nx a + nx b
-        y = ny a + ny b
-        z = nz a + nz b
-    sub a b = NVector x y z
-      where
-        x = nx a - nx b
-        y = ny a - ny b
-        z = nz a - nz b
-    zero = NVector 0 0 0
+instance IsVector3d NVector where
+    vec (NVector v) = v
 
--- | 'NVector' from given x, y, z.
+-- | Unit 'NVector' from given x, y and z.
 nvector :: Double -> Double -> Double -> NVector
-nvector = NVector
+nvector x y z = NVector (vunit (Vector3d x y z))
 
--- | Computes the cross product of the two given 'NVector's.
-cross :: NVector -> NVector -> NVector
-cross a b = NVector x y z
-  where
-    x = ny a * nz b - nz a * ny b
-    y = nz a * nx b - nx a * nz b
-    z = nx a * ny b - ny a * nx b
+-- | Horizontal position of the North Pole.
+northPole :: NVector
+northPole = NVector (Vector3d 0.0 0.0 1.0)
 
--- | Computes the dot product of the two given 'NVector's.
-dot :: NVector -> NVector -> Double
-dot a b = nx a * nx b + ny a * ny b + nz a * nz b
-
--- | Computes the norm of the given 'NVector'.
-norm :: NVector -> Double
-norm a = sqrt ((nx a * nx a) + (ny a * ny a) + (nz a * nz a))
-
--- | Multiplies each component of the given 'NVector' by the given value.
-scale :: NVector -> Double -> NVector
-scale a s = NVector x y z
-  where
-    x = nx a * s
-    y = ny a * s
-    z = nz a * s
-
--- | Normalises the given 'NVector'.
-unit :: NVector -> NVector
-unit a = scale a s
-  where
-    s = 1.0 / norm a
+-- | Horizontal position of the North Pole.
+southPole :: NVector
+southPole = NVector (Vector3d 0.0 0.0 (-1.0))

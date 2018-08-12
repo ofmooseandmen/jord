@@ -12,6 +12,7 @@ module Main where
 
 import Data.Geo.Jord
 import Data.List ((\\), dropWhileEnd, intercalate, isPrefixOf)
+import Eval
 import Prelude hiding (lookup)
 import System.Console.Haskeline
 
@@ -99,31 +100,33 @@ help =
     "    are either parameters in one of the format described below or\n" ++
     "    a call to another function\n" ++
     "\n" ++
-    "    (finalBearing (destination (antipode 54°N,154°E) 54° 1000m) (readGeoPos 54°N,154°E))\n" ++
+    "    (finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E)\n" ++
     "\n" ++
     "    Top level () can be ommitted: antipode 54N028E\n" ++
-    "\n  Position calculations:\n\n" ++
-    "       antipode pos                   antipodal point of pos\n" ++
+    "\n  Position calculations (Spherical Earth):\n\n" ++
+    "     The following calculations assume a spherical earth model with a radius\n" ++
+    "     derived from the WGS84 ellipsoid: " ++
+    show r84 ++
+    "\n" ++
+    "\n       antipode pos                   antipodal point of pos\n" ++
     "       crossTrackDistance pos gc      signed distance from pos to great circle gc\n" ++
-    "       distance pos1 pos2             surface distance between pos1 and pos2\n" ++
-    "       destination pos len ang        destination position from pos having travelled len\n" ++
-    "                                      on initial bearing ang\n" ++
+    "       destination pos ang len        destination position from pos having travelled len\n" ++
+    "                                      on initial bearing ang (either in text form or decimal degrees)\n" ++
     "       finalBearing pos1 pos2         initial bearing from pos1 to pos2\n" ++
     "       initialBearing pos1 pos2       bearing arriving at pos2 from pos1\n" ++
     "       interpolate pos1 pos2 (0..1)   position at fraction between pos1 and pos2\n" ++
     "       intersections gc1 gc2          intersections between great circles gc1 and gc2\n" ++
     "                                      exactly 0 or 2 intersections\n" ++
-    "       isInside pos [pos]             is p inside polygon?\n" ++
-    "       mean [pos]                     geographical mean position of [pos]\n" ++
+    "       insideSurface pos [pos]        is p inside surface polygon?\n" ++
+    "       mean [pos]                     geographical mean surface position of [pos]\n" ++
+    "       surfaceDistance pos1 pos2      surface distance between pos1 and pos2\n" ++
     "\n  Constructors and conversions:\n\n" ++
-    "       decimalDegrees double          angle from decimal degrees\n" ++
+    "       geoPos latlong                 surface geographic position from latlong\n" ++
+    "       geoPos latlong height          geographic position from latlong and height\n" ++
+    "       geoPos lat long height         geographic position from decimal latitude, longitude and height\n" ++
+    "       geoPos lat long metres         geographic position from decimal latitude, longitude and metres\n" ++
     "       greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
     "       greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
-    "       latLong ang ang                geographic position from latitude & longitude\n" ++
-    "       latLongDecimal double double   geographic position from latitude & longitude (DD)\n" ++
-    "       readLatLong string             geographic position from string\n" ++
-    "       toDecimalDegrees pos           latitude and longitude of pos in decimal degrees\n" ++
-    "       toDecimalDegrees ang           decimal degrees of ang\n" ++
     "       toKilometres len               length to kilometres\n" ++
     "       toMetres len                   length to metres\n" ++
     "       toNauticalMiles len            length to nautical miles\n" ++
@@ -150,20 +153,30 @@ showR (Left err) = Left err
 showR (Right v) = Right (showV v)
 
 showV :: Value -> String
-showV (Ang a) = "angle: " ++ show a
-showV (AngDec a) = "angle (dd): " ++ show a
+showV (Ang a) = "angle: " ++ show a ++ " (" ++ show (toDecimalDegrees a) ++ ")"
 showV (Bool b) = show b
 showV (Double d) = show d
 showV (Gc gc) = "great circle: " ++ show gc
 showV (Len l) = "length: " ++ show l
-showV (Ll g) = "geographic position: " ++ show g
-showV (Lls gs) = "geographic position: " ++ intercalate "; " (map show gs)
-showV (LlDec ll) = "latitude, longitude (dd): " ++ show (fst ll) ++ ", " ++ show (snd ll)
-showV (LlsDec lls) =
-    "latitudes, longitudes (dd): " ++
-    intercalate "; " (map (\ll -> show (fst ll) ++ ", " ++ show (snd ll)) lls)
-showV (NVec v) = "n-vector: " ++ show v
-showV (NVecs vs) = "n-vectors: " ++ intercalate "; " (map show vs)
+showV (Geo g) =
+    "latitude, longitude: " ++
+    show ll ++
+    " (" ++
+    show (toDecimalDegrees (latitude ll)) ++
+    ", " ++ show (toDecimalDegrees (longitude ll)) ++ ") - height: " ++ show h
+  where
+    ll = pos g
+    h = height g
+showV (NVec nv) =
+    "n-vector: (" ++ show x ++ ", " ++ show y ++ ", " ++ show z ++ ") - height: " ++ show h
+  where
+    v = vec (pos nv)
+    x = vx v
+    y = vy v
+    z = vz v
+    h = height nv
+showV (Vals []) = "empty"
+showV (Vals vs) = "\n  " ++ intercalate "\n  " (map showV vs)
 
 showVar :: String -> Value -> String
 showVar n v = n ++ "=" ++ showV v

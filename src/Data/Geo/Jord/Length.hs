@@ -13,6 +13,7 @@ module Data.Geo.Jord.Length
     -- * The 'Length' type
       Length(millimetres)
     -- * Smart constructors
+    , feet
     , kilometres
     , metres
     , nauticalMiles
@@ -21,6 +22,7 @@ module Data.Geo.Jord.Length
     , readLengthE
     , readLengthF
     -- * Conversions
+    , toFeet
     , toKilometres
     , toMetres
     , toNauticalMiles
@@ -57,17 +59,21 @@ instance Quantity Length where
     sub a b = Length (millimetres a - millimetres b)
     zero = Length 0
 
--- | 'Length' from given amount of nautical miles.
-nauticalMiles :: Double -> Length
-nauticalMiles nm = metres (nm * 1852.0)
+-- | 'Length' from given amount of feet.
+feet :: Double -> Length
+feet ft = metres (ft * 0.3048)
+
+-- | 'Length' from given amount of kilometres.
+kilometres :: Double -> Length
+kilometres km = metres (km * 1000.0)
 
 -- | 'Length' from given amount of metres.
 metres :: Double -> Length
 metres m = Length (round (m * 1000.0))
 
--- | 'Length' from given amount of kilometres.
-kilometres :: Double -> Length
-kilometres km = metres (km * 1000.0)
+-- | 'Length' from given amount of nautical miles.
+nauticalMiles :: Double -> Length
+nauticalMiles nm = metres (nm * 1852.0)
 
 -- | Obtains a 'Length' from the given string formatted as (-)float[m|km|nm] - e.g. 3000m, 2.5km or -154nm.
 --
@@ -91,6 +97,10 @@ readLengthF s =
             Left e -> fail e
             Right l -> return l
 
+-- | @toFeet l@ converts @l@ to feet.
+toFeet :: Length -> Double
+toFeet l = toMetres l / 0.3048
+
 -- | @toKilometres l@ converts @l@ to kilometres.
 toKilometres :: Length -> Double
 toKilometres l = toMetres l / 1000.0
@@ -108,9 +118,10 @@ length :: ReadP Length
 length = do
     v <- number
     skipSpaces
-    u <- string "m" <|> string "km" <|> string "Nm"
+    u <- string "m" <|> string "km" <|> string "Nm" <|> string "ft"
     case u of
         "m" -> return (metres v)
         "km" -> return (kilometres v)
         "Nm" -> return (nauticalMiles v)
+        "ft" -> return (feet v)
         _ -> pfail

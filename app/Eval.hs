@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- |
--- Module:      Data.Geo.Jord.Eval
+-- Module:      Eval
 -- Copyright:   (c) 2018 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -11,7 +12,7 @@
 --
 -- Types and functions for evaluating expressions in textual form.
 --
-module Data.Geo.Jord.Eval
+module Eval
     ( Value(..)
     , Vault
     , Result
@@ -26,32 +27,29 @@ module Data.Geo.Jord.Eval
 import Control.Monad.Fail
 import Data.Bifunctor
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Geodetics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Position
-import Data.Geo.Jord.Spherical.Geodetics
-import Data.Geo.Jord.Spherical.GreatCircle
+import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Transform
 import Data.List hiding (delete, insert, lookup)
 import Data.Maybe
 import Prelude hiding (fail, lookup)
 import Text.ParserCombinators.ReadP
-import Text.Read (readMaybe)
+import Text.Read (readEither, readMaybe)
 
 -- | A value accepted and returned by 'eval'.
 data Value
-    = Ang Angle -- ^ 'Angle'
-    | AngDec Double -- ^ 'Angle' in decimal degrees
+    = Ang Angle -- ^ angle
     | Bool Bool -- ^ boolean
     | Double Double -- ^ double
-    | Len Length -- ^ 'Length'
-    | Gc GreatCircle -- ^ 'GreatCircle'
-    | Ll LatLong -- ^ 'LatLong'
-    | Lls [LatLong] -- ^ list of 'LatLong'
-    | LlDec (Double, Double) -- ^ latitude and longitude in decimal degrees
-    | LlsDec [(Double, Double)] -- ^ list of latitude and longitude in decimal degrees
-    | NVec NVector -- ^ n-vector
-    | NVecs [NVector] -- ^ list of n-vectors
+    | Len Length -- ^ length
+    | Gc GreatCircle -- ^ great circle
+    | Geo (AngularPosition LatLong) -- ^ latitude, longitude and height
+    | NVec (AngularPosition NVector) -- ^ n-vector and height
+    | Vals [Value] -- array of values
     deriving (Eq, Show)
 
 -- | 'Either' an error or a 'Value'.
@@ -83,7 +81,7 @@ instance MonadFail (Either String) where
 -- @
 --     vault = emptyVault
 --     angle = eval "finalBearing 54N154E 54S154W" vault -- Right Ang
---     length = eval "distance (antipode 54N154E) 54S154W" vault -- Right Len
+--     length = eval "surfaceDistance (antipode 54N154E) 54S154W" vault -- Right Len
 --     -- parameter resolution from vault
 --     a1 = eval "finalBearing 54N154E 54S154W" vault
 --     vault = insert "a1" vault
@@ -117,70 +115,29 @@ convert :: Result -> Bool -> Result
 convert r True = r
 convert r False =
     case r of
-        Right (NVec v) -> Right (Ll (fromNVector v))
-        Right (NVecs vs) -> Right (Lls (map fromNVector vs))
+        Right v@(NVec _) -> Right (toGeo v)
+        Right (Vals vs) -> Right (Vals (map toGeo vs))
         oth -> oth
 
--- | All supported functions:
---
---     * 'antipode'
---
---     * 'crossTrackDistance'
---
---     * 'decimalDegrees'
---
---     * 'destination'
---
---     * 'distance'
---
---     * 'finalBearing'
---
---     * 'greatCircle'
---
---     * 'initialBearing'
---
---     * 'interpolate'
---
---     * 'intersections'
---
---     * 'isInside'
---
---     * 'mean'
---
---     * 'latLong'
---
---     * 'latLongDecimal'
---
---     * 'readLatLong'
---
---     * 'toDecimalDegrees'
---
---     * 'toKilometres'
---
---     * 'toMetres'
---
---     * 'toNauticalMiles'
---
---     * 'toNVector'
---
+toGeo :: Value -> Value
+toGeo (NVec v) = Geo (fromNVector v)
+toGeo val = val
+
+-- | All supported functions.
 functions :: [String]
 functions =
     [ "antipode"
     , "crossTrackDistance"
     , "destination"
-    , "decimalDegrees"
-    , "distance"
     , "finalBearing"
+    , "geoPos"
     , "greatCircle"
     , "initialBearing"
     , "interpolate"
     , "intersections"
-    , "isInside"
-    , "latLong"
-    , "latLongDecimal"
+    , "insideSurface"
     , "mean"
-    , "readLatLong"
-    , "toDecimalDegrees"
+    , "surfaceDistance"
     , "toKilometres"
     , "toMetres"
     , "toNauticalMiles"
@@ -205,7 +162,7 @@ expr :: (MonadFail m) => String -> m (Bool, Expr)
 expr s = do
     ts <- tokenise s
     ast <- parse ts
-    fmap (\a -> (expectVec ts, a)) (transform ast)
+    fmap (expectVec ts,) (transform ast)
 
 expectVec :: [Token] -> Bool
 expectVec (_:Func "toNVector":_) = True
@@ -214,7 +171,7 @@ expectVec _ = False
 evalExpr :: Expr -> Vault -> Result
 evalExpr (Param p) vault =
     case lookup p vault of
-        Just (Ll ll) -> Right (NVec (toNVector ll))
+        Just (Geo geo) -> Right (NVec (toNVector geo))
         Just v -> Right v
         Nothing -> tryRead p
 evalExpr (Antipode a) vault =
@@ -223,21 +180,44 @@ evalExpr (Antipode a) vault =
         r -> Left ("Call error: antipode " ++ showErr [r])
 evalExpr (CrossTrackDistance a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p), Right (Gc gc)] -> Right (Len (crossTrackDistance p gc))
+        [Right (NVec p), Right (Gc gc)] -> Right (Len (crossTrackDistance84 p gc))
         r -> Left ("Call error: crossTrackDistance " ++ showErr r)
-evalExpr (DecimalDegrees d) _ = Right (Ang (decimalDegrees d))
 evalExpr (Destination a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
-        [Right (NVec p), Right (Ang a'), Right (Len l)] -> Right (NVec (destination p a' l))
+        [Right (NVec p), Right (Ang a'), Right (Len l)] -> Right (NVec (destination84 p a' l))
+        [Right (NVec p), Right (Double a'), Right (Len l)] ->
+            Right (NVec (destination84 p (decimalDegrees a') l))
         r -> Left ("Call error: destination " ++ showErr r)
-evalExpr (Distance a b) vault =
-    case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] -> Right (Len (distance p1 p2))
-        r -> Left ("Call error: distance " ++ showErr r)
 evalExpr (FinalBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] -> Right (Ang (finalBearing p1 p2))
+        [Right (NVec p1), Right (NVec p2)] ->
+            maybe
+                (Left "Call error: finalBearing identical points")
+                (Right . Ang)
+                (finalBearing p1 p2)
         r -> Left ("Call error: finalBearing " ++ showErr r)
+evalExpr (GeoPos as) vault =
+    case vs of
+        [Right p@(NVec _)] -> Right p
+        [Right (NVec v), Right (Len h)] -> Right (NVec (AngularPosition (pos v) h))
+        [Right (Double lat), Right (Double lon)] ->
+            bimap
+                (\e -> "Call error: geoPos : " ++ e)
+                (NVec . toNVector)
+                (decimalLatLongHeightE lat lon zero)
+        [Right (Double lat), Right (Double lon), Right (Len h)] ->
+            bimap
+                (\e -> "Call error: geoPos : " ++ e)
+                (NVec . toNVector)
+                (decimalLatLongHeightE lat lon h)
+        [Right (Double lat), Right (Double lon), Right (Double h)] ->
+            bimap
+                (\e -> "Call error: geoPos : " ++ e)
+                (NVec . toNVector)
+                (decimalLatLongHeightE lat lon (metres h))
+        r -> Left ("Call error: geoPos " ++ showErr r)
+  where
+    vs = map (`evalExpr` vault) as
 evalExpr (GreatCircleSC a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (NVec p1), Right (NVec p2)] -> bimap id Gc (greatCircleE p1 p2)
@@ -245,7 +225,11 @@ evalExpr (GreatCircleSC a b) vault =
         r -> Left ("Call error: greatCircle " ++ showErr r)
 evalExpr (InitialBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] -> Right (Ang (initialBearing p1 p2))
+        [Right (NVec p1), Right (NVec p2)] ->
+            maybe
+                (Left "Call error: initialBearing identical points")
+                (Right . Ang)
+                (initialBearing p1 p2)
         r -> Left ("Call error: initialBearing " ++ showErr r)
 evalExpr (Interpolate a b c) vault =
     case [evalExpr a vault, evalExpr b vault] of
@@ -255,39 +239,26 @@ evalExpr (Intersections a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Gc gc1), Right (Gc gc2)] ->
             maybe
-                (Right (NVecs []))
-                (\is -> Right (NVecs [fst is, snd is]))
-                (intersections gc1 gc2 :: Maybe (NVector, NVector))
+                (Right (Vals []))
+                (\is -> Right (Vals [NVec (fst is), NVec (snd is)]))
+                (intersections gc1 gc2 :: Maybe (AngularPosition NVector, AngularPosition NVector))
         r -> Left ("Call error: intersections " ++ showErr r)
-evalExpr (IsInside as) vault =
+evalExpr (InsideSurface as) vault =
     let m = map (`evalExpr` vault) as
         ps = [p | Right (NVec p) <- m]
      in if length m == length ps && length ps > 3
-            then Right (Bool (isInside (head ps) (tail ps)))
-            else Left ("Call error: isInside " ++ showErr m)
+            then Right (Bool (insideSurface (head ps) (tail ps)))
+            else Left ("Call error: insideSurface " ++ showErr m)
 evalExpr (Mean as) vault =
     let m = map (`evalExpr` vault) as
         ps = [p | Right (NVec p) <- m]
      in if length m == length ps
             then maybe (Left ("Call error: mean " ++ showErr m)) (Right . NVec) (mean ps)
             else Left ("Call error: mean " ++ showErr m)
-evalExpr (LatLong a b) vault =
+evalExpr (SurfaceDistance a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (Ang lat), Right (Ang lon)] ->
-            bimap (\e -> "Call error: latLong : " ++ e) (NVec . toNVector) (latLongE lat lon)
-        r -> Left ("Call error: latLong " ++ showErr r)
-evalExpr (LatLongDecimal a b) _ =
-    bimap (\e -> "Call error: LatLongDecimal : " ++ e) (NVec . toNVector) (latLongDecimalE a b)
-evalExpr (ReadLatLong s) _ =
-    bimap (\e -> "Call error: readLatLong : " ++ e) (NVec . toNVector) (readLatLongE s)
-evalExpr (ToDecimalDegrees e) vault =
-    case evalExpr e vault of
-        (Right (Ang a)) -> Right (AngDec (toDecimalDegrees a))
-        (Right (Ll p)) -> Right (LlDec (toDecimalDegrees' p))
-        (Right (Lls ps)) -> Right (LlsDec (map toDecimalDegrees' ps))
-        (Right (NVec p)) -> Right (LlDec ((toDecimalDegrees' . fromNVector) p))
-        (Right (NVecs ps)) -> Right (LlsDec (map (toDecimalDegrees' . fromNVector) ps))
-        r -> Left ("Call error: toDecimalDegrees" ++ showErr [r])
+        [Right (NVec p1), Right (NVec p2)] -> Right (Len (surfaceDistance84 p1 p2))
+        r -> Left ("Call error: surfaceDistance " ++ showErr r)
 evalExpr (ToKilometres e) vault =
     case evalExpr e vault of
         (Right (Len l)) -> Right (Double (toKilometres l))
@@ -311,12 +282,20 @@ showErr rs = " > " ++ intercalate " & " (map (either id show) rs)
 tryRead :: String -> Result
 tryRead s =
     case r of
-        [a@(Right (Ang _)), _, _] -> a
-        [_, l@(Right (Len _)), _] -> l
-        [_, _, Right (Ll ll)] -> Right (NVec (toNVector ll))
+        [a@(Right (Ang _)), _, _, _] -> a
+        [_, l@(Right (Len _)), _, _] -> l
+        [_, _, Right (Geo geo), _] -> Right (NVec (toNVector geo))
+        [_, _, _, d@(Right (Double _))] -> d
         _ -> Left ("couldn't read " ++ s)
   where
-    r = map ($ s) [readE readAngleE Ang, readE readLengthE Len, readE readLatLongE Ll]
+    r =
+        map
+            ($ s)
+            [ readE readAngleE Ang
+            , readE readLengthE Len
+            , readE readLatLongE (\ll -> Geo (AngularPosition ll zero))
+            , readE readEither Double
+            ]
 
 readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
 readE p v s = bimap id v (p s)
@@ -422,14 +401,12 @@ data Expr
     | Antipode Expr
     | CrossTrackDistance Expr
                          Expr
-    | DecimalDegrees Double
     | Destination Expr
                   Expr
                   Expr
-    | Distance Expr
-               Expr
     | FinalBearing Expr
                    Expr
+    | GeoPos [Expr]
     | GreatCircleSC Expr
                     Expr
     | InitialBearing Expr
@@ -439,14 +416,10 @@ data Expr
                   Double
     | Intersections Expr
                     Expr
-    | IsInside [Expr]
+    | InsideSurface [Expr]
     | Mean [Expr]
-    | LatLong Expr
-              Expr
-    | LatLongDecimal Double
-                     Double
-    | ReadLatLong String
-    | ToDecimalDegrees Expr
+    | SurfaceDistance Expr
+                      Expr
     | ToKilometres Expr
     | ToMetres Expr
     | ToNauticalMiles Expr
@@ -459,20 +432,18 @@ transform (Call "crossTrackDistance" [e1, e2]) = do
     p <- transform e1
     gc <- transform e2
     return (CrossTrackDistance p gc)
-transform (Call "decimalDegrees" [Lit s]) = fmap DecimalDegrees (readDouble s)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
     p3 <- transform e3
     return (Destination p1 p2 p3)
-transform (Call "distance" [e1, e2]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    return (Distance p1 p2)
 transform (Call "finalBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (FinalBearing p1 p2)
+transform (Call "geoPos" e) = do
+    ps <- mapM transform e
+    return (GeoPos ps)
 transform (Call "greatCircle" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
@@ -492,22 +463,16 @@ transform (Call "intersections" [e1, e2]) = do
     gc1 <- transform e1
     gc2 <- transform e2
     return (Intersections gc1 gc2)
-transform (Call "isInside" e) = do
+transform (Call "insideSurface" e) = do
     ps <- mapM transform e
-    return (IsInside ps)
-transform (Call "latLong" [e1, e2]) = do
-    gc1 <- transform e1
-    gc2 <- transform e2
-    return (LatLong gc1 gc2)
-transform (Call "latLongDecimal" [Lit s1, Lit s2]) = do
-    d1 <- readDouble s1
-    d2 <- readDouble s2
-    return (LatLongDecimal d1 d2)
+    return (InsideSurface ps)
 transform (Call "mean" e) = do
     ps <- mapM transform e
     return (Mean ps)
-transform (Call "readLatLong" [Lit s]) = return (ReadLatLong s)
-transform (Call "toDecimalDegrees" [e]) = fmap ToDecimalDegrees (transform e)
+transform (Call "surfaceDistance" [e1, e2]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (SurfaceDistance p1 p2)
 transform (Call "toKilometres" [e]) = fmap ToKilometres (transform e)
 transform (Call "toMetres" [e]) = fmap ToMetres (transform e)
 transform (Call "toNauticalMiles" [e]) = fmap ToNauticalMiles (transform e)

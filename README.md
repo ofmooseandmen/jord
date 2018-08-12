@@ -10,7 +10,7 @@
 
 Jord is a [Haskell](https://www.haskell.org) library that implements various geographical position calculations using the algorithms described in [Gade, K. (2010). A Non-singular Horizontal Position Representation](http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf).
 
-- Transformation between ECEF (earth-centered, earth-fixed), Latitude/Longitude and N-Vector positions for spherical and ellipsoidal earth model
+- Transformation between ECEF (earth-centred, earth-fixed), Latitude/Longitude and N-Vector positions for spherical and ellipsoidal earth model
 - Transformation between Latitude/Longitude and N-Vector positions
 - Local, Body and North, East, Down Frames: delta between position, target position from reference position and delta
 - surface distance, initial & final bearing, interpolated position, Great Circle intersections, cross track distance
@@ -38,7 +38,7 @@ deltaBetween p1 p2 (frameL w) wgs84 -- = deltaMetres 359490.579 302818.523 17404
 
 -- destination position from 531914N0014347W having travelled 500Nm on a heading of 96.0217°
 -- using mean earth radius derived from the WG84 ellipsoid
-destination (readGeoPos "531914N0014347W") (decimalDegrees 96.0217, nauticalMiles 500) r84
+destination (readLatLong "531914N0014347W") (decimalDegrees 96.0217) (nauticalMiles 500) r84
 
 -- surface distance between 54°N,154°E and its antipodal position
 -- using mean earth radius derived from the WG84 ellipsoid
@@ -51,5 +51,5 @@ Jord comes with a REPL (built with [haskeline](https://github.com/judah/haskelin
 ```sh
 $ jord-exe
 jord> finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E
-jord> angle: 126°0'0.0"
+jord> angle: 126°0'0.0" (126.0)
 ```

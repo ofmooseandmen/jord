@@ -91,7 +91,7 @@ data FrameB =
            Vector3d
     deriving (Eq, Show)
 
--- | body yaw angle (vertical axis).
+-- | body yaw angle (vertical axis).
 yaw :: FrameB -> Angle
 yaw (FrameB a _ _ _) = a
 

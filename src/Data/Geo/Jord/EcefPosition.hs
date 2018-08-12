@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Earth Centered, Earth Fixed (ECEF) position.
+-- Earth Centred, Earth Fixed (ECEF) position.
 --
 -- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
 --
@@ -22,7 +22,7 @@ module Data.Geo.Jord.EcefPosition
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Vector3d
 
--- | An earth position expressed in the Earth Centered, Earth Fixed (ECEF) coordinates system.
+-- | An earth position expressed in the Earth Centred, Earth Fixed (ECEF) coordinates system.
 --
 -- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
 --

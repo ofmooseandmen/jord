@@ -81,7 +81,7 @@ instance MonadFail (Either String) where
 -- @
 --     vault = emptyVault
 --     angle = eval "finalBearing 54N154E 54S154W" vault -- Right Ang
---     length = eval "distance (antipode 54N154E) 54S154W" vault -- Right Len
+--     length = eval "surfaceDistance (antipode 54N154E) 54S154W" vault -- Right Len
 --     -- parameter resolution from vault
 --     a1 = eval "finalBearing 54N154E 54S154W" vault
 --     vault = insert "a1" vault

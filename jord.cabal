@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d36b4d01b802d24f14caf30448cad64aaf4c52b2529193341f5e8e6c91e6301c
+-- hash: 0f7d62b4ffb4fdc3ff1a411f577d06587329b2b015bbfece734345148e0ebed8
 
 name:           jord
 version:        0.3.0.0
@@ -34,7 +34,6 @@ library
       Data.Geo.Jord.AngularPosition
       Data.Geo.Jord.Earth
       Data.Geo.Jord.EcefPosition
-      Data.Geo.Jord.Eval
       Data.Geo.Jord.Frames
       Data.Geo.Jord.Geodetics
       Data.Geo.Jord.LatLong
@@ -56,6 +55,7 @@ library
 executable jord-exe
   main-is: Main.hs
   other-modules:
+      Eval
       Paths_jord
   hs-source-dirs:
       app
@@ -72,7 +72,6 @@ test-suite jord-test
   other-modules:
       Data.Geo.Jord.AngleSpec
       Data.Geo.Jord.EarthSpec
-      Data.Geo.Jord.EvalSpec
       Data.Geo.Jord.FramesSpec
       Data.Geo.Jord.GeodeticsSpec
       Data.Geo.Jord.LatLongSpec

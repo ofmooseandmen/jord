@@ -28,7 +28,6 @@ library:
     - Data.Geo.Jord.AngularPosition
     - Data.Geo.Jord.Earth
     - Data.Geo.Jord.EcefPosition
-    - Data.Geo.Jord.Eval
     - Data.Geo.Jord.Frames
     - Data.Geo.Jord.Geodetics
     - Data.Geo.Jord.LatLong

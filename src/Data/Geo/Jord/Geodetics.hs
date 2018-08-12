@@ -147,7 +147,7 @@ crossTrackDistance84 :: (NTransform a) => a -> GreatCircle -> Length
 crossTrackDistance84 p gc = crossTrackDistance p gc r84
 
 -- | @destination p b d r@ computes the destination position from position @p@ having
--- travelled the distance @d@ on the initial bearing @b@ (bearing will normally vary
+-- travelled the distance @d@ on the initial bearing (compass angle) @b@ (bearing will normally vary
 -- before destination is reached) and using the earth radius @r@.
 destination :: (NTransform a) => a -> Angle -> Length -> Length -> a
 destination p b d r
@@ -167,15 +167,24 @@ destination84 :: (NTransform a) => a -> Angle -> Length -> a
 destination84 p b d = destination p b d r84
 
 -- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
+--
+-- Compass angle are clockwise angle from true north: 0 = north, 90 = east, 180 = south, 270 = west.
+--
 --  The final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
--- Returns 180 if both horizontal positions are equals.
-finalBearing :: (NTransform a) => a -> a -> Angle
-finalBearing p1 p2 = normalise (initialBearing p2 p1) (decimalDegrees 180)
+--
+-- Returns 'Nothing' if both horizontal positions are equals.
+finalBearing :: (Eq a, NTransform a) => a -> a -> Maybe Angle
+finalBearing p1 p2 = fmap (\b -> normalise b (decimalDegrees 180)) (initialBearing p2 p1)
 
 -- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
--- Returns 0 if both horizontal positions are equals.
-initialBearing :: (NTransform a) => a -> a -> Angle
-initialBearing p1 p2 = normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360)
+--
+-- Compass angle are clockwise angle from true north: 0 = north, 90 = east, 180 = south, 270 = west.
+--
+-- Returns 'Nothing' if both horizontal positions are equals.
+initialBearing :: (Eq a, NTransform a) => a -> a -> Maybe Angle
+initialBearing p1 p2
+   | p1 == p2 = Nothing
+   | otherwise = Just (normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360))
   where
     v1 = vector3d p1
     v2 = vector3d p2

@@ -52,10 +52,22 @@ spec = do
         it "returns the Nothing if both point are the same" $ do
             let p = readLatLong "500359N0054253W"
             finalBearing p p `shouldBe` Nothing
-        it "returns 0° if both point have the same longitude" $ do
+        it "returns 0° if both point have the same longitude (going north)" $ do
             let p1 = latLongHeight (readLatLong "500359N0054253W") (metres 12000)
             let p2 = latLongHeight (readLatLong "583838N0054253W") (metres 5000)
             finalBearing p1 p2 `shouldBe` Just (decimalDegrees 0)
+        it "returns 180° if both point have the same longitude (going south)" $ do
+            let p1 = latLongHeight (readLatLong "583838N0054253W") (metres 12000)
+            let p2 = latLongHeight (readLatLong "500359N0054253W") (metres 5000)
+            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 180)
+        it "returns 90° at the equator going east" $ do
+            let p1 = latLongHeight (readLatLong "000000N0000000E") (metres 12000)
+            let p2 = latLongHeight (readLatLong "000000N0010000E") (metres 5000)
+            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 90)
+        it "returns 270° at the equator going west" $ do
+            let p1 = latLongHeight (readLatLong "000000N0010000E") (metres 12000)
+            let p2 = latLongHeight (readLatLong "000000N0000000E") (metres 5000)
+            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 270)
         it "returns the final bearing in compass angle" $ do
             let p1 = readLatLong "500359N0054253W"
             let p2 = readLatLong "583838N0030412W"
@@ -79,10 +91,22 @@ spec = do
         it "returns Nothing if both point are the same" $ do
             let p = readLatLong "500359N1795959W"
             initialBearing p p `shouldBe` Nothing
-        it "returns 0° if both point have the same longitude" $ do
+        it "returns 0° if both point have the same longitude (going north)" $ do
             let p1 = latLongHeight (readLatLong "500359N0054253W") (metres 12000)
             let p2 = latLongHeight (readLatLong "583838N0054253W") (metres 5000)
             initialBearing p1 p2 `shouldBe` Just (decimalDegrees 0)
+        it "returns 180° if both point have the same longitude (going south)" $ do
+            let p1 = latLongHeight (readLatLong "583838N0054253W") (metres 12000)
+            let p2 = latLongHeight (readLatLong "500359N0054253W") (metres 5000)
+            initialBearing p1 p2 `shouldBe` Just (decimalDegrees 180)
+        it "returns 90° at the equator going east" $ do
+            let p1 = latLongHeight (readLatLong "000000N0000000E") (metres 12000)
+            let p2 = latLongHeight (readLatLong "000000N0010000E") (metres 5000)
+            initialBearing p1 p2 `shouldBe` Just (decimalDegrees 90)
+        it "returns 270° at the equator going west" $ do
+            let p1 = latLongHeight (readLatLong "000000N0010000E") (metres 12000)
+            let p2 = latLongHeight (readLatLong "000000N0000000E") (metres 5000)
+            initialBearing p1 p2 `shouldBe` Just (decimalDegrees 270)
         it "returns the initial bearing in compass angle" $ do
             let p1 = latLongHeight (readLatLong "500359N0054253W") (metres 12000)
             let p2 = latLongHeight (readLatLong "583838N0030412W") (metres 5000)

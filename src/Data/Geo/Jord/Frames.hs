@@ -227,7 +227,10 @@ east (Ned v) = metres (vy v)
 down :: Ned -> Length
 down (Ned v) = metres (vz v)
 
--- | @bearing v@ computes the bearing of the NED vector @v@ from north.
+-- | @bearing v@ computes the bearing in compass angle of the NED vector @v@ from north.
+--
+-- Compass angles are clockwise angles from true north: 0 = north, 90 = east, 180 = south, 270 = west.
+--
 bearing :: Ned -> Angle
 bearing v =
     let a = atan2' (toMetres (east v)) (toMetres (north v))

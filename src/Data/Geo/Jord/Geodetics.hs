@@ -168,7 +168,7 @@ destination84 p b d = destination p b d r84
 
 -- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
 --
--- Compass angle are clockwise angle from true north: 0 = north, 90 = east, 180 = south, 270 = west.
+-- Compass angles are clockwise angles from true north: 0 = north, 90 = east, 180 = south, 270 = west.
 --
 --  The final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
 --
@@ -178,7 +178,7 @@ finalBearing p1 p2 = fmap (\b -> normalise b (decimalDegrees 180)) (initialBeari
 
 -- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 --
--- Compass angle are clockwise angle from true north: 0 = north, 90 = east, 180 = south, 270 = west.
+-- Compass angles are clockwise angles from true north: 0 = north, 90 = east, 180 = south, 270 = west.
 --
 -- Returns 'Nothing' if both horizontal positions are equals.
 initialBearing :: (Eq a, NTransform a) => a -> a -> Maybe Angle

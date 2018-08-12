@@ -52,7 +52,7 @@ import Data.List (subsequences)
 import Data.Maybe (fromMaybe)
 import Prelude hiding (fail)
 
--- | A circle on the _surface_ of the Earth which lies in a plane passing through
+-- | A circle on the __surface__ of the Earth which lies in a plane passing through
 -- the Earth's centre. Every two distinct and non-antipodal points on the surface
 -- of the Earth define a Great Circle.
 --
@@ -196,8 +196,8 @@ initialBearing p1 p2
 -- Special conditions:
 --
 -- @
---     interpolate p0 p1 0.0 => p0
---     interpolate p0 p1 1.0 => p1
+--     interpolate p0 p1 0.0 == p0
+--     interpolate p0 p1 1.0 == p1
 -- @
 --
 -- 'error's if @f < 0 || f > 1.0@

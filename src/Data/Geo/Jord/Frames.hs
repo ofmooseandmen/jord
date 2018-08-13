@@ -34,6 +34,9 @@ module Data.Geo.Jord.Frames
     , Delta
     , delta
     , deltaMetres
+    , dx
+    , dy
+    , dz
     -- * Delta in the north, east, down frame
     , Ned
     , ned
@@ -201,6 +204,18 @@ delta x y z = Delta (Vector3d (toMetres x) (toMetres y) (toMetres z))
 -- | 'Delta' from given x, y and z length in _metres_.
 deltaMetres :: Double -> Double -> Double -> Delta
 deltaMetres x y z = delta (metres x) (metres y) (metres z)
+
+-- | x component of given 'Delta'.
+dx :: Delta -> Length
+dx (Delta v) = metres (vx v)
+
+-- | y component of given 'Delta'.
+dy :: Delta -> Length
+dy (Delta v) = metres (vy v)
+
+-- | z component of given 'Delta'.
+dz :: Delta -> Length
+dz (Delta v) = metres (vz v)
 
 -- | North, east and down delta (thus in frame 'FrameN').
 newtype Ned =

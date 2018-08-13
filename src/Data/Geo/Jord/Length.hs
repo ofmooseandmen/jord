@@ -75,7 +75,7 @@ metres m = Length (round (m * 1000.0))
 nauticalMiles :: Double -> Length
 nauticalMiles nm = metres (nm * 1852.0)
 
--- | Obtains a 'Length' from the given string formatted as (-)float[m|km|nm] - e.g. 3000m, 2.5km or -154nm.
+-- | Obtains a 'Length' from the given string formatted as (-)float[m|km|nm|ft] - e.g. 3000m, 2.5km, -154nm or 10000ft.
 --
 -- This simply calls @read s :: Length@ so 'error' should be handled at the call site.
 --

@@ -11,7 +11,7 @@
 module Main where
 
 import Data.Geo.Jord
-import Data.List ((\\), dropWhileEnd, intercalate, isPrefixOf)
+import Data.List ((\\), dropWhileEnd, isPrefixOf)
 import Eval
 import Prelude hiding (lookup)
 import System.Console.Haskeline
@@ -103,6 +103,13 @@ help =
     "    (finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E)\n" ++
     "\n" ++
     "    Top level () can be ommitted: antipode 54N028E\n" ++
+    "\n  Position calculations (Frames):\n\n" ++
+    "     The following calculations work with both ellipsoidal and derived earth model\n" ++
+    "     WGS84 ellipsoid is used if model is omitted\n" ++
+    "\n       deltaBetween pos1 pos2 frame (earth)  delta between pos1 and pos2 in frame originating at pos1\n" ++
+    "       nedBetween pos1 pos2 (earth)          NED between pos1 and pos2 in frame N originating at pos1\n" ++
+    "       target pos frame delta (earth)        target position from pos and delta in frame originating at pos\n" ++
+    "       targetN pos delta (earth)             target position from pos and NED in frame N originating at pos\n" ++
     "\n  Position calculations (Spherical Earth):\n\n" ++
     "     The following calculations assume a spherical earth model with a radius\n" ++
     "     derived from the WGS84 ellipsoid: " ++
@@ -121,16 +128,26 @@ help =
     "       mean [pos]                     geographical mean surface position of [pos]\n" ++
     "       surfaceDistance pos1 pos2      surface distance between pos1 and pos2\n" ++
     "\n  Constructors and conversions:\n\n" ++
+    "       ecef len len len               Earth-centred earth-fixed position from x, y, z lengths\n" ++
+    "       ecef metres metres metres      Earth-centred earth-fixed position from x, y, z metres\n" ++
+    "       toEcef pos (earth)             geographic position to ECEF position using earth model\n" ++
+    "                                      WGS84 ellipsoid is used if model is omitted\n" ++
+    "       fromEcef ecef (earth)          ECEF position to geographic position using earth model\n" ++
+    "                                      WGS84 ellipsoid is used if model is omitted\n" ++
+    "       frameB ang ang ang             Body frame (vehicle) from yaw, pitch and roll angles\n" ++
+    "       frameL ang ang ang             Local frame from wander azimuth angle\n" ++
+    "       frameN                         North, east, down frame\n" ++
+    "       delta len len len              Delta from lengths\n" ++
+    "       delta metres metres metres     Delta from metres\n" ++
+    "       ned len len len                North, east, down from lengths\n" ++
+    "       ned metres metres metres       North, east, down from metres\n" ++
     "       geoPos latlong                 surface geographic position from latlong\n" ++
     "       geoPos latlong height          geographic position from latlong and height\n" ++
     "       geoPos lat long height         geographic position from decimal latitude, longitude and height\n" ++
     "       geoPos lat long metres         geographic position from decimal latitude, longitude and metres\n" ++
+    "       toNVector pos                  n-vector corresponding to pos\n" ++
     "       greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
     "       greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
-    "       toKilometres len               length to kilometres\n" ++
-    "       toMetres len                   length to metres\n" ++
-    "       toNauticalMiles len            length to nautical miles\n" ++
-    "       toNVector pos                  n-vector corresponding to pos\n" ++
     "\n  Supported Lat/Long formats:\n\n" ++
     "       DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
     "       d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
@@ -139,8 +156,11 @@ help =
     "\n  Supported Angle formats:\n\n" ++
     "       d°m's    - 55°36'21.154\n" ++
     "       decimal° - 51.885°\n" ++
-    "\n  Supported Length formats: {l}m, {l}km, {l}Nm\n\n" ++
-    "\n  Every evaluated result can be saved by prefixing the expression with \"{var} = \"\n" ++
+    "\n  Supported Length formats: {l}m, {l}km, {l}nm, {l}ft\n" ++
+    "\n  Supported earth models:\n\n" ++
+    "       ellipsoidal: wgs84, grs80, wgs72\n" ++
+    "       spherical  : s84, s80, s72\n" ++
+    "\n\n  Every evaluated result can be saved by prefixing the expression with \"{var} = \"\n" ++
     "  Saved results can subsequently be used when calling a function\n" ++
     "    jord> a = antipode 54N028E\n" ++ "    jord> antipode a\n"
 
@@ -150,33 +170,7 @@ save _ _ vault = vault
 
 showR :: Result -> Either String String
 showR (Left err) = Left err
-showR (Right v) = Right (showV v)
-
-showV :: Value -> String
-showV (Ang a) = "angle: " ++ show a ++ " (" ++ show (toDecimalDegrees a) ++ ")"
-showV (Bool b) = show b
-showV (Double d) = show d
-showV (Gc gc) = "great circle: " ++ show gc
-showV (Len l) = "length: " ++ show l
-showV (Geo g) =
-    "latitude, longitude: " ++
-    show ll ++
-    " (" ++
-    show (toDecimalDegrees (latitude ll)) ++
-    ", " ++ show (toDecimalDegrees (longitude ll)) ++ ") - height: " ++ show h
-  where
-    ll = pos g
-    h = height g
-showV (NVec nv) =
-    "n-vector: (" ++ show x ++ ", " ++ show y ++ ", " ++ show z ++ ") - height: " ++ show h
-  where
-    v = vec (pos nv)
-    x = vx v
-    y = vy v
-    z = vz v
-    h = height nv
-showV (Vals []) = "empty"
-showV (Vals vs) = "\n  " ++ intercalate "\n  " (map showV vs)
+showR (Right v) = Right (show v)
 
 showVar :: String -> Value -> String
-showVar n v = n ++ "=" ++ showV v
+showVar n v = n ++ "=" ++ show v

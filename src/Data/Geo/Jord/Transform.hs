@@ -92,7 +92,7 @@ instance ETransform EcefPosition where
 
 -- | @nvectorToLatLong v@ transforms 'NVector' @v@ to an equivalent 'LatLong'.
 --
--- Same as 'toNVector'.
+-- See also 'toNVector'.
 nvectorToLatLong :: NVector -> LatLong
 nvectorToLatLong nv = latLong lat lon
   where

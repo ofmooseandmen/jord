@@ -78,7 +78,7 @@ r2zyx m = [z, y, x]
 -- that the relation between a vector v decomposed in A and B is given by:
 -- @v_A = mdot R_AB v_B@
 --
--- The rotation matrix R_AB is created based on 3 angles x,y,z about new axes
+-- The rotation matrix R_AB is created based on 3 'Angle's x,y,z about new axes
 -- (intrinsic) in the order x-y-z. The angles are called Euler angles or
 -- Tait-Bryan angles and are defined by the following procedure of successive
 -- rotations:
@@ -109,7 +109,7 @@ xyz2r x y z = [v1, v2, v3]
 -- that the relation between a vector v decomposed in A and B is given by:
 -- @v_A = mdot R_AB v_B@
 --
--- The rotation matrix R_AB is created based on 3 angles
+-- The rotation matrix R_AB is created based on 3 'Angle's
 -- z,y,x about new axes (intrinsic) in the order z-y-x. The angles are called
 -- Euler angles or Tait-Bryan angles and are defined by the following
 -- procedure of successive rotations:

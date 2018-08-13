@@ -41,9 +41,11 @@ data Value
     | Double Double -- ^ double
     | Ep EcefPosition -- ^ ECEF position
     | Em Earth -- ^ earth model
-    | FrmB (AngularPosition NVector -> Earth -> FrameB) -- ^ position + model to frame B
-    | FrmL (AngularPosition NVector -> Earth -> FrameL) -- ^ position + model to frame L
-    | FrmN (AngularPosition NVector -> Earth -> FrameN) -- ^ position + model to frame N
+    | FrmB Angle
+           Angle
+           Angle -- ^ yaw, pitch and roll of Body frame
+    | FrmL Angle -- ^ wander azimuth of Local frame
+    | FrmN -- ^ North, east, down frame
     | Len Length -- ^ length
     | Gc GreatCircle -- ^ great circle
     | Gp (AngularPosition LatLong) -- ^ latitude, longitude and height
@@ -59,9 +61,10 @@ instance Show Value where
     show (Dlt d) = "Delta: x=" ++ show (dx d) ++ ", y=" ++ show (dy d) ++ ", z=" ++ show (dz d)
     show (Em m) = "Earth model: " ++ show m
     show (Ep p) = "ECEF: x=" ++ show (ex p) ++ ", y=" ++ show (ey p) ++ ", z=" ++ show (ez p)
-    show (FrmB _) = "Body (vehicle) frame"
-    show (FrmL _) = "Local frame"
-    show (FrmN _) = "North, East, Down frame"
+    show (FrmB y p r) =
+        "Body (vehicle) frame: yaw=" ++ show y ++ ", pitch=" ++ show p ++ ", roll=" ++ show r
+    show (FrmL w) = "Local frame: wander azimuth=" ++ show w
+    show (FrmN) = "North, East, Down frame"
     show (Len l) =
         "length: \n" ++
         "  " ++
@@ -236,12 +239,12 @@ evalExpr (CrossTrackDistance a b) vault =
         r -> Left ("Call error: crossTrackDistance " ++ showErr r)
 evalExpr (DeltaBetween a b c d) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault, evalEarth d] of
-        [Right (Np p1), Right (Np p2), Right (FrmB f), Right (Em m)] ->
-            Right (Dlt (deltaBetween p1 p2 f m))
-        [Right (Np p1), Right (Np p2), Right (FrmL f), Right (Em m)] ->
-            Right (Dlt (deltaBetween p1 p2 f m))
-        [Right (Np p1), Right (Np p2), Right (FrmN f), Right (Em m)] ->
-            Right (Dlt (deltaBetween p1 p2 f m))
+        [Right (Np p1), Right (Np p2), Right (FrmB y p r), Right (Em m)] ->
+            Right (Dlt (deltaBetween p1 p2 (frameB y p r) m))
+        [Right (Np p1), Right (Np p2), Right (FrmL w), Right (Em m)] ->
+            Right (Dlt (deltaBetween p1 p2 (frameL w) m))
+        [Right (Np p1), Right (Np p2), Right FrmN, Right (Em m)] ->
+            Right (Dlt (deltaBetween p1 p2 frameN m))
         r -> Left ("Call error: deltaBetween " ++ showErr r)
 evalExpr (DeltaV a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
@@ -261,13 +264,13 @@ evalExpr (Ecef a b c) vault =
         r -> Left ("Call error: ecef " ++ showErr r)
 evalExpr (FrameB a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
-        [Right (Ang a'), Right (Ang b'), Right (Ang c')] -> Right (FrmB (frameB a' b' c'))
+        [Right (Ang a'), Right (Ang b'), Right (Ang c')] -> Right (FrmB a' b' c')
         r -> Left ("Call error: frameB " ++ showErr r)
 evalExpr (FrameL a) vault =
     case evalExpr a vault of
-        (Right (Ang a')) -> Right (FrmL (frameL a'))
+        (Right (Ang a')) -> Right (FrmL a')
         r -> Left ("Call error: frameL " ++ showErr [r])
-evalExpr FrameN _ = Right (FrmN frameN)
+evalExpr FrameN _ = Right FrmN
 evalExpr (FromEcef a b) vault =
     case [evalExpr a vault, evalEarth b] of
         [Right (Ep p), Right (Em m)] -> Right (Np (fromEcef p m))
@@ -354,12 +357,12 @@ evalExpr (SurfaceDistance a b) vault =
         r -> Left ("Call error: surfaceDistance " ++ showErr r)
 evalExpr (Target a b c d) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault, evalEarth d] of
-        [Right (Np p0), Right (FrmB f), Right (Dlt d'), Right (Em m)] ->
-            Right (Np (target p0 f d' m))
-        [Right (Np p0), Right (FrmL f), Right (Dlt d'), Right (Em m)] ->
-            Right (Np (target p0 f d' m))
-        [Right (Np p0), Right (FrmN f), Right (Dlt d'), Right (Em m)] ->
-            Right (Np (target p0 f d' m))
+        [Right (Np p0), Right (FrmB y p r), Right (Dlt d'), Right (Em m)] ->
+            Right (Np (target p0 (frameB y p r) d' m))
+        [Right (Np p0), Right (FrmL w), Right (Dlt d'), Right (Em m)] ->
+            Right (Np (target p0 (frameL w) d' m))
+        [Right (Np p0), Right FrmN, Right (Dlt d'), Right (Em m)] ->
+            Right (Np (target p0 frameN d' m))
         r -> Left ("Call error: target " ++ showErr r)
 evalExpr (TargetN a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalEarth c] of
@@ -599,8 +602,7 @@ transform (Call "frameB" [e1, e2, e3]) = do
     p3 <- transform e3
     return (FrameB p1 p2 p3)
 transform (Call "frameL" [e]) = fmap FrameL (transform e)
-transform (Call "frameN" []) =
-    return FrameN
+transform (Call "frameN" []) = return FrameN
 transform (Call "fromEcef" [e]) = do
     p <- transform e
     return (FromEcef p "wgs84")
@@ -661,7 +663,7 @@ transform (Call "target" [e1, e2, e3]) = do
     f <- transform e2
     d <- transform e3
     return (Target p0 f d "wgs84")
-transform (Call "targetN" [e1, e2, e3, Lit s]) = do
+transform (Call "target" [e1, e2, e3, Lit s]) = do
     p0 <- transform e1
     f <- transform e2
     d <- transform e3

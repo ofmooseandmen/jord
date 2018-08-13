@@ -22,19 +22,19 @@ spec = do
         it "returns a negative length when position is left of great circle (bearing)" $ do
             let p = decimalLatLong 53.2611 (-0.7972)
             let gc = greatCircleBearing (decimalLatLong 53.3206 (-1.7297)) (decimalDegrees 96.0)
-            crossTrackDistance p gc (meanRadius wgs84) `shouldBe` metres (-305.663)
+            crossTrackDistance p gc r84 `shouldBe` metres (-305.663)
         it "returns a negative length when position is left of great circle" $ do
             let p = decimalLatLong 53.2611 (-0.7972)
             let gc = greatCircle (decimalLatLong 53.3206 (-1.7297)) (decimalLatLong 53.1887 0.1334)
-            crossTrackDistance p gc (meanRadius wgs84) `shouldBe` metres (-307.547)
+            crossTrackDistance p gc r84 `shouldBe` metres (-307.547)
         it "returns a positve length when position is right of great circle (bearing)" $ do
             let p = readLatLong "531540N0014750W"
             let gc = greatCircleBearing (readLatLong "531914N0014347W") (readAngle "96d01m18s")
-            crossTrackDistance p gc (meanRadius wgs84) `shouldBe` metres 7042.324
+            crossTrackDistance p gc r84 `shouldBe` metres 7042.324
         it "returns a positive length when position is left of great circle" $ do
             let p = antipode (decimalLatLong 53.2611 (-0.7972))
             let gc = greatCircle (decimalLatLong 53.3206 (-1.7297)) (decimalLatLong 53.1887 0.1334)
-            crossTrackDistance p gc (meanRadius wgs84) `shouldBe` metres 307.547
+            crossTrackDistance p gc r84 `shouldBe` metres 307.547
     describe "destination" $ do
         it "return the given point if distance is 0 meter" $ do
             let p0 = readLatLong "531914N0014347W"

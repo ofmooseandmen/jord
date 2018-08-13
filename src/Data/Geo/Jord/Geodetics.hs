@@ -71,6 +71,12 @@ instance Show GreatCircle where
 
 -- | 'GreatCircle' passing by both given positions. 'error's if given positions are
 -- equal or antipodal.
+--
+-- @
+--     let p1 = decimalLatLongHeight 45.0 (-143.5) (metres 1500)
+--     let p2 = decimalLatLongHeight 46.0 14.5 (metres 3000)
+--     greatCircle p1 p2 -- heights are ignored, great circle are always at earth surface.
+-- @
 greatCircle :: (NTransform a, Show a) => a -> a -> GreatCircle
 greatCircle p1 p2 =
     fromMaybe
@@ -101,6 +107,10 @@ greatCircleF p1 p2 =
     e = greatCircleE p1 p2
 
 -- | 'GreatCircle' passing by the given position and heading on given bearing.
+--
+-- @
+--     greatCircleBearing (readLatLong "283321N0290700W") (decimalDegrees 33.0)
+-- @
 greatCircleBearing :: (NTransform a) => a -> Angle -> GreatCircle
 greatCircleBearing p b =
     GreatCircle (vsub n' e') ("passing by " ++ show (ll p) ++ " heading on " ++ show b)
@@ -128,7 +138,7 @@ antipode p = fromNVector (angular (vscale (vector3d nv) (-1.0)) h)
   where
     (AngularPosition nv h) = toNVector p
 
--- | @crossTrackDistance p gc@ computes the signed distance horizontal position @p@ to great circle @gc@.
+-- | @crossTrackDistance p gc@ computes the signed distance from horizontal position @p@ to great circle @gc@.
 -- Returns a negative 'Length' if position if left of great circle,
 -- positive 'Length' if position if right of great circle; the orientation of the
 -- great circle is therefore important:
@@ -136,7 +146,11 @@ antipode p = fromNVector (angular (vscale (vector3d nv) (-1.0)) h)
 -- @
 --     let gc1 = greatCircle (decimalLatLong 51 0) (decimalLatLong 52 1)
 --     let gc2 = greatCircle (decimalLatLong 52 1) (decimalLatLong 51 0)
---     crossTrackDistance p gc1 == (- crossTrackDistance p gc2)
+--     crossTrackDistance p gc1 = (- crossTrackDistance p gc2)
+--
+--     let p = decimalLatLong 53.2611 (-0.7972)
+--     let gc = greatCircleBearing (decimalLatLong 53.3206 (-1.7297)) (decimalDegrees 96.0)
+--     crossTrackDistance p gc r84 -- -305.663 metres
 -- @
 crossTrackDistance :: (NTransform a) => a -> GreatCircle -> Length -> Length
 crossTrackDistance p gc =
@@ -149,6 +163,13 @@ crossTrackDistance84 p gc = crossTrackDistance p gc r84
 -- | @destination p b d r@ computes the destination position from position @p@ having
 -- travelled the distance @d@ on the initial bearing (compass angle) @b@ (bearing will normally vary
 -- before destination is reached) and using the earth radius @r@.
+--
+-- @
+--     let p0 = ecefToNVector (ecefMetres 3812864.094 (-115142.863) 5121515.161) s84
+--     let p1 = ecefMetres 3826406.4710518294 8900.536398998282 5112694.233184049
+--     let p = destination p0 (decimalDegrees 96.0217) (metres 124800) r84
+--     nvectorToEcef p s84 = p1
+-- @
 destination :: (NTransform a) => a -> Angle -> Length -> Length -> a
 destination p b d r
     | toMetres d == 0.0 = p
@@ -170,7 +191,7 @@ destination84 p b d = destination p b d r84
 --
 -- Compass angles are clockwise angles from true north: 0 = north, 90 = east, 180 = south, 270 = west.
 --
---  The final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
+-- The final bearing will differ from the 'initialBearing' by varying degrees according to distance and latitude.
 --
 -- Returns 'Nothing' if both horizontal positions are equals.
 finalBearing :: (Eq a, NTransform a) => a -> a -> Maybe Angle
@@ -196,12 +217,17 @@ initialBearing p1 p2
 -- Special conditions:
 --
 -- @
---     interpolate p0 p1 0.0 == p0
---     interpolate p0 p1 1.0 == p1
+--     interpolate p0 p1 0.0 = p0
+--     interpolate p0 p1 1.0 = p1
 -- @
 --
 -- 'error's if @f < 0 || f > 1.0@
 --
+-- @
+--     let p1 = latLongHeight (readLatLong "53°28'46''N 2°14'43''W") (metres 10000)
+--     let p2 = latLongHeight (readLatLong "55°36'21''N 13°02'09''E") (metres 20000)
+--     interpolate p1 p2 0.5 = decimalLatLongHeight 54.7835574 5.1949856 (metres 15000)
+-- @
 interpolate :: (NTransform a) => a -> a -> Double -> a
 interpolate p0 p1 f
     | f < 0 || f > 1 = error ("fraction must be in range [0..1], was " ++ show f)
@@ -216,17 +242,6 @@ interpolate p0 p1 f
     iv = vunit (vadd v0 (vscale (vsub v1 v0) f))
     ih = lrph h0 h1 f
 
--- | Computes the intersections between the two given 'GreatCircle's.
--- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
--- in which case 'Nothing' is returned.
-intersections :: (NTransform a) => GreatCircle -> GreatCircle -> Maybe (a, a)
-intersections gc1 gc2
-    | (vnorm i :: Double) == 0.0 = Nothing
-    | otherwise
-    , let ni = fromNVector (angular (vunit i) zero) = Just (ni, antipode ni)
-  where
-    i = vcross (normal gc1) (normal gc2)
-
 -- | @insideSurface p ps@ determines whether the @p@ is inside the polygon defined by the list of positions @ps@.
 -- The polygon is closed if needed (i.e. if @head ps /= last ps@).
 --
@@ -235,6 +250,18 @@ intersections gc1 gc2
 --
 -- Always returns 'False' if @ps@ does not at least defines a triangle.
 --
+-- @
+--     let malmo = decimalLatLong 55.6050 13.0038
+--     let ystad = decimalLatLong 55.4295 13.82
+--     let lund = decimalLatLong 55.7047 13.1910
+--     let helsingborg = decimalLatLong 56.0465 12.6945
+--     let kristianstad = decimalLatLong 56.0294 14.1567
+--     let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
+--     let hoor = decimalLatLong 55.9295 13.5297
+--     let hassleholm = decimalLatLong 56.1589 13.7668
+--     insideSurface hoor polygon = True
+--     insideSurface hassleholm polygon = False
+-- @
 insideSurface :: (Eq a, NTransform a) => a -> [a] -> Bool
 insideSurface p ps
     | null ps = False
@@ -251,6 +278,25 @@ insideSurface p ps
     v = vector3d p
     vs = fmap vector3d ps
 
+-- | Computes the intersections between the two given 'GreatCircle's.
+-- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
+-- in which case 'Nothing' is returned.
+--
+-- @
+--     let gc1 = greatCircleBearing (decimalLatLong 51.885 0.235) (decimalDegrees 108.63)
+--     let gc2 = greatCircleBearing (decimalLatLong 49.008 2.549) (decimalDegrees 32.72)
+--     let (i1, i2) = fromJust (intersections gc1 gc2)
+--     i1 = decimalLatLong 50.9017226 4.4942782
+--     i2 = antipode i1
+-- @
+intersections :: (NTransform a) => GreatCircle -> GreatCircle -> Maybe (a, a)
+intersections gc1 gc2
+    | (vnorm i :: Double) == 0.0 = Nothing
+    | otherwise
+    , let ni = fromNVector (angular (vunit i) zero) = Just (ni, antipode ni)
+  where
+    i = vcross (normal gc1) (normal gc2)
+
 -- | @mean ps@ computes the mean geographic horitzontal position of @ps@, if it is defined.
 --
 -- The geographic mean is not defined for antipodals position (since they
@@ -259,12 +305,11 @@ insideSurface p ps
 -- Special conditions:
 --
 -- @
---     mean [] == Nothing
---     mean [p] == Just p
---     mean [p1, p2, p3] == Just circumcentre
---     mean [p1, .., antipode p1] == Nothing
+--     mean [] = Nothing
+--     mean [p] = Just p
+--     mean [p1, p2, p3] = Just circumcentre
+--     mean [p1, .., antipode p1] = Nothing
 -- @
---
 mean :: (NTransform a) => [a] -> Maybe a
 mean [] = Nothing
 mean [p] = Just p

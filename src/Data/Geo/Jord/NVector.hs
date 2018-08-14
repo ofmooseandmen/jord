@@ -36,6 +36,6 @@ nvector x y z = NVector (vunit (Vector3d x y z))
 northPole :: NVector
 northPole = NVector (Vector3d 0.0 0.0 1.0)
 
--- | Horizontal position of the North Pole.
+-- | Horizontal position of the South Pole.
 southPole :: NVector
 southPole = NVector (Vector3d 0.0 0.0 (-1.0))

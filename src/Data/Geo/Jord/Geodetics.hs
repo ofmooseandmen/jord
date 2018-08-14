@@ -221,7 +221,7 @@ initialBearing p1 p2
 --     interpolate p0 p1 1.0 = p1
 -- @
 --
--- 'error's if @f < 0 || f > 1.0@
+-- 'error's if @f < 0 || f > 1@
 --
 -- @
 --     let p1 = latLongHeight (readLatLong "53°28'46''N 2°14'43''W") (metres 10000)

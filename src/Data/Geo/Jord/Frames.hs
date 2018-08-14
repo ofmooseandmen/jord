@@ -201,7 +201,7 @@ newtype Delta =
 delta :: Length -> Length -> Length -> Delta
 delta x y z = Delta (Vector3d (toMetres x) (toMetres y) (toMetres z))
 
--- | 'Delta' from given x, y and z length in _metres_.
+-- | 'Delta' from given x, y and z length in __metres__.
 deltaMetres :: Double -> Double -> Double -> Delta
 deltaMetres x y z = delta (metres x) (metres y) (metres z)
 
@@ -226,7 +226,7 @@ newtype Ned =
 ned :: Length -> Length -> Length -> Ned
 ned n e d = Ned (Vector3d (toMetres n) (toMetres e) (toMetres d))
 
--- | 'Ned' from given north, east and down in _metres_.
+-- | 'Ned' from given north, east and down in __metres__.
 nedMetres :: Double -> Double -> Double -> Ned
 nedMetres n e d = ned (metres n) (metres e) (metres d)
 

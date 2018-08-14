@@ -99,7 +99,7 @@ vunit v
 vzero :: Vector3d
 vzero = Vector3d 0 0 0
 
--- | transpose __square (3x3)__ matrix made of 'Vector3d'.
+-- | transpose __square (3x3)__ matrix of 'Vector3d'.
 transpose :: [Vector3d] -> [Vector3d]
 transpose m = fmap ds2v (transpose' xs)
   where
@@ -110,7 +110,7 @@ transpose' :: [[Double]] -> [[Double]]
 transpose' ([]:_) = []
 transpose' x = map head x : transpose' (map tail x)
 
--- | multiplies 2 matrices of 'Vector3d'.
+-- | multiplies 2 __square (3x3)__ matrices of 'Vector3d'.
 mdot :: [Vector3d] -> [Vector3d] -> [Vector3d]
 mdot a b = fmap ds2v [[vdot ar bc | bc <- transpose b] | ar <- a]
 

@@ -141,10 +141,10 @@ help =
     "     delta metres metres metres     Delta from metres\n" ++
     "     ned len len len                North, east, down from lengths\n" ++
     "     ned metres metres metres       North, east, down from metres\n" ++
-    "     geoPos latlong                 surface geographic position from latlong\n" ++
-    "     geoPos latlong height          geographic position from latlong and height\n" ++
-    "     geoPos lat long height         geographic position from decimal latitude, longitude and height\n" ++
-    "     geoPos lat long metres         geographic position from decimal latitude, longitude and metres\n" ++
+    "     geo latlong                    surface geographic position from latlong\n" ++
+    "     geo latlong height             geographic position from latlong and height\n" ++
+    "     geo lat long height            geographic position from decimal latitude, longitude and height\n" ++
+    "     geo lat long metres            geographic position from decimal latitude, longitude and metres\n" ++
     "     toNVector pos                  n-vector corresponding to pos\n" ++
     "     greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
     "     greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
@@ -167,7 +167,7 @@ help =
     "    jord> antipode a\n" ++
     "    jord> f = frameB 10d 20d 30d\n" ++
     "    jord> d = delta 3000 2000 100\n" ++
-    "    jord> p0 = geoPos 49.66618 3.45063 0\n" ++ "    jord> target p0 f d wgs84\n"
+    "    jord> p0 = geo 49.66618 3.45063 0\n" ++ "    jord> target p0 f d wgs84\n"
 
 save :: Result -> String -> Vault -> Vault
 save (Right v) k vault = insert k v vault

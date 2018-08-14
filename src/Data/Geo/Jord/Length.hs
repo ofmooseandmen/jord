@@ -45,10 +45,10 @@ newtype Length = Length
 instance Read Length where
     readsPrec _ = readP_to_S length
 
--- | Length is shown in metres when <= 10,000 m and in kilometres otherwise.
+-- | Length is shown in metres when absolute value is <= 10,000 m and in kilometres otherwise.
 instance Show Length where
     show l
-        | m <= 10000.0 = show m ++ "m"
+        | (abs m) <= 10000.0 = show m ++ "m"
         | otherwise = show (m / 1000.0) ++ "km"
       where
         m = toMetres l

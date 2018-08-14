@@ -183,7 +183,7 @@ functions =
     , "frameN"
     , "finalBearing"
     , "fromEcef"
-    , "geoPos"
+    , "geo"
     , "greatCircle"
     , "initialBearing"
     , "interpolate"
@@ -283,26 +283,26 @@ evalExpr (FinalBearing a b) vault =
                 (Right . Ang)
                 (finalBearing p1 p2)
         r -> Left ("Call error: finalBearing " ++ showErr r)
-evalExpr (GeoPos as) vault =
+evalExpr (Geo as) vault =
     case vs of
         [Right p@(Np _)] -> Right p
         [Right (Np v), Right (Len h)] -> Right (Np (AngularPosition (pos v) h))
         [Right (Double lat), Right (Double lon)] ->
             bimap
-                (\e -> "Call error: geoPos : " ++ e)
+                (\e -> "Call error: geo " ++ e)
                 (Np . toNVector)
                 (decimalLatLongHeightE lat lon zero)
         [Right (Double lat), Right (Double lon), Right (Len h)] ->
             bimap
-                (\e -> "Call error: geoPos : " ++ e)
+                (\e -> "Call error: geo " ++ e)
                 (Np . toNVector)
                 (decimalLatLongHeightE lat lon h)
         [Right (Double lat), Right (Double lon), Right (Double h)] ->
             bimap
-                (\e -> "Call error: geoPos : " ++ e)
+                (\e -> "Call error: geo " ++ e)
                 (Np . toNVector)
                 (decimalLatLongHeightE lat lon (metres h))
-        r -> Left ("Call error: geoPos " ++ showErr r)
+        r -> Left ("Call error: geo " ++ showErr r)
   where
     vs = map (`evalExpr` vault) as
 evalExpr (GreatCircleSC a b) vault =
@@ -533,7 +533,7 @@ data Expr
                    Expr
     | FromEcef Expr
                String
-    | GeoPos [Expr]
+    | Geo [Expr]
     | GreatCircleSC Expr
                     Expr
     | InitialBearing Expr
@@ -613,9 +613,9 @@ transform (Call "finalBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (FinalBearing p1 p2)
-transform (Call "geoPos" e) = do
+transform (Call "geo" e) = do
     ps <- mapM transform e
-    return (GeoPos ps)
+    return (Geo ps)
 transform (Call "greatCircle" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2

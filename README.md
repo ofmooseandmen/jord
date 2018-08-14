@@ -56,7 +56,7 @@ jord> f = frameB 10d 20d 30d
 jord> Body (vehicle) frame: yaw=10°0'0.000", pitch=20°0'0.000", roll=30°0'0.000"
 jord> d = delta 3000 2000 100
 jord> Delta: x=3000.0m, y=2000.0m, z=100.0m
-jord> p0 = geoPos 49.66618 3.45063 0
+jord> p0 = geo 49.66618 3.45063 0
 jord> latitude, longitude, height:
   49°39'58.248"N,3°27'2.268"E
   49.66618, 3.45063

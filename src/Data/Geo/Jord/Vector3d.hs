@@ -99,7 +99,7 @@ vunit v
 vzero :: Vector3d
 vzero = Vector3d 0 0 0
 
--- | transpose __square__ matrix made of 'Vector3d'.
+-- | transpose __square (3x3)__ matrix made of 'Vector3d'.
 transpose :: [Vector3d] -> [Vector3d]
 transpose m = fmap ds2v (transpose' xs)
   where

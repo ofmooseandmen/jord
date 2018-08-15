@@ -35,6 +35,7 @@ library:
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Rotation
+    - Data.Geo.Jord.Speed
     - Data.Geo.Jord.Transform
     - Data.Geo.Jord.Vector3d
   other-modules:

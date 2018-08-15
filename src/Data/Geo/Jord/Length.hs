@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working with (signed) lengths in metres, kilometres or nautical miles.
+-- Types and functions for working with (signed) lengths in metres, kilometres, nautical miles or feet.
 --
 module Data.Geo.Jord.Length
     (
@@ -48,7 +48,7 @@ instance Read Length where
 -- | Length is shown in metres when absolute value is <= 10,000 m and in kilometres otherwise.
 instance Show Length where
     show l
-        | (abs m) <= 10000.0 = show m ++ "m"
+        | abs m <= 10000.0 = show m ++ "m"
         | otherwise = show (m / 1000.0) ++ "km"
       where
         m = toMetres l

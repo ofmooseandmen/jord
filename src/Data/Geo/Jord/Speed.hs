@@ -9,8 +9,9 @@
 -- Types and functions for working with speed in metres per second, kilometres per hour, miles per hour or knots.
 --
 module Data.Geo.Jord.Speed
+    (
     -- * The 'Speed' type
-    ( Speed(metresPerHour)
+      Speed(metresPerHour)
     -- * Smart constructors
     , metresPerSecond
     , kilometresPerHour

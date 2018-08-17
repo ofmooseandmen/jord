@@ -22,19 +22,19 @@ spec = do
         it "returns a negative length when position is left of great circle (bearing)" $ do
             let p = decimalLatLong 53.2611 (-0.7972)
             let gc = greatCircleBearing (decimalLatLong 53.3206 (-1.7297)) (decimalDegrees 96.0)
-            crossTrackDistance p gc r84 `shouldBe` metres (-305.663)
+            crossTrackDistance p gc r84 `shouldBe` metres (-305.6629)
         it "returns a negative length when position is left of great circle" $ do
             let p = decimalLatLong 53.2611 (-0.7972)
             let gc = greatCircle (decimalLatLong 53.3206 (-1.7297)) (decimalLatLong 53.1887 0.1334)
-            crossTrackDistance p gc r84 `shouldBe` metres (-307.547)
+            crossTrackDistance p gc r84 `shouldBe` metres (-307.5471)
         it "returns a positve length when position is right of great circle (bearing)" $ do
             let p = readLatLong "531540N0014750W"
             let gc = greatCircleBearing (readLatLong "531914N0014347W") (readAngle "96d01m18s")
-            crossTrackDistance p gc r84 `shouldBe` metres 7042.324
+            crossTrackDistance p gc r84 `shouldBe` metres 7042.3242
         it "returns a positive length when position is left of great circle" $ do
             let p = antipode (decimalLatLong 53.2611 (-0.7972))
             let gc = greatCircle (decimalLatLong 53.3206 (-1.7297)) (decimalLatLong 53.1887 0.1334)
-            crossTrackDistance p gc r84 `shouldBe` metres 307.547
+            crossTrackDistance p gc r84 `shouldBe` metres 307.5471
     describe "destination" $ do
         it "return the given point if distance is 0 meter" $ do
             let p0 = readLatLong "531914N0014347W"
@@ -45,7 +45,7 @@ spec = do
             destination p0 (decimalDegrees 96.0217) (metres 124800) r84 `shouldBe` p1
         it "return the ECEF position along great-circle at distance and bearing" $ do
             let p0 = ecefToNVector (ecefMetres 3812864.094 (-115142.863) 5121515.161) s84
-            let p1 = ecefMetres 3826406.4710518294 8900.536398998282 5112694.233184049
+            let p1 = ecefMetres 3826406.471 8900.5364 5112694.2331
             let p = destination84 p0 (decimalDegrees 96.0217) (metres 124800)
             nvectorToEcef p s84 `shouldBe` p1
     describe "finalBearing" $ do
@@ -204,10 +204,10 @@ spec = do
         it "returns the distance between 2 points" $ do
             let p1 = readLatLong "500359N0054253W"
             let p2 = readLatLong "583838N0030412W"
-            surfaceDistance84 p1 p2 `shouldBe` metres 968854.868
+            surfaceDistance84 p1 p2 `shouldBe` metres 968854.8685
         it "handles singularity at the pole" $
-            surfaceDistance northPole southPole r84 `shouldBe` kilometres 20015.114351
+            surfaceDistance northPole southPole r84 `shouldBe` kilometres 20015.114352200002
         it "handles the discontinuity at the Date Line" $ do
             let p1 = readLatLong "500359N1795959W"
             let p2 = readLatLong "500359N1795959E"
-            surfaceDistance p1 p2 (meanRadius wgs84) `shouldBe` metres 39.66
+            surfaceDistance p1 p2 (meanRadius wgs84) `shouldBe` metres 39.6596

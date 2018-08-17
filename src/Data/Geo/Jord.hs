@@ -18,10 +18,12 @@
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.AngularPosition
+    , module Data.Geo.Jord.Duration
     , module Data.Geo.Jord.Earth
     , module Data.Geo.Jord.EcefPosition
     , module Data.Geo.Jord.Frames
     , module Data.Geo.Jord.Geodetics
+    , module Data.Geo.Jord.Kinematics
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NVector
@@ -35,10 +37,12 @@ module Data.Geo.Jord
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Duration
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
 import Data.Geo.Jord.Frames
 import Data.Geo.Jord.Geodetics
+import Data.Geo.Jord.Kinematics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector

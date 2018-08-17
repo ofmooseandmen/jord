@@ -26,10 +26,12 @@ library:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
     - Data.Geo.Jord.AngularPosition
+    - Data.Geo.Jord.Duration
     - Data.Geo.Jord.Earth
     - Data.Geo.Jord.EcefPosition
     - Data.Geo.Jord.Frames
     - Data.Geo.Jord.Geodetics
+    - Data.Geo.Jord.Kinematics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
     - Data.Geo.Jord.NVector

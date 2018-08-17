@@ -2,6 +2,8 @@
 
 - Added ECEF, frames and delta to REPL
 - Added Speed
+- Added Duration
+- Added Kinematics: course, position and CPA
 
 ### 0.3.1.0
 

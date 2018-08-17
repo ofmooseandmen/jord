@@ -127,6 +127,12 @@ help =
     "     insideSurface pos [pos]        is p inside surface polygon?\n" ++
     "     mean [pos]                     geographical mean surface position of [pos]\n" ++
     "     surfaceDistance pos1 pos2      surface distance between pos1 and pos2\n" ++
+    "\n  Kinematics calculations (Spherical Earth):\n\n" ++
+    "     The following calculations assume a spherical earth model with a radius\n" ++
+    "     derived from the WGS84 ellipsoid: " ++
+    show r84 ++
+    "\n" ++
+    "\n     cpa track1 track2              closest point of approach between two tracks\n" ++
     "\n  Constructors and conversions:\n\n" ++
     "     ecef len len len               Earth-centred earth-fixed position from x, y, z lengths\n" ++
     "     ecef metres metres metres      Earth-centred earth-fixed position from x, y, z metres\n" ++
@@ -148,15 +154,17 @@ help =
     "     toNVector pos                  n-vector corresponding to pos\n" ++
     "     greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
     "     greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
-    "\n  Supported Lat/Long formats:\n\n" ++
+    "     track pos ang spd              track at pos, heading on bearing ang and travelling at speed spd\n" ++
+    "\n  Supported lat/long formats:\n\n" ++
     "    DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
     "    d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
     "    ^ zeroes can be ommitted and separtors can also be d, m, s\n" ++
     "    decimal°[N|S],decimal°[E|W]     - 51.885°N,13,1°E\n" ++
-    "\n  Supported Angle formats:\n\n" ++
+    "\n  Supported angle formats:\n\n" ++
     "    d°m's    - 55°36'21.154\n" ++
     "    decimal° - 51.885°\n" ++
-    "\n  Supported Length formats: {l}m, {l}km, {l}nm, {l}ft\n" ++
+    "\n  Supported length formats: {l}m, {l}km, {l}nm, {l}ft\n" ++
+    "\n  Supported speed formats: {s}m/s, {s}km/h, {s}mph, {s}kt\n" ++
     "\n  Supported earth models:\n\n" ++
     "    ellipsoidal: wgs84, grs80, wgs72\n" ++
     "    spherical  : s84, s80, s72\n" ++

@@ -46,7 +46,7 @@ module Data.Geo.Jord.Frames
     , down
     , bearing
     , elevation
-    , norm
+    , slantRange
     -- * Calculations
     , deltaBetween
     , nedBetween
@@ -255,9 +255,9 @@ bearing v =
 elevation :: Ned -> Angle
 elevation (Ned v) = negate' (asin' (vz v / vnorm v))
 
--- | @norm v@ computes the norm of the NED vector @v@.
-norm :: Ned -> Length
-norm (Ned v) = metres (vnorm v)
+-- | @slantRange v@ computes the distance from origin in the local system of the NED vector @v@.
+slantRange :: Ned -> Length
+slantRange (Ned v) = metres (vnorm v)
 
 -- | @deltaBetween p1 p2 f e@ computes the exact 'Delta' between the two positions @p1@ and @p2@ in frame @f@
 -- using earth model @e@.

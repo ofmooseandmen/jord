@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 43b55b006f0e333b43b360604adecd6d2c668b12c9261879f172bdfa326151ac
+-- hash: 0fa7a5ff85ca5fca02b4d954db765ef9097847a42148bbdac936e9094ff927f5
 
 name:           jord
 version:        0.3.2.0
@@ -32,10 +32,12 @@ library
       Data.Geo.Jord
       Data.Geo.Jord.Angle
       Data.Geo.Jord.AngularPosition
+      Data.Geo.Jord.Duration
       Data.Geo.Jord.Earth
       Data.Geo.Jord.EcefPosition
       Data.Geo.Jord.Frames
       Data.Geo.Jord.Geodetics
+      Data.Geo.Jord.Kinematics
       Data.Geo.Jord.LatLong
       Data.Geo.Jord.Length
       Data.Geo.Jord.NVector

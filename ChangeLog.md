@@ -1,4 +1,4 @@
-### 0.3.2.0
+### 0.4.0.0
 
 - Added ECEF, frames and delta to REPL
 - Added Speed

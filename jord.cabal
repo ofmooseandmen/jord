@@ -2,10 +2,10 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0fa7a5ff85ca5fca02b4d954db765ef9097847a42148bbdac936e9094ff927f5
+-- hash: 8c72ba6818919a5894f3cb84cf4b5b6d6a24632ee0f7fb2349e23e12b0e99922
 
 name:           jord
-version:        0.3.2.0
+version:        0.4.0.0
 synopsis:       Geographical Position Calculations
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 category:       Geography

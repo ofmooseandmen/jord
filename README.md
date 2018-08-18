@@ -13,7 +13,8 @@ Jord is a [Haskell](https://www.haskell.org) library that implements various geo
 - Transformation between ECEF (earth-centred, earth-fixed), Latitude/Longitude and N-Vector positions for spherical and ellipsoidal earth model
 - Transformation between Latitude/Longitude and N-Vector positions
 - Local, Body and North, East, Down Frames: delta between positions, target position from reference position and delta
-- surface distance, initial & final bearing, interpolated position, great circle intersections, cross track distance, ...
+- Geodetics: surface distance, initial & final bearing, interpolated position, great circle intersections, cross track distance, ...
+- Kinematics: position from p0, bearing and speed, closest point of approach between tracks
 
 ## How do I build it?
 
@@ -37,13 +38,31 @@ let w = decimalDegrees 5 -- wander azimuth
 deltaBetween p1 p2 (frameL w) wgs84 -- deltaMetres 359490.579 302818.523 17404.272
 
 -- destination position from 531914N0014347W having travelled 500Nm on a heading of 96.0217°
--- using mean earth radius derived from the WG84 ellipsoid
-destination (readLatLong "531914N0014347W") (decimalDegrees 96.0217) (nauticalMiles 500) r84
+-- using mean earth radius derived from the WGS84 ellipsoid
+destination84 (readLatLong "531914N0014347W") (decimalDegrees 96.0217) (nauticalMiles 500)
+-- using mean earth radius derived from the GRS80 ellipsoid
+destination (readLatLong "531914N0014347W") (decimalDegrees 96.0217) (nauticalMiles 500) r80
 
 -- surface distance between 54°N,154°E and its antipodal position
--- using mean earth radius derived from the WG84 ellipsoid
 let p = decimalLatLong 54 154
-surfaceDistance p (antipode p) r84
+-- using mean earth radius derived from the WGS84 ellipsoid
+surfaceDistance84 p (antipode p)
+-- using mean earth radius derived from the GRS80 ellipsoid
+surfaceDistance p (antipode p) r80
+
+-- closest point of approach between tracks
+let p1 = decimalLatLong 20 (-60)
+let b1 = decimalDegrees 10
+let s1 = knots 15
+let p2 = decimalLatLong 34 (-50)
+let b2 = decimalDegrees 220
+let s2 = knots 300
+let t1 = Track p1 b1 s1
+let t2 = Track p2 b2 s2
+-- using mean earth radius derived from the WGS84 ellipsoid
+cpa84 t1 t2
+-- using mean earth radius derived from the WGS72 ellipsoid
+cpa t1 t2 r72
 ```
 
 Jord comes with a REPL (built with [haskeline](https://github.com/judah/haskeline)):

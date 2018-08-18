@@ -27,6 +27,7 @@ module Eval
 import Control.Monad.Fail
 import Data.Bifunctor
 import Data.Geo.Jord
+import Data.Either (rights)
 import Data.List hiding (delete, insert, lookup)
 import Data.Maybe
 import Prelude hiding (fail, lookup)
@@ -416,24 +417,19 @@ showErr :: [Result] -> String
 showErr rs = " > " ++ intercalate " & " (map (either id show) rs)
 
 tryRead :: String -> Result
-tryRead s =
-    case r of
-        [a@(Right (Ang _)), _, _, _, _] -> a
-        [_, l@(Right (Len _)), _, _, _] -> l
-        [_, _, s'@(Right (Spd _)), _, _] -> s'
-        [_, _, _, Right (Gp geo), _] -> Right (Np (toNVector geo))
-        [_, _, _, _, d@(Right (Double _))] -> d
-        _ -> Left ("couldn't read " ++ s)
+tryRead s
+    | null r = Left ("couldn't read " ++ s)
+    | otherwise = Right (head r)
   where
     r =
-        map
-            ($ s)
-            [ readE readAngleE Ang
-            , readE readLengthE Len
-            , readE readSpeedE Spd
-            , readE readLatLongE (\ll -> Gp (AngularPosition ll zero))
-            , readE readEither Double
-            ]
+        rights
+            (map ($ s)
+                 [ readE readAngleE Ang
+                 , readE readLengthE Len
+                 , readE readSpeedE Spd
+                 , readE readLatLongE (\ll -> Np (toNVector (AngularPosition ll zero)))
+                 , readE readEither Double
+                 ])
 
 readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
 readE p v s = bimap id v (p s)

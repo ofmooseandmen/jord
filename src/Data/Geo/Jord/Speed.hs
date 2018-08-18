@@ -6,17 +6,18 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working with speed in metres per second, kilometres per hour, miles per hour or knots.
+-- Types and functions for working with speed in metres per second, kilometres per hour, miles per hour, knots or feet per second.
 --
 module Data.Geo.Jord.Speed
     (
     -- * The 'Speed' type
-      Speed(metresPerHour)
+      Speed
     -- * Smart constructors
     , metresPerSecond
     , kilometresPerHour
     , milesPerHour
     , knots
+    , feetPerSecond
     -- * Read
     , readSpeed
     , readSpeedE
@@ -26,6 +27,7 @@ module Data.Geo.Jord.Speed
     , toKilometresPerHour
     , toMilesPerHour
     , toKnots
+    , toFeetPerSecond
     ) where
 
 import Control.Applicative
@@ -36,9 +38,9 @@ import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
--- | A speed with a resolution of 1 metre per hour.
+-- | A speed with a resolution of 1 millimetre per hour.
 newtype Speed = Speed
-    { metresPerHour :: Int
+    { mmPerHour :: Int
     } deriving (Eq)
 
 -- | See 'readSpeed'.
@@ -51,8 +53,8 @@ instance Show Speed where
 
 -- | Add/Subtract Speed.
 instance Quantity Speed where
-    add a b = Speed (metresPerHour a + metresPerHour b)
-    sub a b = Speed (metresPerHour a - metresPerHour b)
+    add a b = Speed (mmPerHour a + mmPerHour b)
+    sub a b = Speed (mmPerHour a - mmPerHour b)
     zero = Speed 0
 
 -- | 'Speed' from given amount of metres per second.
@@ -61,7 +63,7 @@ metresPerSecond mps = kilometresPerHour (mps * 3.6)
 
 -- | 'Speed' from given amount of kilometres per hour.
 kilometresPerHour :: Double -> Speed
-kilometresPerHour kph = Speed (round (kph * 1000))
+kilometresPerHour kph = Speed (round (kph * 1e+6))
 
 -- | 'Speed' from given amount of miles per hour.
 milesPerHour :: Double -> Speed
@@ -71,7 +73,11 @@ milesPerHour mph = kilometresPerHour (mph * 1.609344)
 knots :: Double -> Speed
 knots kt = kilometresPerHour (kt * 1.852)
 
--- | Obtains a 'Speed' from the given string formatted as (-)float[m/s|km/h|mph|kt] - e.g. 300m/s, 250km/h, -154mph or 400kt.
+-- | 'Speed' from given amount of feet per second.
+feetPerSecond :: Double -> Speed
+feetPerSecond fps = kilometresPerHour (fps * 1.09728)
+
+-- | Obtains a 'Speed' from the given string formatted as (-)float[m/s|km/h|mph|kt] - e.g. 300m/s, 250km/h, -154mph, 400kt or 100ft/s.
 --
 -- This simply calls @read s :: Speed@ so 'error' should be handled at the call site.
 --
@@ -99,7 +105,7 @@ toMetresPerSecond s = toKilometresPerHour s / 3.6
 
 -- | @toKilometresPerHour s@ converts @s@ to kilometres per hour.
 toKilometresPerHour :: Speed -> Double
-toKilometresPerHour (Speed s) = fromIntegral s / 1000.0
+toKilometresPerHour (Speed s) = fromIntegral s / 1e+6
 
 -- | @toMilesPerHour s@ converts @s@ to miles per hour.
 toMilesPerHour :: Speed -> Double
@@ -109,15 +115,20 @@ toMilesPerHour s = toKilometresPerHour s / 1.609344
 toKnots :: Speed -> Double
 toKnots s = toKilometresPerHour s / 1.852
 
+-- | @toFeetPerSecond s@ converts @s@ to feet per second.
+toFeetPerSecond :: Speed -> Double
+toFeetPerSecond s = toKilometresPerHour s / 1.09728
+
 -- | Parses and returns a 'Speed'.
 speed :: ReadP Speed
 speed = do
-    v <- number
+    s <- number
     skipSpaces
-    u <- string "m/s" <|> string "km/h" <|> string "mph" <|> string "kt"
+    u <- string "m/s" <|> string "km/h" <|> string "mph" <|> string "kt" <|> string "ft/s"
     case u of
-        "m/s" -> return (metresPerSecond v)
-        "km/h" -> return (kilometresPerHour v)
-        "mph" -> return (milesPerHour v)
-        "kt" -> return (knots v)
+        "m/s" -> return (metresPerSecond s)
+        "km/h" -> return (kilometresPerHour s)
+        "mph" -> return (milesPerHour s)
+        "kt" -> return (knots s)
+        "ft/s" -> return (feetPerSecond s)
         _ -> pfail

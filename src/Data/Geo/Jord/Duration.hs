@@ -61,32 +61,32 @@ instance Quantity Duration where
     zero = Duration 0
 
 -- | 'Duration' from given amount of milliseconds.
-milliseconds :: Int -> Duration
-milliseconds = Duration
+milliseconds :: Double -> Duration
+milliseconds ms = Duration (round ms)
 
 -- | 'Duration' from given amount of seconds.
-seconds :: Int -> Duration
-seconds s = Duration (s * 1000)
+seconds :: Double -> Duration
+seconds s = milliseconds (s * 1000)
 
 -- | 'Duration' from given amount of minutes.
-minutes :: Int -> Duration
-minutes m = Duration (m * 60000)
+minutes :: Double -> Duration
+minutes m = milliseconds (m * 60000)
 
 -- | 'Duration' from given amount of hours.
-hours :: Int -> Duration
-hours h = Duration (h * 3600000)
+hours :: Double -> Duration
+hours h = milliseconds (h * 3600000)
 
 -- | @toHours d@ gets the number of hours in @d@.
-toHours :: Duration -> Int
-toHours (Duration ms) = truncate (fromIntegral ms / 3600000.0 :: Double)
+toHours :: Duration -> Double
+toHours (Duration ms) = fromIntegral ms / 3600000.0 :: Double
 
 -- | @toMinutes d@ gets the number of minutes in @d@.
-toMinutes :: Duration -> Int
-toMinutes (Duration ms) = truncate (fromIntegral ms / 60000.0 :: Double)
+toMinutes :: Duration -> Double
+toMinutes (Duration ms) = fromIntegral ms / 60000.0 :: Double
 
 -- | @toSeconds d@ gets the number of seconds in @d@.
-toSeconds :: Duration -> Int
-toSeconds (Duration ms) = truncate (fromIntegral ms / 1000.0 :: Double)
+toSeconds :: Duration -> Double
+toSeconds (Duration ms) = fromIntegral ms / 1000.0 :: Double
 
 -- | Obtains a 'Duration' from the given string formatted @(-)nHnMn.nS@.
 --
@@ -116,19 +116,19 @@ duration = do
     h <- option 0 hoursP
     m <- option 0 minutesP
     s <- option 0.0 secondsP
-    return (Duration (h * 3600000 + m * 60000 + (truncate s * 1000)))
+    return (milliseconds (h * 3600000.0 + m * 60000.0 + s * 1000.0))
 
-hoursP :: ReadP Int
+hoursP :: ReadP Double
 hoursP = do
     h <- integer
     _ <- char 'H'
-    return h
+    return (fromIntegral h :: Double)
 
-minutesP :: ReadP Int
+minutesP :: ReadP Double
 minutesP = do
     m <- integer
     _ <- char 'M'
-    return m
+    return (fromIntegral m :: Double)
 
 secondsP :: ReadP Double
 secondsP = do

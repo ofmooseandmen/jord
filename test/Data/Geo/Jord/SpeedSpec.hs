@@ -12,6 +12,7 @@ spec = do
         it "reads 154km/h" $ readSpeed "154km/h" `shouldBe` kilometresPerHour 154
         it "reads 200mph" $ readSpeed "200mph" `shouldBe` milesPerHour 200
         it "reads 400kt" $ readSpeed "400kt" `shouldBe` knots 400
+        it "reads 1ft/s" $ readSpeed "1ft/s" `shouldBe` feetPerSecond 1
     describe "Reading invalid speeds" $ do
         it "fails to read 5" $ readSpeedE "5" `shouldBe` Left "couldn't read speed 5"
         it "fails to read 5mps" $ readSpeedE "5mps" `shouldBe` Left "couldn't read speed 5mps"
@@ -25,6 +26,14 @@ spec = do
             toMilesPerHour (metresPerSecond 100) `shouldBe` 223.6936292054402
         it "converts kilometres per hour to knots" $
             toKnots (kilometresPerHour 1000) `shouldBe` 539.9568034557235
+        it "converts feet per second to kilometres per hour" $
+            toKilometresPerHour (feetPerSecond 1) `shouldBe` 1.09728
+    describe "Resolution" $ do
+        it "handles 1 km/h" $ toKilometresPerHour (kilometresPerHour 1) `shouldBe` 1
+        it "handles 1 1m/s" $ toMetresPerSecond (metresPerSecond 1) `shouldBe` 1
+        it "handles 1 1mph" $ toMilesPerHour (milesPerHour 1) `shouldBe` 1
+        it "handles 1 knot" $ toKnots (knots 1) `shouldBe` 1
+        it "handles 1 fp/s" $ toFeetPerSecond (feetPerSecond 1) `shouldBe` 1
     describe "Adding/Subtracting speeds" $ do
         it "adds speeds" $
             add (kilometresPerHour 1000) (metresPerSecond 1000) `shouldBe` kilometresPerHour 4600

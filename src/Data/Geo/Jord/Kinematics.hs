@@ -73,18 +73,40 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
     r = mdot (mdot (rz (negate' lon)) (ry lat)) (rx b)
 
 -- | @position t d r@ computes the position of a track @t@ after duration @d@ has elapsed and using the earth radius @r@.
+--
+-- @
+--     let p0 = latLongHeight (readLatLong "531914N0014347W") (metres 15000)
+--     let b = decimalDegrees 96.0217
+--     let s = kilometresPerHour 124.8
+--     let p1 = decimalLatLongHeight 53.1882691 0.1332741 (metres 15000)
+--     position (Track p0 b s) (hours 1) = p1
+-- @
 position :: (NTransform a) => Track a -> Duration -> Length -> a
-position (Track p0 b s) d r = positionC p0 s (course p0 b) d r
+position (Track p0 b s) d r = positionC p0 s (course p0 b) (toSeconds d) r
 
 -- | 'position' using the mean radius of the WGS84 reference ellipsoid.
 position84 :: (NTransform a) => Track a -> Duration -> a
 position84 t d = position t d r84
 
 -- | @cpa t1 t2 r@ computes the closest point of approach between tracks @t1@ and @t2@ and using the earth radius @r@.
+--
+-- @
+--     let p1 = decimalLatLong 20 (-60)
+--     let b1 = decimalDegrees 10
+--     let s1 = knots 15
+--     let p2 = decimalLatLong 34 (-50)
+--     let b2 = decimalDegrees 220
+--     let s2 = knots 300
+--     let t1 = Track p1 b1 s1
+--     let t2 = Track p2 b2 s2
+--     let c = cpa84 t1 t2
+--     fmap cpaTime c = Just (milliseconds 11396155)
+--     fmap cpaDistance c = Just (kilometres 124.2317453)
+-- @
 cpa :: (NTransform a) => Track a -> Track a -> Length -> Maybe (Cpa a)
 cpa (Track p1 b1 s1) (Track p2 b2 s2) r
-    | toMilliseconds t < 0 = Nothing
-    | otherwise = Just (Cpa t d cp1 cp2)
+    | t < 0 = Nothing
+    | otherwise = Just (Cpa (seconds t) d cp1 cp2)
   where
     c1 = course p1 b1
     c2 = course p2 b2
@@ -98,20 +120,19 @@ cpa84 :: (NTransform a) => Track a -> Track a -> Maybe (Cpa a)
 cpa84 t1 t2 = cpa t1 t2 r84
 
 -- | position from speed and course.
-positionC :: (NTransform a) => a -> Speed -> Course -> Duration -> Length -> a
-positionC p0 s c d r = fromNVector (nvectorHeight (nvector (vx v1) (vy v1) (vz v1)) h0)
+positionC :: (NTransform a) => a -> Speed -> Course -> Double -> Length -> a
+positionC p0 s c sec r = fromNVector (nvectorHeight (nvector (vx v1) (vy v1) (vz v1)) h0)
   where
     nv0 = toNVector p0
     v0 = vec . pos $ nv0
     h0 = height nv0
     w = toMetresPerSecond s / toMetres r
     vc = vec c
-    sec = fromIntegral . toSeconds $ d
     v1 = vadd (vscale v0 (cos (w * sec))) (vscale vc (sin (w * sec)))
 
 -- | time to CPA.
-timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Duration
-timeToCpa p1 c1 s1 p2 c2 s2 = milliseconds (round (cpaNr v10 c10 w1 v20 c20 w2 * 1000))
+timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Double
+timeToCpa p1 c1 s1 p2 c2 s2 = cpaNr v10 c10 w1 v20 c20 w2
   where
     v10 = vec . pos . toNVector $ p1
     c10 = vec c1

@@ -30,7 +30,7 @@ spec =
                 let t2 = Track p2 b2 s
                 let c = cpa84 t1 t2
                 fmap cpaTime c `shouldBe` Just (milliseconds 4175)
-                fmap cpaDistance c `shouldBe` Just (metres 250.0036) -- should be 250m ?
+                fmap cpaDistance c `shouldBe` Just (metres 250.0036)
             it "handles heading tracks" $ do
                 let p1 = decimalLatLong 20 30
                 let p2 = decimalLatLong 21 31
@@ -44,7 +44,7 @@ spec =
                 -- speed = 740.8 km/h
                 -- time = 152.354309 / 740.8 / 2
                 fmap cpaTime c `shouldBe` Just (milliseconds 370191)
-                fmap cpaDistance c `shouldBe` Just (metres 78.7632) -- should be 0m ?
+                fmap cpaDistance c `shouldBe` Just zero
             it "computes time to CPA, positions and distance at CPA" $ do
                 let p1 = decimalLatLong 20 (-60)
                 let b1 = decimalDegrees 10

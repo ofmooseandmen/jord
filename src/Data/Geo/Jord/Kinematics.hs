@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.kinematics
+-- Module:      Data.Geo.Jord.Kinematics
 -- Copyright:   (c) 2018 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -37,14 +37,14 @@ import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Speed
-import Data.Geo.Jord.Transform
+import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
 
 -- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
 data Track a = Track
-    { trackPos :: a
-    , trackBearing :: Angle
-    , trackSpeed :: Speed
+    { trackPos :: a -- ^ position of the track.
+    , trackBearing :: Angle -- ^ bearing of the track
+    , trackSpeed :: Speed -- ^ speed of the track
     } deriving (Eq, Show)
 
 -- | 'Course' represents the cardinal direction in which the vehicle is to be steered.
@@ -55,7 +55,7 @@ newtype Course =
 instance IsVector3d Course where
     vec (Course v) = v
 
--- | Time to, and distance at, Closest point of approach as well as position of both track at CPA.
+-- | Time to, and distance at, closest point of approach (CPA) as well as position of both track at CPA.
 data Cpa a = Cpa
     { cpaTime :: Duration -- ^ time to CPA
     , cpaDistance :: Length -- ^ distance at CPA

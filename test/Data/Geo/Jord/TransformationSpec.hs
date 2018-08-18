@@ -1,4 +1,4 @@
-module Data.Geo.Jord.TransformSpec
+module Data.Geo.Jord.TransformationSpec
     ( spec
     ) where
 

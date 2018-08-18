@@ -46,7 +46,7 @@ import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Transform
+import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
 import Data.List (subsequences)
 import Data.Maybe (fromMaybe)

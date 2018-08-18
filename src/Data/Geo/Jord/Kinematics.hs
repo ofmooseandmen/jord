@@ -82,7 +82,7 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
 --     position (Track p0 b s) (hours 1) = p1
 -- @
 position :: (NTransform a) => Track a -> Duration -> Length -> a
-position (Track p0 b s) d r = positionC p0 s (course p0 b) (toSeconds d) r
+position (Track p0 b s) d = positionC p0 s (course p0 b) (toSeconds d)
 
 -- | 'position' using the mean radius of the WGS84 reference ellipsoid.
 position84 :: (NTransform a) => Track a -> Duration -> a
@@ -209,7 +209,7 @@ cpaNr v10 c10 w1 v20 c20 w2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
 
 cpaNrRec :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
-    | i == 50 = (-1.0)
+    | i == 50 = ti1
     | abs fi < 1e-12 = ti1
     | otherwise = cpaNrRec v10 c10 w1 v20 c20 w2 ti1 (i + 1)
   where

@@ -17,11 +17,12 @@ module Data.Geo.Jord.Duration
     , hours
     , minutes
     , seconds
-   -- * Accessors
+    , hms
+    -- * Accessors
     , toHours
     , toMinutes
     , toSeconds
-   -- * Read
+    -- * Read
     , readDuration
     , readDurationE
     , readDurationF
@@ -49,7 +50,7 @@ instance Show Duration where
     show d@(Duration millis) =
         show h ++ "H" ++ show m ++ "M" ++ show s ++ "." ++ printf "%03d" ms ++ "S"
       where
-        h = toHours d
+        h = truncate (toHours d) :: Int
         m = truncate (fromIntegral (millis `mod` 3600000) / 60000.0 :: Double) :: Int
         s = truncate (fromIntegral (millis `mod` 60000) / 1000.0 :: Double) :: Int
         ms = mod (abs millis) 1000
@@ -60,21 +61,25 @@ instance Quantity Duration where
     sub a b = Duration (toMilliseconds a - toMilliseconds b)
     zero = Duration 0
 
--- | 'Duration' from given amount of milliseconds.
-milliseconds :: Double -> Duration
-milliseconds ms = Duration (round ms)
+-- | 'Duration' from hours minutes and decimal seconds.
+hms :: Int -> Int -> Double -> Duration
+hms h m s = milliseconds (fromIntegral h * 3600000 + fromIntegral m * 60000 + s * 1000)
 
--- | 'Duration' from given amount of seconds.
-seconds :: Double -> Duration
-seconds s = milliseconds (s * 1000)
+-- | 'Duration' from given amount of hours.
+hours :: Double -> Duration
+hours h = milliseconds (h * 3600000)
 
 -- | 'Duration' from given amount of minutes.
 minutes :: Double -> Duration
 minutes m = milliseconds (m * 60000)
 
--- | 'Duration' from given amount of hours.
-hours :: Double -> Duration
-hours h = milliseconds (h * 3600000)
+-- | 'Duration' from given amount of seconds.
+seconds :: Double -> Duration
+seconds s = milliseconds (s * 1000)
+
+-- | 'Duration' from given amount of milliseconds.
+milliseconds :: Double -> Duration
+milliseconds ms = Duration (round ms)
 
 -- | @toHours d@ gets the number of hours in @d@.
 toHours :: Duration -> Double
@@ -132,6 +137,7 @@ minutesP = do
 
 secondsP :: ReadP Double
 secondsP = do
-    s <- double
+    s <- integer
+    ms <- option 0 (char '.' >> natural)
     _ <- char 'S'
-    return s
+    return (fromIntegral s + fromIntegral ms / 10.0)

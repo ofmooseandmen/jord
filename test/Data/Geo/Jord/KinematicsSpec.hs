@@ -6,7 +6,6 @@ import Data.Geo.Jord
 import Data.Maybe (fromJust)
 import Test.Hspec
 
--- | see <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf?sequence=1&isAllowed=y Some tactical algorithms for spherical geometry>
 spec :: Spec
 spec =
     describe "kinematics" $ do
@@ -57,3 +56,7 @@ spec =
                 let c = cpa84 t1 t2
                 fmap cpaTime c `shouldBe` Just (milliseconds 11396155)
                 fmap cpaDistance c `shouldBe` Just (kilometres 124.2317453)
+            it "returns Nothing if time to CPA is in the past" $ do
+                let t1 = Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400)
+                let t2 = Track (decimalLatLong 30.01 30) (decimalDegrees 315) (knots 400)
+                cpa84 t1 t2 `shouldBe` Nothing

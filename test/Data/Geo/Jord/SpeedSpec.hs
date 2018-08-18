@@ -23,7 +23,7 @@ spec = do
         it "converts metres per seconds to kilometres per hour" $
             toKilometresPerHour (metresPerSecond 100) `shouldBe` 360.0
         it "converts metres per seconds to miles per hour" $
-            toMilesPerHour (metresPerSecond 100) `shouldBe` 223.6936292054402
+            toMilesPerHour (metresPerSecond 100) `shouldBe` 223.69362920544023
         it "converts kilometres per hour to knots" $
             toKnots (kilometresPerHour 1000) `shouldBe` 539.9568034557235
         it "converts feet per second to kilometres per hour" $

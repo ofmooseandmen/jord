@@ -26,8 +26,8 @@ module Eval
 
 import Control.Monad.Fail
 import Data.Bifunctor
-import Data.Geo.Jord
 import Data.Either (rights)
+import Data.Geo.Jord
 import Data.List hiding (delete, insert, lookup)
 import Data.Maybe
 import Prelude hiding (fail, lookup)
@@ -40,6 +40,7 @@ data Value
     | Bool Bool -- ^ boolean
     | Cpa (Cpa (AngularPosition NVector)) -- ^ CPA
     | Dlt Delta -- ^ delta
+    | Dur Duration -- ^ duration
     | Double Double -- ^ double
     | Ep EcefPosition -- ^ ECEF position
     | Em Earth -- ^ earth model
@@ -59,49 +60,48 @@ data Value
 
 -- | show value.
 instance Show Value where
-    show (Ang a) = "angle: " ++ show a ++ " (" ++ show (toDecimalDegrees a) ++ ")"
+    show (Ang a) = "angle: " ++ showAng a
     show (Bool b) = show b
     show (Cpa c) =
-        "closest point of approach:\n" ++
-        "  time    : " ++
+        "closest point of approach:" ++
+        "\n      time    : " ++
         show (cpaTime c) ++
-        "\n  distance: " ++
-        show (cpaDistance c) ++
-        "\n  pos1: " ++
-        show (fromNVector . cpaPos1 $ c :: LatLong) ++
-        "\n  pos2: " ++ show (fromNVector . cpaPos2 $ c :: LatLong)
+        "\n      distance: " ++
+        showLen (cpaDistance c) ++
+        "\n      pos1    : " ++
+        showLl (fromNVector . cpaPos1 $ c :: LatLong) ++
+        "\n      pos2    : " ++ showLl (fromNVector . cpaPos2 $ c :: LatLong)
+    show (Dlt d) =
+        "Delta:" ++
+        "\n      x: " ++
+        showLen (dx d) ++ "\n      y: " ++ showLen (dy d) ++ "\n      z: " ++ showLen (dz d)
+    show (Dur d) = "duration: " ++ show d
     show (Double d) = show d
-    show (Dlt d) = "Delta: x=" ++ show (dx d) ++ ", y=" ++ show (dy d) ++ ", z=" ++ show (dz d)
     show (Em m) = "Earth model: " ++ show m
-    show (Ep p) = "ECEF: x=" ++ show (ex p) ++ ", y=" ++ show (ey p) ++ ", z=" ++ show (ez p)
+    show (Ep p) =
+        "ECEF:" ++
+        "\n      x: " ++
+        showLen (ex p) ++ "\n      y: " ++ showLen (ey p) ++ "\n      z: " ++ showLen (ez p)
     show (FrmB y p r) =
-        "Body (vehicle) frame: yaw=" ++ show y ++ ", pitch=" ++ show p ++ ", roll=" ++ show r
-    show (FrmL w) = "Local frame: wander azimuth=" ++ show w
-    show (FrmN) = "North, East, Down frame"
-    show (Len l) =
-        "length:\n" ++
-        "  " ++
-        show (toMetres l) ++
-        "m, " ++
-        show (toKilometres l) ++
-        "km\n" ++ "  " ++ show (toNauticalMiles l) ++ "nm, " ++ show (toFeet l) ++ "ft"
+        "Body (vehicle) frame:" ++
+        "\n      yaw  : " ++
+        showAng y ++ "\n      pitch: " ++ showAng p ++ "\n      roll : " ++ showAng r
+    show (FrmL w) = "Local frame:" ++ "\n      wander azimuth: " ++ showAng w
+    show FrmN = "North, East, Down frame"
+    show (Len l) = "length: " ++ showLen l
     show (Gc gc) = "great circle: " ++ show gc
-    show (Gp g) =
-        "latitude, longitude, height:\n" ++
-        "  " ++
-        show ll ++
-        "\n" ++
-        "  " ++
-        show (toDecimalDegrees (latitude ll)) ++
-        ", " ++ show (toDecimalDegrees (longitude ll)) ++ "\n  height: " ++ show h
+    show (Gp g) = "latlong: " ++ showLl ll ++ "\n      height : " ++ showLen h
       where
         ll = pos g
         h = height g
     show (Ned d) =
-        "North: " ++ show (north d) ++ ", East: " ++ show (east d) ++ ", Down: " ++ show (down d)
+        "NED:" ++
+        "\n      north: " ++
+        showLen (north d) ++
+        "\n      east : " ++ showLen (east d) ++ "\n      down : " ++ showLen (down d)
     show (Np nv) =
-        "n-vector:\n" ++
-        "  " ++ "x=" ++ show x ++ ", y=" ++ show y ++ ", z=" ++ show z ++ "\n  height: " ++ show h
+        "n-vector: " ++
+        show x ++ ", " ++ show y ++ ", " ++ show z ++ "\n      height  : " ++ showLen h
       where
         v = vec (pos nv)
         x = vx v
@@ -109,13 +109,41 @@ instance Show Value where
         z = vz v
         h = height nv
     show (Trk t) =
-        "track:\n" ++
-        "  pos      : " ++
-        show (fromNVector . trackPos $ t :: LatLong) ++
-        "\n  bearing: " ++ show (trackBearing t) ++ "\n  speed  : " ++ show (trackSpeed t)
-    show (Spd s) = "speed: " ++ show (toKilometresPerHour s) ++ "km/h, " ++ show (toKnots s) ++ "kt"
+        "track:" ++
+        "\n      position: " ++
+        showLl (fromNVector . trackPos $ t :: LatLong) ++
+        "\n      height  : " ++
+        showLen (height . trackPos $ t) ++
+        "\n      bearing : " ++
+        showAng (trackBearing t) ++ "\n      speed   : " ++ showSpd (trackSpeed t)
+    show (Spd s) = "speed: " ++ showSpd s
     show (Vals []) = "empty"
     show (Vals vs) = "\n  " ++ intercalate "\n\n  " (map show vs)
+
+showAng :: Angle -> String
+showAng a = show a ++ " (" ++ show (toDecimalDegrees a) ++ ")"
+
+showLl :: LatLong -> String
+showLl ll =
+    show ll ++
+    " (" ++
+    show (toDecimalDegrees (latitude ll)) ++ ", " ++ show (toDecimalDegrees (longitude ll)) ++ ")"
+
+showLen :: Length -> String
+showLen l =
+    show (toMetres l) ++
+    "m <-> " ++
+    show (toKilometres l) ++
+    "km <-> " ++ show (toNauticalMiles l) ++ "nm <-> " ++ show (toFeet l) ++ "ft"
+
+showSpd :: Speed -> String
+showSpd s =
+    show (toKilometresPerHour s) ++
+    "km/h <-> " ++
+    show (toMetresPerSecond s) ++
+    "m/s <-> " ++
+    show (toKnots s) ++
+    "kt <-> " ++ show (toMilesPerHour s) ++ "mph <-> " ++ show (toFeetPerSecond s) ++ "ft/s"
 
 -- | 'Either' an error or a 'Value'.
 type Result = Either String Value
@@ -212,6 +240,7 @@ functions =
     , "mean"
     , "ned"
     , "nedBetween"
+    , "position"
     , "surfaceDistance"
     , "target"
     , "targetN"
@@ -374,6 +403,10 @@ evalExpr (NedV a b c) vault =
         [Right (Len x), Right (Len y), Right (Len z)] -> Right (Ned (ned x y z))
         [Right (Double x), Right (Double y), Right (Double z)] -> Right (Ned (nedMetres x y z))
         r -> Left ("Call error: ned " ++ showErr r)
+evalExpr (Position a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Trk t), Right (Dur d)] -> Right (Np (position84 t d))
+        r -> Left ("Call error: position " ++ showErr r)
 evalExpr (SurfaceDistance a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Np p1), Right (Np p2)] -> Right (Len (surfaceDistance84 p1 p2))
@@ -427,6 +460,7 @@ tryRead s
                  [ readE readAngleE Ang
                  , readE readLengthE Len
                  , readE readSpeedE Spd
+                 , readE readDurationE Dur
                  , readE readLatLongE (\ll -> Np (toNVector (AngularPosition ll zero)))
                  , readE readEither Double
                  ])
@@ -577,6 +611,8 @@ data Expr
     | NedV Expr
            Expr
            Expr
+    | Position Expr
+               Expr
     | SurfaceDistance Expr
                       Expr
     | Target Expr
@@ -687,6 +723,10 @@ transform (Call "nedBetween" [e1, e2, Lit s]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (NedBetween p1 p2 s)
+transform (Call "position" [e1, e2]) = do
+    t <- transform e1
+    d <- transform e2
+    return (Position t d)
 transform (Call "surfaceDistance" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2

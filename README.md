@@ -8,7 +8,8 @@
 
 ## What is this?
 
-Jord is a [Haskell](https://www.haskell.org) library that implements various geographical position calculations using the algorithms described in [Gade, K. (2010). A Non-singular Horizontal Position Representation](http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf).
+Jord is a [Haskell](https://www.haskell.org) library that implements various geographical position calculations using the algorithms described in [Gade, K. (2010). A Non-singular Horizontal Position Representation](http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf) and in
+[Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry](https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf)
 
 - Transformation between ECEF (earth-centred, earth-fixed), Latitude/Longitude and N-Vector positions for spherical and ellipsoidal earth model
 - Transformation between Latitude/Longitude and N-Vector positions
@@ -72,18 +73,20 @@ $ jord-exe
 jord> finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E
 jord> angle: 126°0'0.0" (126.0)
 jord> f = frameB 10d 20d 30d
-jord> Body (vehicle) frame: yaw=10°0'0.000", pitch=20°0'0.000", roll=30°0'0.000"
+jord> Body (vehicle) frame:
+      yaw  : 10°0'0.000" (10.0)
+      pitch: 20°0'0.000" (20.0)
+      roll : 30°0'0.000" (30.0)
 jord> d = delta 3000 2000 100
-jord> Delta: x=3000.0m, y=2000.0m, z=100.0m
+jord> Delta:
+      x: 3000.0m <-> 3.0km <-> 1.6198704103671706nm <-> 9842.51968503937ft
+      y: 2000.0m <-> 2.0km <-> 1.079913606911447nm <-> 6561.679790026246ft
+      z: 100.0m <-> 0.1km <-> 5.399568034557235e-2nm <-> 328.0839895013123ft
 jord> p0 = geo 49.66618 3.45063 0
-jord> latitude, longitude, height:
-  49°39'58.248"N,3°27'2.268"E
-  49.66618, 3.45063
-  height: 0.0m
+jord> latlong: 49°39'58.248"N,3°27'2.268"E (49.66618, 3.45063)
+      height : 0.0m <-> 0.0km <-> 0.0nm <-> 0.0ft
 jord> target p0 f d wgs84
-jord> latitude, longitude, height:
-  49°41'30.486"N,3°28'52.561"E
-  49.69180166666667, 3.4812669444444446
-  height: 6.007m
+jord> latlong: 49°41'30.486"N,3°28'52.561"E (49.69180166666667, 3.4812669444444446)
+      height : 6.0077m <-> 6.0077e-3km <-> 3.24389848812095e-3nm <-> 19.71030183727034ft
 jord>  
 ```

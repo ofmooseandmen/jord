@@ -59,7 +59,7 @@ instance Quantity Speed where
 
 -- | 'Speed' from given amount of metres per second.
 metresPerSecond :: Double -> Speed
-metresPerSecond mps = kilometresPerHour (mps * 3.6)
+metresPerSecond mps = Speed (round (mps * 3600000.0))
 
 -- | 'Speed' from given amount of kilometres per hour.
 kilometresPerHour :: Double -> Speed
@@ -67,15 +67,15 @@ kilometresPerHour kph = Speed (round (kph * 1e+6))
 
 -- | 'Speed' from given amount of miles per hour.
 milesPerHour :: Double -> Speed
-milesPerHour mph = kilometresPerHour (mph * 1.609344)
+milesPerHour mph = Speed (round (mph * 1609344.0))
 
 -- | 'Speed' from given amount of knots.
 knots :: Double -> Speed
-knots kt = kilometresPerHour (kt * 1.852)
+knots kt = Speed (round (kt * 1852000.0))
 
 -- | 'Speed' from given amount of feet per second.
 feetPerSecond :: Double -> Speed
-feetPerSecond fps = kilometresPerHour (fps * 1.09728)
+feetPerSecond fps = Speed (round (fps * 1097280.0))
 
 -- | Obtains a 'Speed' from the given string formatted as (-)float[m/s|km/h|mph|kt] - e.g. 300m/s, 250km/h, -154mph, 400kt or 100ft/s.
 --
@@ -101,7 +101,7 @@ readSpeedF s =
 
 -- | @toMetresPerSecond s@ converts @s@ to metres per second.
 toMetresPerSecond :: Speed -> Double
-toMetresPerSecond s = toKilometresPerHour s / 3.6
+toMetresPerSecond (Speed s) = fromIntegral s / 3600000.0
 
 -- | @toKilometresPerHour s@ converts @s@ to kilometres per hour.
 toKilometresPerHour :: Speed -> Double
@@ -109,15 +109,15 @@ toKilometresPerHour (Speed s) = fromIntegral s / 1e+6
 
 -- | @toMilesPerHour s@ converts @s@ to miles per hour.
 toMilesPerHour :: Speed -> Double
-toMilesPerHour s = toKilometresPerHour s / 1.609344
+toMilesPerHour (Speed s) = fromIntegral s / 1609344.0
 
 -- | @toKnots s@ converts @s@ to knots.
 toKnots :: Speed -> Double
-toKnots s = toKilometresPerHour s / 1.852
+toKnots (Speed s) = fromIntegral s / 1852000.0
 
 -- | @toFeetPerSecond s@ converts @s@ to feet per second.
 toFeetPerSecond :: Speed -> Double
-toFeetPerSecond s = toKilometresPerHour s / 1.09728
+toFeetPerSecond (Speed s) = fromIntegral s / 1097280.0
 
 -- | Parses and returns a 'Speed'.
 speed :: ReadP Speed

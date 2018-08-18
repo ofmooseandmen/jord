@@ -10,7 +10,7 @@
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
--- and in <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf Some tactical algorithms for spherical geometry>
+-- and in <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry>
 --
 module Data.Geo.Jord.Kinematics
     (

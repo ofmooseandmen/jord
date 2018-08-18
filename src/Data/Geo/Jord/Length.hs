@@ -61,11 +61,11 @@ instance Quantity Length where
 
 -- | 'Length' from given amount of feet.
 feet :: Double -> Length
-feet ft = metres (ft * 0.3048)
+feet ft = Length (round (ft * 3048.0))
 
 -- | 'Length' from given amount of kilometres.
 kilometres :: Double -> Length
-kilometres km = metres (km * 1000.0)
+kilometres km = Length (round (km * 10000000.0))
 
 -- | 'Length' from given amount of metres.
 metres :: Double -> Length
@@ -73,7 +73,7 @@ metres m = Length (round (m * 10000.0))
 
 -- | 'Length' from given amount of nautical miles.
 nauticalMiles :: Double -> Length
-nauticalMiles nm = metres (nm * 1852.0)
+nauticalMiles nm = Length (round (nm * 18520000.0))
 
 -- | Obtains a 'Length' from the given string formatted as (-)float[m|km|nm|ft] - e.g. 3000m, 2.5km, -154nm or 10000ft.
 --
@@ -99,19 +99,19 @@ readLengthF s =
 
 -- | @toFeet l@ converts @l@ to feet.
 toFeet :: Length -> Double
-toFeet l = toMetres l / 0.3048
+toFeet (Length l) = fromIntegral l / 3048.0
 
 -- | @toKilometres l@ converts @l@ to kilometres.
 toKilometres :: Length -> Double
-toKilometres l = toMetres l / 1000.0
+toKilometres (Length l) = fromIntegral l / 10000000.0
 
 -- | @toMetres l@ converts @l@ to metres.
 toMetres :: Length -> Double
-toMetres (Length mm) = fromIntegral mm / 10000.0
+toMetres (Length l) = fromIntegral l / 10000.0
 
 -- | @toNauticalMiles l@ converts @l@ to nautical miles.
 toNauticalMiles :: Length -> Double
-toNauticalMiles l = toMetres l / 1852.0
+toNauticalMiles (Length l) = fromIntegral l / 18520000.0
 
 -- | Parses and returns a 'Length'.
 length :: ReadP Length

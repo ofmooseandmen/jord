@@ -24,20 +24,20 @@ spec =
                 let p2 = interpolate p1 px 0.25
                 let b1 = fromJust (initialBearing p1 px)
                 let b2 = fromJust (initialBearing p2 px)
-                let s = knots 400
-                let t1 = Track p1 b1 s
-                let t2 = Track p2 b2 s
+                let t1 = Track p1 b1 (knots 400)
+                let t2 = Track p2 b2 (knots 400)
                 let c = cpa84 t1 t2
-                fmap cpaTime c `shouldBe` Just (milliseconds 4175)
+                -- any time is correct but it should be close to zero since that's
+                -- our initial value
+                fmap (\r -> toMilliseconds (cpaTime r) < 5000) c `shouldBe` Just True
                 fmap cpaDistance c `shouldBe` Just (metres 250.0036)
             it "handles heading tracks" $ do
                 let p1 = decimalLatLong 20 30
                 let p2 = decimalLatLong 21 31
                 let b1 = fromJust (initialBearing p1 p2)
                 let b2 = fromJust (initialBearing p2 p1)
-                let s = knots 400
-                let t1 = Track p1 b1 s
-                let t2 = Track p2 b2 s
+                let t1 = Track p1 b1 (knots 400)
+                let t2 = Track p2 b2 (knots 400)
                 let c = cpa84 t1 t2
                 -- distance between p1 and p2 = 152.354309 km
                 -- speed = 740.8 km/h

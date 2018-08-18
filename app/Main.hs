@@ -132,6 +132,7 @@ help =
     "     derived from the WGS84 ellipsoid: " ++
     show r84 ++
     "\n" ++
+    "\n     position track duration        position of track after duration\n" ++
     "\n     cpa track1 track2              closest point of approach between two tracks\n" ++
     "\n  Constructors and conversions:\n\n" ++
     "     ecef len len len               Earth-centred earth-fixed position from x, y, z lengths\n" ++
@@ -164,7 +165,8 @@ help =
     "    d°m's    - 55°36'21.154\n" ++
     "    decimal° - 51.885°\n" ++
     "\n  Supported length formats: {l}m, {l}km, {l}nm, {l}ft\n" ++
-    "\n  Supported speed formats: {s}m/s, {s}km/h, {s}mph, {s}kt\n" ++
+    "\n  Supported speed formats: {s}m/s, {s}km/h, {s}mph, {s}kt, {s}ft/s\n" ++
+    "\n  Supported duration formats: (-)nHnMn.nS\n" ++
     "\n  Supported earth models:\n\n" ++
     "    ellipsoidal: wgs84, grs80, wgs72\n" ++
     "    spherical  : s84, s80, s72\n" ++

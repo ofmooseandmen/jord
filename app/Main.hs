@@ -155,7 +155,7 @@ help =
     "     toNVector pos                  n-vector corresponding to pos\n" ++
     "     greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
     "     greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
-    "     greatCircle track              great circle from track"
+    "     greatCircle track              great circle from track\n" ++
     "     track pos ang spd              track at pos, heading on bearing ang and travelling at speed spd\n" ++
     "\n  Supported lat/long formats:\n\n" ++
     "    DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++

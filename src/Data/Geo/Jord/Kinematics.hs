@@ -47,6 +47,10 @@ data Track a = Track
     , trackSpeed :: Speed -- ^ speed of the track
     } deriving (Eq, Show)
 
+-- | 'GreatCircle' from track.
+instance (NTransform a, Show a) => IsGreatCircle (Track a) where
+    greatCircleE t = greatCircleE (trackPos t, trackBearing t)
+
 -- | 'Course' represents the cardinal direction in which the vehicle is to be steered.
 newtype Course =
     Course Vector3d
@@ -175,7 +179,8 @@ cpaFt :: Double -> Double -> Double -> Double -> Double -> Double -> Double -> D
 cpaFt cw1t cw2t sw1t sw2t a b c d =
     a * sw1t * sw2t + b * cw1t * cw2t + c * sw1t * cw2t + d * cw1t * sw2t
 
-cpaDft :: Double
+cpaDft ::
+       Double
     -> Double
     -> Double
     -> Double
@@ -207,7 +212,8 @@ cpaStep v10 c10 w1 v20 c20 w2 t =
 cpaNr :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double
 cpaNr v10 c10 w1 v20 c20 w2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
 
-cpaNrRec :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
+cpaNrRec ::
+       Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     | i == 50 = ti1
     | abs fi < 1e-12 = ti1

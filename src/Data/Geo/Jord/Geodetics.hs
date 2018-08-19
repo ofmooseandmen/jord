@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 -- |
 -- Module:      Data.Geo.Jord.Geodetics
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -15,11 +17,7 @@ module Data.Geo.Jord.Geodetics
     (
     -- * The 'GreatCircle' type
       GreatCircle
-    -- * Smart constructors
-    , greatCircle
-    , greatCircleE
-    , greatCircleF
-    , greatCircleBearing
+    , IsGreatCircle(..)
     -- * Calculations
     , angularDistance
     , antipode
@@ -69,57 +67,55 @@ data GreatCircle = GreatCircle
 instance Show GreatCircle where
     show = dscr
 
--- | 'GreatCircle' passing by both given positions. 'error's if given positions are
+-- | Class for data from which a 'GreatCircle' can be computed.
+class (Show a) =>
+      IsGreatCircle a
+    where
+    greatCircle :: a -> GreatCircle -- ^ 'GreatCircle' from @a@, if 'greateCircleE' returns a 'Left', this function 'error's.
+    greatCircle a = fromMaybe (error (show a ++ " do not define a Great Circle")) (greatCircleF a)
+    greatCircleE :: a -> Either String GreatCircle -- ^ 'GreatCircle' from @a@, A 'Left' indicates an error.
+    greatCircleF :: (MonadFail m) => a -> m GreatCircle -- ^ 'GreatCircle' from @a@, if 'greateCircleE' returns a 'Left', this function 'fail's.
+    greatCircleF a =
+        case e of
+            Left err -> fail err
+            Right gc -> return gc
+      where
+        e = greatCircleE a
+
+-- | 'GreatCircle' passing by both given positions'. A 'Left' indicates that given positions are
 -- equal or antipodal.
 --
 -- @
 --     let p1 = decimalLatLongHeight 45.0 (-143.5) (metres 1500)
 --     let p2 = decimalLatLongHeight 46.0 14.5 (metres 3000)
---     greatCircle p1 p2 -- heights are ignored, great circle are always at earth surface.
+--     greatCircle (p1, p2) -- heights are ignored, great circle are always at earth surface.
 -- @
-greatCircle :: (NTransform a, Show a) => a -> a -> GreatCircle
-greatCircle p1 p2 =
-    fromMaybe
-        (error (show p1 ++ " and " ++ show p2 ++ " do not define a unique Great Circle"))
-        (greatCircleF p1 p2)
-
--- | 'GreatCircle' passing by both given positions. A 'Left' indicates that given positions are
--- equal or antipodal.
-greatCircleE :: (NTransform a) => a -> a -> Either String GreatCircle
-greatCircleE p1 p2
-    | v1 == v2 = Left "Invalid Great Circle: positions are equal"
-    | (realToFrac (vnorm (vadd v1 v2)) :: Nano) == 0 =
-        Left "Invalid Great Circle: positions are antipodal"
-    | otherwise =
-        Right (GreatCircle (vcross v1 v2) ("passing by " ++ show (ll p1) ++ " & " ++ show (ll p2)))
-  where
-    v1 = vector3d p1
-    v2 = vector3d p2
-
--- | 'GreatCircle' passing by both given positions. 'fail's if given positions are
--- equal or antipodal.
-greatCircleF :: (NTransform a, MonadFail m) => a -> a -> m GreatCircle
-greatCircleF p1 p2 =
-    case e of
-        Left err -> fail err
-        Right gc -> return gc
-  where
-    e = greatCircleE p1 p2
+instance (NTransform a, Show a) => IsGreatCircle (a, a) where
+    greatCircleE (p1, p2)
+        | v1 == v2 = Left "Invalid Great Circle: positions are equal"
+        | (realToFrac (vnorm (vadd v1 v2)) :: Nano) == 0 =
+            Left "Invalid Great Circle: positions are antipodal"
+        | otherwise =
+            Right
+                (GreatCircle (vcross v1 v2) ("passing by " ++ show (ll p1) ++ " & " ++ show (ll p2)))
+      where
+        v1 = vector3d p1
+        v2 = vector3d p2
 
 -- | 'GreatCircle' passing by the given position and heading on given bearing.
 --
 -- @
---     greatCircleBearing (readLatLong "283321N0290700W") (decimalDegrees 33.0)
+--     greatCircle (readLatLong "283321N0290700W", decimalDegrees 33.0)
 -- @
-greatCircleBearing :: (NTransform a) => a -> Angle -> GreatCircle
-greatCircleBearing p b =
-    GreatCircle (vsub n' e') ("passing by " ++ show (ll p) ++ " heading on " ++ show b)
-  where
-    v = vector3d p
-    e = vcross (vec northPole) v -- easting
-    n = vcross v e -- northing
-    e' = vscale e (cos' b / vnorm e)
-    n' = vscale n (sin' b / vnorm n)
+instance (NTransform a, Show a) => IsGreatCircle (a, Angle) where
+    greatCircleE (p, b) =
+        Right (GreatCircle (vsub n' e') ("passing by " ++ show (ll p) ++ " heading on " ++ show b))
+      where
+        v = vector3d p
+        e = vcross (vec northPole) v -- easting
+        n = vcross v e -- northing
+        e' = vscale e (cos' b / vnorm e)
+        n' = vscale n (sin' b / vnorm n)
 
 -- | @angularDistance p1 p2 n@ computes the angle between the horizontal positions @p1@ and @p2@.
 -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
@@ -204,8 +200,8 @@ finalBearing p1 p2 = fmap (\b -> normalise b (decimalDegrees 180)) (initialBeari
 -- Returns 'Nothing' if both horizontal positions are equals.
 initialBearing :: (Eq a, NTransform a) => a -> a -> Maybe Angle
 initialBearing p1 p2
-   | p1 == p2 = Nothing
-   | otherwise = Just (normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360))
+    | p1 == p2 = Nothing
+    | otherwise = Just (normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360))
   where
     v1 = vector3d p1
     v2 = vector3d p2

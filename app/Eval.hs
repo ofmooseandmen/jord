@@ -357,10 +357,11 @@ evalExpr (Geo as) vault =
         r -> Left ("Call error: geo " ++ showErr r)
   where
     vs = map (`evalExpr` vault) as
-evalExpr (GreatCircleE a b) vault =
-    case [evalExpr a vault, evalExpr b vault] of
-        [Right (Np p1), Right (Np p2)] -> bimap id Gc (greatCircleE p1 p2)
-        [Right (Np p), Right (Ang a')] -> Right (Gc (greatCircleBearing p a'))
+evalExpr (GreatCircleE as) vault =
+    case fmap (`evalExpr` vault) as of
+        [Right (Np p1), Right (Np p2)] -> bimap id Gc (greatCircleE (p1, p2))
+        [Right (Np p), Right (Ang a')] -> bimap id Gc (greatCircleE (p, a'))
+        [Right (Trk t)] -> bimap id Gc (greatCircleE t)
         r -> Left ("Call error: greatCircle " ++ showErr r)
 evalExpr (InitialBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
@@ -594,8 +595,7 @@ data Expr
     | FromEcef Expr
                String
     | Geo [Expr]
-    | GreatCircleE Expr
-                   Expr
+    | GreatCircleE [Expr]
     | InitialBearing Expr
                      Expr
     | Interpolate Expr
@@ -685,10 +685,9 @@ transform (Call "finalBearing" [e1, e2]) = do
 transform (Call "geo" e) = do
     ps <- mapM transform e
     return (Geo ps)
-transform (Call "greatCircle" [e1, e2]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    return (GreatCircleE p1 p2)
+transform (Call "greatCircle" e) = do
+    ps <- mapM transform e
+    return (GreatCircleE ps)
 transform (Call "initialBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2

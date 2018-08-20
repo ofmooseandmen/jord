@@ -29,6 +29,8 @@ module Data.Geo.Jord.Kinematics
     , position84
     , cpa
     , cpa84
+    , intercept
+    , intercept84
     , interceptByTime
     , interceptByTime84
     ) where
@@ -128,7 +130,7 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2) r
   where
     c1 = course p1 b1
     c2 = course p2 b2
-    t = timeToCpa p1 c1 s1 p2 c2 s2
+    t = timeToCpa p1 c1 s1 p2 c2 s2 r
     cp1 = positionC p1 s1 c1 t r
     cp2 = positionC p2 s2 c2 t r
     d = surfaceDistance cp1 cp2 r
@@ -137,8 +139,24 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2) r
 cpa84 :: (NTransform a) => Track a -> Track a -> Maybe (Cpa a)
 cpa84 t1 t2 = cpa t1 t2 r84
 
+
+-- | @intercept t p r@ computes the __minimum__ speed of interceptor at
+-- position @p@ needed for an intercept with target track @t@ to take place
+-- using the earth radius @r@. Intercept time, position, distance and interceptor
+-- bearing are derived from this minimum speed. Returns 'Nothing' if intercept
+-- cannot be achieved.
+intercept :: (NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
+intercept (Track tp tb ts) p r = Nothing
+  where
+      ct0 = course tp tb
+      t = timeToIntercept tp ts ct0 p r
+
+-- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
+intercept84 :: (NTransform a) => Track a -> a -> Maybe (Intercept a)
+intercept84 t p = intercept t p r84
+
 -- | @interceptByTime t p d r@ computes the speed of interceptor at
--- position @p@ need for an intercept with target track @t@ to take place
+-- position @p@ needed for an intercept with target track @t@ to take place
 -- after duration @d@ and using the earth radius @r@. Returns 'Nothing' if
 -- given duration is <= 0.
 interceptByTime :: (Eq a, NTransform a) => Track a -> a -> Duration -> Length -> Maybe (Intercept a)
@@ -167,15 +185,23 @@ positionC p0 s c sec r = fromNVector (nvectorHeight (nvector (vx v1) (vy v1) (vz
     v1 = vadd (vscale v0 (cos (w * sec))) (vscale vc (sin (w * sec)))
 
 -- | time to CPA.
-timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Double
-timeToCpa p1 c1 s1 p2 c2 s2 = cpaNr v10 c10 w1 v20 c20 w2
+timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Length -> Double
+timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNr v10 c10 w1 v20 c20 w2
   where
     v10 = vec . pos . toNVector $ p1
     c10 = vec c1
-    w1 = toMetresPerSecond s1 / toMetres r84
+    w1 = toMetresPerSecond s1 / toMetres r
     v20 = vec . pos . toNVector $ p2
     c20 = vec c2
-    w2 = toMetresPerSecond s2 / toMetres r84
+    w2 = toMetresPerSecond s2 / toMetres r
+
+-- | time to intercept.
+timeToIntercept :: (NTransform a) => a -> Speed -> Course -> a -> Length -> Double
+timeToIntercept p2 s2 c20 p1 r = intNr v10 v20 (vec c20) w2
+    where
+        v10 = vec . pos . toNVector $ p1
+        v20 = vec . pos . toNVector $ p2
+        w2 = toMetresPerSecond s2 / toMetres r
 
 rx :: Angle -> [Vector3d]
 rx a = [Vector3d 1 0 0, Vector3d 0 c s, Vector3d 0 (-s) c]
@@ -252,4 +278,28 @@ cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     | otherwise = cpaNrRec v10 c10 w1 v20 c20 w2 ti1 (i + 1)
   where
     fi = cpaStep v10 c10 w1 v20 c20 w2 ti
+    ti1 = ti - fi
+
+intFt :: Double -> Double -> Double -> Vector3d -> Vector3d -> Vector3d -> Double
+intFt w2 cw2t sw2t v10 v20 c20 = (vdot v10 (vscale v20 sw2t) - vdot v10 (vscale c20 cw2t)) * (-w2)
+
+intDft :: Double -> Double -> Double -> Vector3d -> Vector3d -> Vector3d -> Double
+intDft cw2t sw2t v10 v20 c20 = undefined
+
+intStep :: Vector3d -> Vector3d -> Vector3d -> Double -> Double -> Double
+intStep v10 v20 c20 w2 t = intFt w2 cw2t sw2t v10 v20 c20 / intDft w2 cw2t sw2t v10 v20 c20
+  where
+      cw2t = cos (w2 * t)
+      sw2t = sin (w2 * t)
+
+intNr :: Vector3d -> Vector3d -> Vector3d -> Double -> Double
+intNr v10 v20 c20 w2 = intNrRec v10 v20 c20 w2 0 0
+
+intNrRec :: Vector3d -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
+intNrRec v10 v20 c20 w2 ti i
+   | i == 50 = ti1
+   | abs fi < 1e-12 = ti1
+   | otherwise = intNrRec v10 v20 c20 w2 ti1 (i + 1)
+  where
+    fi = intStep v10 v20 c20 w2 ti
     ti1 = ti - fi

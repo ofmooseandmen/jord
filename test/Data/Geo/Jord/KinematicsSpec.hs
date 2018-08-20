@@ -60,3 +60,26 @@ spec =
                 let t1 = Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400)
                 let t2 = Track (decimalLatLong 30.01 30) (decimalDegrees 315) (knots 400)
                 cpa84 t1 t2 `shouldBe` Nothing
+        describe "interceptByTime" $ do
+            it "returns Nothing if duration is zero" $ do
+                interceptByTime84
+                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
+                    (decimalLatLong 34 (-50))
+                    zero `shouldBe`
+                    Nothing
+            it "returns Nothing if duration is negative" $ do
+                interceptByTime84
+                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
+                    (decimalLatLong 34 (-50))
+                    (seconds (-1)) `shouldBe`
+                    Nothing
+            it "returns the speed needed for intercept to take place" $ do
+                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+                let ip = (decimalLatLong 20 (-60))
+                let d = seconds 2700
+                let i = interceptByTime84 t ip d
+                fmap interceptorSpeed i `shouldBe` Just (knots 730.959238)
+                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 26.1199030)
+                fmap interceptPosition i `shouldBe` Just (decimalLatLong 28.1366797 (-55.4559475))
+                fmap interceptDistance i `shouldBe` Just (metres 1015302.3815)
+                fmap interceptTime i `shouldBe` Just (seconds 2700)

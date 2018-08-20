@@ -19,13 +19,18 @@ module Data.Geo.Jord.Kinematics
     -- * The 'Course' type.
     , Course
     -- * The 'Cpa' type.
-    , Cpa(cpaTime, cpaDistance, cpaPos1, cpaPos2)
+    , Cpa(cpaTime, cpaDistance, cpaPosition1, cpaPosition2)
+    -- * The 'Intercept' type.
+    , Intercept(interceptTime, interceptDistance, interceptPosition,
+          interceptorBearing, interceptorSpeed)
     -- * Calculations
     , course
     , position
     , position84
     , cpa
     , cpa84
+    , interceptByTime
+    , interceptByTime84
     ) where
 
 import Data.Geo.Jord.Angle
@@ -59,12 +64,21 @@ newtype Course =
 instance IsVector3d Course where
     vec (Course v) = v
 
--- | Time to, and distance at, closest point of approach (CPA) as well as position of both track at CPA.
+-- | Time to, and distance at, closest point of approach (CPA) as well as position of both tracks at CPA.
 data Cpa a = Cpa
     { cpaTime :: Duration -- ^ time to CPA
     , cpaDistance :: Length -- ^ distance at CPA
-    , cpaPos1 :: a -- position of track 1 at CPA
-    , cpaPos2 :: a -- position of track 2 at CPA
+    , cpaPosition1 :: a -- position of track 1 at CPA
+    , cpaPosition2 :: a -- position of track 2 at CPA
+    } deriving (Eq, Show)
+
+-- | Time, distance and position of intercept as well as speed and initial bearing of interceptor.
+data Intercept a = Intercept
+    { interceptTime :: Duration -- ^ time to intercept
+    , interceptDistance :: Length -- ^ distance at intercept
+    , interceptPosition :: a -- ^ position of intercept
+    , interceptorBearing :: Angle -- ^ initial bearing of interceptor
+    , interceptorSpeed :: Speed -- ^ speed of interceptor
     } deriving (Eq, Show)
 
 -- | @course p b@ computes the course of a vehicle currently at position @p@ and following bearing @b@.
@@ -122,6 +136,24 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2) r
 -- | 'cpa' using the mean radius of the WGS84 reference ellipsoid.
 cpa84 :: (NTransform a) => Track a -> Track a -> Maybe (Cpa a)
 cpa84 t1 t2 = cpa t1 t2 r84
+
+-- | @interceptByTime t p d r@ computes the speed of interceptor at
+-- position @p@ need for an intercept with target track @t@ to take place
+-- after duration @d@ and using the earth radius @r@. Returns 'Nothing' if
+-- given duration is <= 0.
+interceptByTime :: (Eq a, NTransform a) => Track a -> a -> Duration -> Length -> Maybe (Intercept a)
+interceptByTime t p d r
+    | toMilliseconds d <= 0 = Nothing
+    | otherwise = fmap (\b -> Intercept d idist ipos b is) ib
+  where
+    ipos = position t d r
+    idist = surfaceDistance p ipos r
+    ib = initialBearing p ipos
+    is = metresPerSecond (toMetres idist / toSeconds d)
+
+-- | 'interceptByTime' using the mean radius of the WGS84 reference ellipsoid.
+interceptByTime84 :: (Eq a, NTransform a) => Track a -> a -> Duration -> Maybe (Intercept a)
+interceptByTime84 t p d = interceptByTime t p d r84
 
 -- | position from speed and course.
 positionC :: (NTransform a) => a -> Speed -> Course -> Double -> Length -> a

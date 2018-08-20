@@ -69,8 +69,8 @@ instance Show Value where
         "\n      distance: " ++
         showLen (cpaDistance c) ++
         "\n      pos1    : " ++
-        showLl (fromNVector . cpaPos1 $ c :: LatLong) ++
-        "\n      pos2    : " ++ showLl (fromNVector . cpaPos2 $ c :: LatLong)
+        showLl (fromNVector . cpaPosition1 $ c :: LatLong) ++
+        "\n      pos2    : " ++ showLl (fromNVector . cpaPosition2 $ c :: LatLong)
     show (Dlt d) =
         "Delta:" ++
         "\n      x: " ++

@@ -307,10 +307,12 @@ cpaStep v10 c10 w1 v20 c20 w2 t =
     d = cpaD v10 c10 w1 v20 c20 w2
 
 -- | Newton-Raphson for CPA time.
+-- note: this should always converge to the minimum time given
+-- that the assumptions made in the proof of quadratic convergence are met
 cpaNrRec ::
        Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
-    | i == 50 = (-1.0) -- no convergence
+    | i == 50 = -1.0 -- no convergence
     | abs fi < 1e-12 = ti1
     | otherwise = cpaNrRec v10 c10 w1 v20 c20 w2 ti1 (i + 1)
   where
@@ -318,6 +320,8 @@ cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     ti1 = ti - fi
 
 -- | Newton-Raphson for min speed intercept.
+-- note: this should always converge to the minimum time given
+-- that the assumptions made in the proof of quadratic convergence are met
 intMinNrRec ::
        Vector3d
     -> Vector3d
@@ -330,7 +334,7 @@ intMinNrRec ::
     -> Int
     -> Double
 intMinNrRec v10 v20 c20 s2 w2 r si ti i
-    | i == 50 = (-1.0) -- no convergence
+    | i == 50 = -1.0 -- no convergence
     | abs fi < 1e-12 = ti1
     | otherwise = intMinNrRec v10 v20 c20 s2 w2 r si1 ti1 (i + 1)
   where
@@ -357,9 +361,9 @@ d2sdt2 s w2 v10v20 v10c20 sinw2t cosw2t =
     ((-1.0) / sin s) * (cos s / (sins * sins) * x10d2x2dt2 * x10d2x2dt2 + x10d2x2dt2)
   where
     sins = sin s
-    x10d2x2dt2 = ((negate (w2 * w2)) * (v10v20 * cosw2t + v10c20 * sinw2t))
+    x10d2x2dt2 = negate (w2 * w2) * (v10v20 * cosw2t + v10c20 * sinw2t)
 
 -- | angle in radians between 2 n-vectors (as vector3d), copied from Geodetics
--- without the sign and returing radians
+-- without the sign and returing radians.
 ad :: Vector3d -> Vector3d -> Double
 ad v1 v2 = atan2 (vnorm (vcross v1 v2)) (vdot v1 v2)

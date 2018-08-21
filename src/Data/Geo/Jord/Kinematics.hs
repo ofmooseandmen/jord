@@ -19,10 +19,18 @@ module Data.Geo.Jord.Kinematics
     -- * The 'Course' type.
     , Course
     -- * The 'Cpa' type.
-    , Cpa(cpaTime, cpaDistance, cpaPosition1, cpaPosition2)
+    , Cpa
+    , cpaTime
+    , cpaDistance
+    , cpaPosition1
+    , cpaPosition2
     -- * The 'Intercept' type.
-    , Intercept(interceptTime, interceptDistance, interceptPosition,
-          interceptorBearing, interceptorSpeed)
+    , Intercept
+    , interceptTime
+    , interceptDistance
+    , interceptPosition
+    , interceptorBearing
+    , interceptorSpeed
     -- * Calculations
     , course
     , position
@@ -50,8 +58,8 @@ import Data.Geo.Jord.Vector3d
 -- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
 data Track a = Track
     { trackPos :: a -- ^ position of the track.
-    , trackBearing :: Angle -- ^ bearing of the track
-    , trackSpeed :: Speed -- ^ speed of the track
+    , trackBearing :: Angle -- ^ bearing of the track.
+    , trackSpeed :: Speed -- ^ speed of the track.
     } deriving (Eq, Show)
 
 -- | 'GreatCircle' from track.
@@ -68,19 +76,19 @@ instance IsVector3d Course where
 
 -- | Time to, and distance at, closest point of approach (CPA) as well as position of both tracks at CPA.
 data Cpa a = Cpa
-    { cpaTime :: Duration -- ^ time to CPA
-    , cpaDistance :: Length -- ^ distance at CPA
-    , cpaPosition1 :: a -- position of track 1 at CPA
-    , cpaPosition2 :: a -- position of track 2 at CPA
+    { cpaTime :: Duration -- ^ time to CPA.
+    , cpaDistance :: Length -- ^ distance at CPA.
+    , cpaPosition1 :: a -- ^ position of track 1 at CPA.
+    , cpaPosition2 :: a -- ^ position of track 2 at CPA.
     } deriving (Eq, Show)
 
 -- | Time, distance and position of intercept as well as speed and initial bearing of interceptor.
 data Intercept a = Intercept
-    { interceptTime :: Duration -- ^ time to intercept
-    , interceptDistance :: Length -- ^ distance at intercept
-    , interceptPosition :: a -- ^ position of intercept
-    , interceptorBearing :: Angle -- ^ initial bearing of interceptor
-    , interceptorSpeed :: Speed -- ^ speed of interceptor
+    { interceptTime :: Duration -- ^ time to intercept.
+    , interceptDistance :: Length -- ^ distance at intercept.
+    , interceptPosition :: a -- ^ position of intercept.
+    , interceptorBearing :: Angle -- ^ initial bearing of interceptor.
+    , interceptorSpeed :: Speed -- ^ speed of interceptor.
     } deriving (Eq, Show)
 
 -- | @course p b@ computes the course of a vehicle currently at position @p@ and following bearing @b@.
@@ -99,10 +107,10 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
 --     let b = decimalDegrees 96.0217
 --     let s = kilometresPerHour 124.8
 --     let p1 = decimalLatLongHeight 53.1882691 0.1332741 (metres 15000)
---     position (Track p0 b s) (hours 1) = p1
+--     position (Track p0 b s) (hours 1) r84 = p1
 -- @
 position :: (NTransform a) => Track a -> Duration -> Length -> a
-position (Track p0 b s) d = positionC p0 s (course p0 b) (toSeconds d)
+position (Track p0 b s) d = position' p0 s (course p0 b) (toSeconds d)
 
 -- | 'position' using the mean radius of the WGS84 reference ellipsoid.
 position84 :: (NTransform a) => Track a -> Duration -> a
@@ -119,7 +127,7 @@ position84 t d = position t d r84
 --     let s2 = knots 300
 --     let t1 = Track p1 b1 s1
 --     let t2 = Track p2 b2 s2
---     let c = cpa84 t1 t2
+--     let c = cpa t1 t2 r84
 --     fmap cpaTime c = Just (milliseconds 11396155)
 --     fmap cpaDistance c = Just (kilometres 124.2317453)
 -- @
@@ -131,34 +139,55 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2) r
     c1 = course p1 b1
     c2 = course p2 b2
     t = timeToCpa p1 c1 s1 p2 c2 s2 r
-    cp1 = positionC p1 s1 c1 t r
-    cp2 = positionC p2 s2 c2 t r
+    cp1 = position' p1 s1 c1 t r
+    cp2 = position' p2 s2 c2 t r
     d = surfaceDistance cp1 cp2 r
 
 -- | 'cpa' using the mean radius of the WGS84 reference ellipsoid.
 cpa84 :: (NTransform a) => Track a -> Track a -> Maybe (Cpa a)
 cpa84 t1 t2 = cpa t1 t2 r84
 
-
 -- | @intercept t p r@ computes the __minimum__ speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place
 -- using the earth radius @r@. Intercept time, position, distance and interceptor
 -- bearing are derived from this minimum speed. Returns 'Nothing' if intercept
 -- cannot be achieved.
-intercept :: (NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
-intercept (Track tp tb ts) p r = Nothing
+--
+-- @
+--     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+--     let ip = (decimalLatLong 20 (-60))
+--     let i = intercept t ip r84
+--     fmap interceptorSpeed i = Just (knots 52.837096)
+--     fmap interceptTime i = Just (seconds 5947.698)
+-- @
+intercept :: (Eq a, NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
+intercept t@(Track tp tb ts) p r
+    | d <= 0 = Nothing
+    | otherwise = interceptByTime t p (seconds d) r
   where
-      ct0 = course tp tb
-      t = timeToIntercept tp ts ct0 p r
+    ct0 = course tp tb
+    d = timeToIntercept tp ts ct0 p r
 
 -- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
-intercept84 :: (NTransform a) => Track a -> a -> Maybe (Intercept a)
+intercept84 :: (Eq a, NTransform a) => Track a -> a -> Maybe (Intercept a)
 intercept84 t p = intercept t p r84
 
 -- | @interceptByTime t p d r@ computes the speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place
 -- after duration @d@ and using the earth radius @r@. Returns 'Nothing' if
 -- given duration is <= 0.
+--
+-- @
+--     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+--     let ip = (decimalLatLong 20 (-60))
+--     let d = seconds 2700
+--     let i = interceptByTime t ip d r84
+--     fmap interceptorSpeed i = Just (knots 730.959238)
+--     fmap interceptorBearing i = Just (decimalDegrees 26.1199030)
+--     fmap interceptPosition i = Just (decimalLatLong 28.1366797 (-55.4559475))
+--     fmap interceptDistance i = Just (metres 1015302.3815)
+--     fmap interceptTime i = Just (seconds 2700)
+-- @
 interceptByTime :: (Eq a, NTransform a) => Track a -> a -> Duration -> Length -> Maybe (Intercept a)
 interceptByTime t p d r
     | toMilliseconds d <= 0 = Nothing
@@ -173,35 +202,45 @@ interceptByTime t p d r
 interceptByTime84 :: (Eq a, NTransform a) => Track a -> a -> Duration -> Maybe (Intercept a)
 interceptByTime84 t p d = interceptByTime t p d r84
 
--- | position from speed and course.
-positionC :: (NTransform a) => a -> Speed -> Course -> Double -> Length -> a
-positionC p0 s c sec r = fromNVector (nvectorHeight (nvector (vx v1) (vy v1) (vz v1)) h0)
+-- | position from speed course and seconds.
+position' :: (NTransform a) => a -> Speed -> Course -> Double -> Length -> a
+position' p0 s c sec r = fromNVector (nvectorHeight (nvector (vx v1) (vy v1) (vz v1)) h0)
   where
     nv0 = toNVector p0
-    v0 = vec . pos $ nv0
+    v0 = vec . pos $nv0
     h0 = height nv0
+    v1 = position'' v0 s (vec c) sec r
+
+-- | position from speed course and seconds.
+position'' :: Vector3d -> Speed -> Vector3d -> Double -> Length -> Vector3d
+position'' v0 s c sec r = v1
+  where
     w = toMetresPerSecond s / toMetres r
-    vc = vec c
-    v1 = vadd (vscale v0 (cos (w * sec))) (vscale vc (sin (w * sec)))
+    v1 = vadd (vscale v0 (cos (w * sec))) (vscale c (sin (w * sec)))
 
 -- | time to CPA.
 timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Length -> Double
-timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNr v10 c10 w1 v20 c20 w2
+timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
   where
     v10 = vec . pos . toNVector $ p1
     c10 = vec c1
-    w1 = toMetresPerSecond s1 / toMetres r
+    rm = toMetres r
+    w1 = toMetresPerSecond s1 / rm
     v20 = vec . pos . toNVector $ p2
     c20 = vec c2
-    w2 = toMetresPerSecond s2 / toMetres r
+    w2 = toMetresPerSecond s2 / rm
 
--- | time to intercept.
+-- | time to intercept with minimum speed.
 timeToIntercept :: (NTransform a) => a -> Speed -> Course -> a -> Length -> Double
-timeToIntercept p2 s2 c20 p1 r = intNr v10 v20 (vec c20) w2
-    where
-        v10 = vec . pos . toNVector $ p1
-        v20 = vec . pos . toNVector $ p2
-        w2 = toMetresPerSecond s2 / toMetres r
+timeToIntercept p2 s2 c20 p1 r = intMinNrRec v10 v20 (vec c20) s2 w2 r s0 t0 0
+  where
+    v10 = vec . pos . toNVector $ p1
+    v20 = vec . pos . toNVector $ p2
+    s2mps = toMetresPerSecond s2
+    rm = toMetres r
+    w2 = s2mps / rm
+    s0 = ad v10 v20
+    t0 = rm * s0 / s2mps
 
 rx :: Angle -> [Vector3d]
 rx a = [Vector3d 1 0 0, Vector3d 0 c s, Vector3d 0 (-s) c]
@@ -267,39 +306,60 @@ cpaStep v10 c10 w1 v20 c20 w2 t =
     c = cpaC v10 c10 w1 v20 c20 w2
     d = cpaD v10 c10 w1 v20 c20 w2
 
-cpaNr :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double
-cpaNr v10 c10 w1 v20 c20 w2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
-
+-- | Newton-Raphson for CPA time.
 cpaNrRec ::
        Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
-    | i == 50 = ti1
+    | i == 50 = (-1.0) -- no convergence
     | abs fi < 1e-12 = ti1
     | otherwise = cpaNrRec v10 c10 w1 v20 c20 w2 ti1 (i + 1)
   where
     fi = cpaStep v10 c10 w1 v20 c20 w2 ti
     ti1 = ti - fi
 
-intFt :: Double -> Double -> Double -> Vector3d -> Vector3d -> Vector3d -> Double
-intFt w2 cw2t sw2t v10 v20 c20 = (vdot v10 (vscale v20 sw2t) - vdot v10 (vscale c20 cw2t)) * (-w2)
-
-intDft :: Double -> Double -> Double -> Vector3d -> Vector3d -> Vector3d -> Double
-intDft cw2t sw2t v10 v20 c20 = undefined
-
-intStep :: Vector3d -> Vector3d -> Vector3d -> Double -> Double -> Double
-intStep v10 v20 c20 w2 t = intFt w2 cw2t sw2t v10 v20 c20 / intDft w2 cw2t sw2t v10 v20 c20
+-- | Newton-Raphson for min speed intercept.
+intMinNrRec ::
+       Vector3d
+    -> Vector3d
+    -> Vector3d
+    -> Speed
+    -> Double
+    -> Length
+    -> Double
+    -> Double
+    -> Int
+    -> Double
+intMinNrRec v10 v20 c20 s2 w2 r si ti i
+    | i == 50 = (-1.0) -- no convergence
+    | abs fi < 1e-12 = ti1
+    | otherwise = intMinNrRec v10 v20 c20 s2 w2 r si1 ti1 (i + 1)
   where
-      cw2t = cos (w2 * t)
-      sw2t = sin (w2 * t)
-
-intNr :: Vector3d -> Vector3d -> Vector3d -> Double -> Double
-intNr v10 v20 c20 w2 = intNrRec v10 v20 c20 w2 0 0
-
-intNrRec :: Vector3d -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
-intNrRec v10 v20 c20 w2 ti i
-   | i == 50 = ti1
-   | abs fi < 1e-12 = ti1
-   | otherwise = intNrRec v10 v20 c20 w2 ti1 (i + 1)
-  where
-    fi = intStep v10 v20 c20 w2 ti
+    fi = intMinStep v10 v20 c20 w2 si ti
     ti1 = ti - fi
+    v2t = position'' v20 s2 c20 ti1 r
+    si1 = ad v10 v2t
+
+intMinStep :: Vector3d -> Vector3d -> Vector3d -> Double -> Double -> Double -> Double
+intMinStep v10 v20 c20 w2 s t =
+    dsdt s w2 v10v20 v10c20 sinw2t cosw2t / d2sdt2 s w2 v10v20 v10c20 sinw2t cosw2t
+  where
+    cosw2t = cos (w2 * t)
+    sinw2t = sin (w2 * t)
+    v10v20 = vdot v10 v20
+    v10c20 = vdot v10 c20
+
+dsdt :: Double -> Double -> Double -> Double -> Double -> Double -> Double
+dsdt s w2 v10v20 v10c20 sinw2t cosw2t =
+    ((-1.0) / sin s) * ((-w2) * (v10v20 * sinw2t - v10c20 * cosw2t))
+
+d2sdt2 :: Double -> Double -> Double -> Double -> Double -> Double -> Double
+d2sdt2 s w2 v10v20 v10c20 sinw2t cosw2t =
+    ((-1.0) / sin s) * (cos s / (sins * sins) * x10d2x2dt2 * x10d2x2dt2 + x10d2x2dt2)
+  where
+    sins = sin s
+    x10d2x2dt2 = ((negate (w2 * w2)) * (v10v20 * cosw2t + v10c20 * sinw2t))
+
+-- | angle in radians between 2 n-vectors (as vector3d), copied from Geodetics
+-- without the sign and returing radians
+ad :: Vector3d -> Vector3d -> Double
+ad v1 v2 = atan2 (vnorm (vcross v1 v2)) (vdot v1 v2)

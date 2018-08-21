@@ -83,3 +83,10 @@ spec =
                 fmap interceptPosition i `shouldBe` Just (decimalLatLong 28.1366797 (-55.4559475))
                 fmap interceptDistance i `shouldBe` Just (metres 1015302.3815)
                 fmap interceptTime i `shouldBe` Just (seconds 2700)
+        describe "intercept" $ do
+            it "returns the minimum speed required for intercept to take place" $ do
+                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+                let ip = (decimalLatLong 20 (-60))
+                let i = intercept84 t ip
+                fmap interceptorSpeed i `shouldBe` Just (knots 52.837096)
+                fmap interceptTime i `shouldBe` Just (seconds 5947.698)

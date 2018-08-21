@@ -11,7 +11,8 @@
 module Data.Geo.Jord.Duration
     (
     -- * The 'Duration' type
-      Duration(toMilliseconds)
+      Duration
+    , toMilliseconds
     -- * Smart constructors
     , milliseconds
     , hours
@@ -38,7 +39,7 @@ import Text.Read hiding (pfail)
 
 -- | A durartion with a resolution of 1 millisecond.
 newtype Duration = Duration
-    { toMilliseconds :: Int
+    { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
     } deriving (Eq)
 
 -- | See 'readDuration'.

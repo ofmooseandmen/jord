@@ -43,6 +43,7 @@ module Data.Geo.Jord.Kinematics
     , interceptByTime84
     ) where
 
+import Control.Applicative
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Duration
@@ -51,6 +52,7 @@ import Data.Geo.Jord.Geodetics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Speed
 import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
@@ -131,8 +133,9 @@ position84 t d = position t d r84
 --     fmap cpaTime c = Just (milliseconds 11396155)
 --     fmap cpaDistance c = Just (kilometres 124.2317453)
 -- @
-cpa :: (NTransform a) => Track a -> Track a -> Length -> Maybe (Cpa a)
+cpa :: (Eq a, NTransform a) => Track a -> Track a -> Length -> Maybe (Cpa a)
 cpa (Track p1 b1 s1) (Track p2 b2 s2) r
+    | p1 == p2 = Just (Cpa zero zero p1 p2)
     | t < 0 = Nothing
     | otherwise = Just (Cpa (seconds t) d cp1 cp2)
   where
@@ -144,14 +147,18 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2) r
     d = surfaceDistance cp1 cp2 r
 
 -- | 'cpa' using the mean radius of the WGS84 reference ellipsoid.
-cpa84 :: (NTransform a) => Track a -> Track a -> Maybe (Cpa a)
+cpa84 :: (Eq a, NTransform a) => Track a -> Track a -> Maybe (Cpa a)
 cpa84 t1 t2 = cpa t1 t2 r84
 
 -- | @intercept t p r@ computes the __minimum__ speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place
 -- using the earth radius @r@. Intercept time, position, distance and interceptor
 -- bearing are derived from this minimum speed. Returns 'Nothing' if intercept
--- cannot be achieved.
+-- cannot be achieved e.g.:
+--
+--     * interceptor and target are at the same position
+--
+--     * interceptor interceptor is on the great circle of target and behind as the minimum speed would be target speed + epsillon
 --
 -- @
 --     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
@@ -161,21 +168,19 @@ cpa84 t1 t2 = cpa t1 t2 r84
 --     fmap interceptTime i = Just (seconds 5947.698)
 -- @
 intercept :: (Eq a, NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
-intercept t@(Track tp tb ts) p r
-    | d <= 0 = Nothing
-    | otherwise = interceptByTime t p (seconds d) r
+intercept t@(Track tp tb ts) p r = interceptByTime t p (seconds d) r
   where
     ct0 = course tp tb
     d = timeToIntercept tp ts ct0 p r
 
 -- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
-intercept84 :: (Eq a, NTransform a) => Track a -> a -> Maybe (Intercept a)
+intercept84 :: (Eq a, NTransform a, Show a) => Track a -> a -> Maybe (Intercept a)
 intercept84 t p = intercept t p r84
 
 -- | @interceptByTime t p d r@ computes the speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place
 -- after duration @d@ and using the earth radius @r@. Returns 'Nothing' if
--- given duration is <= 0.
+-- given duration is <= 0 or interceptor and target are at the same position.
 --
 -- @
 --     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
@@ -191,11 +196,12 @@ intercept84 t p = intercept t p r84
 interceptByTime :: (Eq a, NTransform a) => Track a -> a -> Duration -> Length -> Maybe (Intercept a)
 interceptByTime t p d r
     | toMilliseconds d <= 0 = Nothing
+    | trackPos t == p = Nothing
     | otherwise = fmap (\b -> Intercept d idist ipos b is) ib
   where
     ipos = position t d r
     idist = surfaceDistance p ipos r
-    ib = initialBearing p ipos
+    ib = initialBearing p ipos <|> initialBearing p (trackPos t)
     is = metresPerSecond (toMetres idist / toSeconds d)
 
 -- | 'interceptByTime' using the mean radius of the WGS84 reference ellipsoid.

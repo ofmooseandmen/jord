@@ -39,6 +39,8 @@ module Data.Geo.Jord.Kinematics
     , cpa84
     , intercept
     , intercept84
+    , interceptBySpeed
+    , interceptBySpeed84
     , interceptByTime
     , interceptByTime84
     ) where
@@ -158,7 +160,7 @@ cpa84 t1 t2 = cpa t1 t2 r84
 --
 --     * interceptor and target are at the same position
 --
---     * interceptor interceptor is on the great circle of target and behind as the minimum speed would be target speed + epsillon
+--     * interceptor is on the great circle of target and behind as the minimum speed would be target speed + epsillon
 --
 -- @
 --     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
@@ -174,8 +176,26 @@ intercept t@(Track tp tb ts) p r = interceptByTime t p (seconds d) r
     d = timeToIntercept tp ts ct0 p r
 
 -- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
-intercept84 :: (Eq a, NTransform a, Show a) => Track a -> a -> Maybe (Intercept a)
+intercept84 :: (Eq a, NTransform a) => Track a -> a -> Maybe (Intercept a)
 intercept84 t p = intercept t p r84
+
+-- | @interceptBySpeed t p s r@ computes the time needed by interceptor at
+-- position @p@ and travelling at speed @s@ to intercept target track @t@
+-- using the earth radius @r@. Returns 'Nothing' if intercept
+-- cannot be achieved e.g.:
+--
+--     * interceptor and target are at the same position
+--
+--     * interceptor speed is below minimum speed
+interceptBySpeed :: (Eq a, NTransform a) => Track a -> a -> Speed -> Length -> Maybe (Intercept a)
+interceptBySpeed t@(Track tp tb ts) p s r = interceptByTime t p (seconds d) r
+  where
+    ct0 = course tp tb
+    d = timeToInterceptSpeed tp ts ct0 p s r
+
+-- | 'interceptBySpeed' using the mean radius of the WGS84 reference ellipsoid.
+interceptBySpeed84 :: (Eq a, NTransform a) => Track a -> a -> Speed -> Maybe (Intercept a)
+interceptBySpeed84 t p s = interceptBySpeed t p s r84
 
 -- | @interceptByTime t p d r@ computes the speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place
@@ -245,6 +265,20 @@ timeToIntercept p2 s2 c20 p1 r = intMinNrRec v10 v20 (vec c20) s2 w2 r s0 t0 0
     s2mps = toMetresPerSecond s2
     rm = toMetres r
     w2 = s2mps / rm
+    s0 = ad v10 v20
+    t0 = rm * s0 / s2mps
+
+-- | time to intercept with speed.
+timeToInterceptSpeed :: (NTransform a) => a -> Speed -> Course -> a -> Speed -> Length -> Double
+timeToInterceptSpeed p2 s2 c20 p1 s1 r = intSpdNrRec v10 w1 v20 (vec c20) s2 w2 r s0 t0 0
+  where
+    v10 = vec . pos . toNVector $ p1
+    v20 = vec . pos . toNVector $ p2
+    s1mps = toMetresPerSecond s1
+    s2mps = toMetresPerSecond s2
+    rm = toMetres r
+    w2 = s2mps / rm
+    w1 = s1mps / rm
     s0 = ad v10 v20
     t0 = rm * s0 / s2mps
 
@@ -357,6 +391,41 @@ intMinStep v10 v20 c20 w2 s t =
     sinw2t = sin (w2 * t)
     v10v20 = vdot v10 v20
     v10c20 = vdot v10 c20
+
+-- | Newton-Raphson for speed intercept.
+-- note: this should always converge to the minimum time given
+-- that the assumptions made in the proof of quadratic convergence are met
+intSpdNrRec ::
+       Vector3d
+    -> Double
+    -> Vector3d
+    -> Vector3d
+    -> Speed
+    -> Double
+    -> Length
+    -> Double
+    -> Double
+    -> Int
+    -> Double
+intSpdNrRec v10 w1 v20 c20 s2 w2 r si ti i
+    | i == 50 = -1.0 -- no convergence
+    | abs fi < 1e-12 = ti1
+    | otherwise = intSpdNrRec v10 w1 v20 c20 s2 w2 r si1 ti1 (i + 1)
+  where
+    fi = intSpdStep v10 w1 v20 c20 w2 si ti
+    ti1 = ti - fi
+    v2t = position'' v20 s2 c20 ti1 r
+    si1 = ad v10 v2t
+
+intSpdStep :: Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Double -> Double
+intSpdStep v10 w1 v20 c20 w2 s t = f / df
+  where
+    cosw2t = cos (w2 * t)
+    sinw2t = sin (w2 * t)
+    v10v20 = vdot v10 v20
+    v10c20 = vdot v10 c20
+    f = s / t - w1
+    df = (1.0 / t) * (dsdt s w2 v10v20 v10c20 sinw2t cosw2t - s / t)
 
 dsdt :: Double -> Double -> Double -> Double -> Double -> Double -> Double
 dsdt s w2 v10v20 v10c20 sinw2t cosw2t =

@@ -80,57 +80,15 @@ spec =
                 let t1 = Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400)
                 let t2 = Track (decimalLatLong 30.01 30) (decimalDegrees 315) (knots 400)
                 cpa84 t1 t2 `shouldBe` Nothing
-        describe "interceptByTime" $ do
-            it "returns Nothing if duration is zero" $
-                interceptByTime84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 34 (-50))
-                    zero `shouldBe`
-                Nothing
-            it "returns Nothing if duration is negative" $
-                interceptByTime84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 34 (-50))
-                    (seconds (-1)) `shouldBe` Nothing
-            it "returns Nothing if target and interceptor are at the same position" $ do
-                interceptByTime84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 30 30)
-                    (seconds 10) `shouldBe` Nothing
-            it "returns the speed needed for intercept to take place" $ do
-                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
-                let ip = decimalLatLong 20 (-60)
-                let d = seconds 2700
-                let i = interceptByTime84 t ip d
-                fmap interceptorSpeed i `shouldBe` Just (knots 730.959238)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 26.1199030)
-                fmap interceptPosition i `shouldBe` Just (decimalLatLong 28.1366797 (-55.4559475))
-                fmap interceptDistance i `shouldBe` Just (metres 1015302.3815)
-                fmap interceptTime i `shouldBe` Just (seconds 2700)
-            it "handles the poles" $ do
-                -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
-                -- target at north pole travelling at 500km/h and true north can be intercepted from
-                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 180 degrees.
-                let t = Track (decimalLatLong 90 0) zero (kilometresPerHour 500)
-                let ip = decimalLatLong (-90) 0
-                let i = interceptByTime84 t ip (seconds 3600)
-                fmap interceptorSpeed i `shouldBe` Just (kilometresPerHour 19515.11434)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 180)
-            it "handles the interceptor being at the intercept position at t" $ do
-                let tp = decimalLatLong 34 (-50)
-                let t = Track tp (decimalDegrees 220) (knots 600)
-                let d = seconds 3600
-                let ip = position84 t d
-                let i = interceptByTime84 t ip d
-                fmap interceptorSpeed i `shouldBe` Just zero
-                fmap interceptorBearing i `shouldBe` initialBearing ip tp
         describe "intercept" $ do
-            it "returns Nothing if target and interceptor are at the same position" $ do
+            it "returns Nothing if target and interceptor are at the same position" $
                 intercept84
                     (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 30 30) `shouldBe` Nothing
-            it "returns Nothing if interceptor is on the great circle of target and behind" $ do
+                    (decimalLatLong 30 30) `shouldBe`
+                Nothing
+            it "returns Nothing if interceptor is on the great circle of target and behind" $
                 -- minimum speed would be ideally target speed + epsillon.
+             do
                 let ip = decimalLatLong 20 30
                 let px = destination84 ip (decimalDegrees 20) (kilometres 1)
                 let tp = interpolate ip px 0.25
@@ -160,3 +118,67 @@ spec =
                             (fromJust (fmap interceptorSpeed i))
                 fmap interceptPosition i `shouldBe`
                     Just (position84 interceptor (fromJust (fmap interceptTime i)))
+        describe "interceptBySpeed" $ do
+            it "returns Nothing if target and interceptor are at the same position" $
+                interceptBySpeed84
+                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
+                    (decimalLatLong 30 30)
+                    (knots 400) `shouldBe`
+                Nothing
+            it "returns Nothing if interceptor speed is below minimum speed" $ do
+                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+                let ip = decimalLatLong 20 (-60)
+                interceptBySpeed84 t ip (knots 50) `shouldBe` Nothing
+            it "returns the time needed for intercept to take place" $ do
+                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+                let ip = decimalLatLong 20 (-60)
+                let i = interceptBySpeed84 t ip (knots 700)
+                fmap interceptTime i `shouldBe` Just (seconds 2764.692)
+                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 25.93541277)
+                fmap interceptDistance i `shouldBe` Just (kilometres 995.5960805999999)
+        describe "interceptByTime" $ do
+            it "returns Nothing if duration is zero" $
+                interceptByTime84
+                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
+                    (decimalLatLong 34 (-50))
+                    zero `shouldBe`
+                Nothing
+            it "returns Nothing if duration is negative" $
+                interceptByTime84
+                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
+                    (decimalLatLong 34 (-50))
+                    (seconds (-1)) `shouldBe`
+                Nothing
+            it "returns Nothing if target and interceptor are at the same position" $
+                interceptByTime84
+                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
+                    (decimalLatLong 30 30)
+                    (seconds 10) `shouldBe`
+                Nothing
+            it "returns the speed needed for intercept to take place" $ do
+                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+                let ip = decimalLatLong 20 (-60)
+                let d = seconds 2700
+                let i = interceptByTime84 t ip d
+                fmap interceptorSpeed i `shouldBe` Just (knots 730.959238)
+                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 26.1199030)
+                fmap interceptPosition i `shouldBe` Just (decimalLatLong 28.1366797 (-55.4559475))
+                fmap interceptDistance i `shouldBe` Just (metres 1015302.3815)
+                fmap interceptTime i `shouldBe` Just (seconds 2700)
+            it "handles the poles" $ do
+                -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
+                -- target at north pole travelling at 500km/h and true north can be intercepted from
+                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 180 degrees.
+                let t = Track (decimalLatLong 90 0) zero (kilometresPerHour 500)
+                let ip = decimalLatLong (-90) 0
+                let i = interceptByTime84 t ip (seconds 3600)
+                fmap interceptorSpeed i `shouldBe` Just (kilometresPerHour 19515.11434)
+                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 180)
+            it "handles the interceptor being at the intercept position at t" $ do
+                let tp = decimalLatLong 34 (-50)
+                let t = Track tp (decimalDegrees 220) (knots 600)
+                let d = seconds 3600
+                let ip = position84 t d
+                let i = interceptByTime84 t ip d
+                fmap interceptorSpeed i `shouldBe` Just zero
+                fmap interceptorBearing i `shouldBe` initialBearing ip tp

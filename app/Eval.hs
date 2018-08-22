@@ -49,9 +49,10 @@ data Value
            Angle -- ^ yaw, pitch and roll of Body frame
     | FrmL Angle -- ^ wander azimuth of Local frame
     | FrmN -- ^ North, east, down frame
-    | Len Length -- ^ length
     | Gc GreatCircle -- ^ great circle
     | Gp (AngularPosition LatLong) -- ^ latitude, longitude and height
+    | Intp (Intercept (AngularPosition NVector)) -- ^ Intercept
+    | Len Length -- ^ length
     | Ned Ned -- ^ north east down
     | Np (AngularPosition NVector) -- ^ n-vector and height
     | Spd Speed -- ^ speed
@@ -88,12 +89,23 @@ instance Show Value where
         showAng y ++ "\n      pitch: " ++ showAng p ++ "\n      roll : " ++ showAng r
     show (FrmL w) = "Local frame:" ++ "\n      wander azimuth: " ++ showAng w
     show FrmN = "North, East, Down frame"
-    show (Len l) = "length: " ++ showLen l
     show (Gc gc) = "great circle: " ++ show gc
     show (Gp g) = "latlong: " ++ showLl ll ++ "\n      height : " ++ showLen h
       where
         ll = pos g
         h = height g
+    show (Intp i) =
+        "intercept:" ++
+        "\n      time               : " ++
+        show (interceptTime i) ++
+        "\n      distance           : " ++
+        showLen (interceptDistance i) ++
+        "\n      pos                : " ++
+        showLl (fromNVector . interceptPosition $ i :: LatLong) ++
+        "\n      interceptor speed  : " ++
+        showSpd (interceptorSpeed i) ++
+        "\n      interceptor bearing: " ++ showAng (interceptorBearing i)
+    show (Len l) = "length: " ++ showLen l
     show (Ned d) =
         "NED:" ++
         "\n      north: " ++
@@ -234,6 +246,9 @@ functions =
     , "geo"
     , "greatCircle"
     , "initialBearing"
+    , "intercept"
+    , "interceptBySpeed"
+    , "interceptByTime"
     , "interpolate"
     , "intersections"
     , "insideSurface"
@@ -371,6 +386,21 @@ evalExpr (InitialBearing a b) vault =
                 (Right . Ang)
                 (initialBearing p1 p2)
         r -> Left ("Call error: initialBearing " ++ showErr r)
+evalExpr (Intercept a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Trk t), Right (Np i)] ->
+            maybe (Left "intercept impossible") (Right . Intp) (intercept84 t i)
+        r -> Left ("Call error: intercept " ++ showErr r)
+evalExpr (InterceptBySpeed a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Trk t), Right (Np i), Right (Spd s)] ->
+            maybe (Left "intercept impossible") (Right . Intp) (interceptBySpeed84 t i s)
+        r -> Left ("Call error: interceptBySpeed " ++ showErr r)
+evalExpr (InterceptByTime a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Trk t), Right (Np i), Right (Dur d)] ->
+            maybe (Left "intercept impossible") (Right . Intp) (interceptByTime84 t i d)
+        r -> Left ("Call error: interceptByTime " ++ showErr r)
 evalExpr (Interpolate a b c) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Np p1), Right (Np p2)] -> Right (Np (interpolate p1 p2 c))
@@ -598,6 +628,14 @@ data Expr
     | GreatCircleE [Expr]
     | InitialBearing Expr
                      Expr
+    | Intercept Expr
+                Expr
+    | InterceptBySpeed Expr
+                       Expr
+                       Expr
+    | InterceptByTime Expr
+                      Expr
+                      Expr
     | Interpolate Expr
                   Expr
                   Double
@@ -692,6 +730,20 @@ transform (Call "initialBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (InitialBearing p1 p2)
+transform (Call "intercept" [e1, e2]) = do
+    t <- transform e1
+    i <- transform e2
+    return (Intercept t i)
+transform (Call "interceptBySpeed" [e1, e2, e3]) = do
+    t <- transform e1
+    i <- transform e2
+    s <- transform e3
+    return (InterceptBySpeed t i s)
+transform (Call "interceptTime" [e1, e2, e3]) = do
+    t <- transform e1
+    i <- transform e2
+    d <- transform e3
+    return (InterceptByTime t i d)
 transform (Call "interpolate" [e1, e2, Lit s]) = do
     p1 <- transform e1
     p2 <- transform e2

@@ -115,48 +115,51 @@ help =
     "     derived from the WGS84 ellipsoid: " ++
     show r84 ++
     "\n" ++
-    "\n     antipode pos                   antipodal point of pos\n" ++
-    "     crossTrackDistance pos gc      signed distance from pos to great circle gc\n" ++
-    "     destination pos ang len        destination position from pos having travelled len\n" ++
-    "                                    on initial bearing ang (either in text form or decimal degrees)\n" ++
-    "     finalBearing pos1 pos2         initial bearing from pos1 to pos2\n" ++
-    "     initialBearing pos1 pos2       bearing arriving at pos2 from pos1\n" ++
-    "     interpolate pos1 pos2 (0..1)   position at fraction between pos1 and pos2\n" ++
-    "     intersections gc1 gc2          intersections between great circles gc1 and gc2\n" ++
-    "                                    exactly 0 or 2 intersections\n" ++
-    "     insideSurface pos [pos]        is p inside surface polygon?\n" ++
-    "     mean [pos]                     geographical mean surface position of [pos]\n" ++
-    "     surfaceDistance pos1 pos2      surface distance between pos1 and pos2\n" ++
+    "\n     antipode pos                          antipodal point of pos\n" ++
+    "     crossTrackDistance pos gc             signed distance from pos to great circle gc\n" ++
+    "     destination pos ang len               destination position from pos having travelled len\n" ++
+    "                                           on initial bearing ang (either in text form or decimal degrees)\n" ++
+    "     finalBearing pos1 pos2                initial bearing from pos1 to pos2\n" ++
+    "     initialBearing pos1 pos2              bearing arriving at pos2 from pos1\n" ++
+    "     interpolate pos1 pos2 (0..1)          position at fraction between pos1 and pos2\n" ++
+    "     intersections gc1 gc2                 intersections between great circles gc1 and gc2\n" ++
+    "                                           exactly 0 or 2 intersections\n" ++
+    "     insideSurface pos [pos]               is p inside surface polygon?\n" ++
+    "     mean [pos]                            geographical mean surface position of [pos]\n" ++
+    "     surfaceDistance pos1 pos2             surface distance between pos1 and pos2\n" ++
     "\n  Kinematics calculations (Spherical Earth):\n\n" ++
     "     The following calculations assume a spherical earth model with a radius\n" ++
     "     derived from the WGS84 ellipsoid: " ++
     show r84 ++
     "\n" ++
-    "\n     position track duration        position of track after duration\n" ++
-    "\n     cpa track1 track2              closest point of approach between two tracks\n" ++
+    "\n     position track dur                    position of track after duration\n" ++
+    "     cpa track1 track2                     closest point of approach between two tracks\n" ++
+    "     intercept track pos                   minimum speed of interceptor at pos to intercept target\n" ++
+    "     interceptBySpeed track pos spd        time needed by interceptor at pos and travelling at spd to intercept target\n" ++
+    "     interceptByTime track pos dur         speed needed by interceptor at pos to intercept target after duration\n" ++
     "\n  Constructors and conversions:\n\n" ++
-    "     ecef len len len               Earth-centred earth-fixed position from x, y, z lengths\n" ++
-    "     ecef metres metres metres      Earth-centred earth-fixed position from x, y, z metres\n" ++
-    "     toEcef pos (earth)             geographic position to ECEF position using earth model\n" ++
-    "                                    WGS84 ellipsoid is used if model is omitted\n" ++
-    "     fromEcef ecef (earth)          ECEF position to geographic position using earth model\n" ++
-    "                                    WGS84 ellipsoid is used if model is omitted\n" ++
-    "     frameB ang ang ang             Body frame (vehicle) from yaw, pitch and roll angles\n" ++
-    "     frameL ang                     Local frame from wander azimuth angle\n" ++
-    "     frameN                         North, east, down frame\n" ++
-    "     delta len len len              Delta from lengths\n" ++
-    "     delta metres metres metres     Delta from metres\n" ++
-    "     ned len len len                North, east, down from lengths\n" ++
-    "     ned metres metres metres       North, east, down from metres\n" ++
-    "     geo latlong                    surface geographic position from latlong\n" ++
-    "     geo latlong height             geographic position from latlong and height\n" ++
-    "     geo lat long height            geographic position from decimal latitude, longitude and height\n" ++
-    "     geo lat long metres            geographic position from decimal latitude, longitude and metres\n" ++
-    "     toNVector pos                  n-vector corresponding to pos\n" ++
-    "     greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
-    "     greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
-    "     greatCircle track              great circle from track\n" ++
-    "     track pos ang spd              track at pos, heading on bearing ang and travelling at speed spd\n" ++
+    "     ecef len len len                      earth-centred earth-fixed position from x, y, z lengths\n" ++
+    "     ecef metres metres metres             earth-centred earth-fixed position from x, y, z metres\n" ++
+    "     toEcef pos (earth)                    geographic position to ECEF position using earth model\n" ++
+    "                                           WGS84 ellipsoid is used if model is omitted\n" ++
+    "     fromEcef ecef (earth)                 ECEF position to geographic position using earth model\n" ++
+    "                                           WGS84 ellipsoid is used if model is omitted\n" ++
+    "     frameB ang ang ang                    body frame (vehicle) from yaw, pitch and roll angles\n" ++
+    "     frameL ang                            local frame from wander azimuth angle\n" ++
+    "     frameN                                north, east, down frame\n" ++
+    "     delta len len len                     delta from lengths\n" ++
+    "     delta metres metres metres            delta from metres\n" ++
+    "     ned len len len                       north, east, down from lengths\n" ++
+    "     ned metres metres metres              north, east, down from metres\n" ++
+    "     geo latlong                           surface geographic position from latlong\n" ++
+    "     geo latlong height                    geographic position from latlong and height\n" ++
+    "     geo lat long height                   geographic position from decimal latitude, longitude and height\n" ++
+    "     geo lat long metres                   geographic position from decimal latitude, longitude and metres\n" ++
+    "     toNVector pos                         n-vector corresponding to pos\n" ++
+    "     greatCircle pos1 pos2                 great circle passing by pos1 and pos2\n" ++
+    "     greatCircle pos ang                   great circle passing by pos and heading on bearing ang\n" ++
+    "     greatCircle track                     great circle from track\n" ++
+    "     track pos ang spd                     track at pos, heading on bearing ang and travelling at speed spd\n" ++
     "\n  Supported lat/long formats:\n\n" ++
     "    DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
     "    d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++

@@ -86,9 +86,8 @@ spec =
                     (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
                     (decimalLatLong 30 30) `shouldBe`
                 Nothing
-            it "returns Nothing if interceptor is on the great circle of target and behind" $
+            it "returns Nothing if interceptor is on the great circle of target and behind" $ do
                 -- minimum speed would be ideally target speed + epsillon.
-             do
                 let ip = decimalLatLong 20 30
                 let px = destination84 ip (decimalDegrees 20) (kilometres 1)
                 let tp = interpolate ip px 0.25
@@ -129,6 +128,14 @@ spec =
                 let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
                 let ip = decimalLatLong 20 (-60)
                 interceptBySpeed84 t ip (knots 50) `shouldBe` Nothing
+            it "handles interceptor on the great circle of target and behind" $ do
+                let ip = decimalLatLong 20 30
+                let px = destination84 ip (decimalDegrees 20) (kilometres 1)
+                let tp = interpolate ip px 0.25
+                let b = fromJust (initialBearing tp px)
+                let t = Track tp b (metresPerSecond 400)
+                let i = interceptBySpeed84 t ip (metresPerSecond 500)
+                fmap interceptTime i `shouldBe` Just (seconds 2.5)
             it "returns the time needed for intercept to take place" $ do
                 let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
                 let ip = decimalLatLong 20 (-60)

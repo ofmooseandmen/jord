@@ -52,7 +52,7 @@ import Data.Maybe
 import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Printf
-import Text.Read hiding (get, look, pfail)
+import Text.Read hiding (pfail)
 
 -- | An angle with a resolution of a milliseconds of a degree.
 -- When used as a latitude/longitude this roughly translate to a precision
@@ -80,7 +80,7 @@ instance Show Angle where
                 then "-"
                 else ""
 
--- | Add/Subtract 'Angle'.
+-- | Add/Subtract 'Angle's.
 instance Quantity Angle where
     add (Angle millis1) (Angle millis2) = Angle (millis1 + millis2)
     sub (Angle millis1) (Angle millis2) = Angle (millis1 - millis2)

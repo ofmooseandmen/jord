@@ -1,5 +1,5 @@
 name:                jord
-version:             0.3.1.0
+version:             0.4.0.0
 github:              ofmooseandmen/jord
 license:             BSD3
 author:              Cedric Liegeois
@@ -26,16 +26,19 @@ library:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
     - Data.Geo.Jord.AngularPosition
+    - Data.Geo.Jord.Duration
     - Data.Geo.Jord.Earth
     - Data.Geo.Jord.EcefPosition
     - Data.Geo.Jord.Frames
     - Data.Geo.Jord.Geodetics
+    - Data.Geo.Jord.Kinematics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Rotation
-    - Data.Geo.Jord.Transform
+    - Data.Geo.Jord.Speed
+    - Data.Geo.Jord.Transformation
     - Data.Geo.Jord.Vector3d
   other-modules:
     - Data.Geo.Jord.Parse

@@ -11,7 +11,7 @@
 module Main where
 
 import Data.Geo.Jord
-import Data.List ((\\), dropWhileEnd, intercalate, isPrefixOf)
+import Data.List ((\\), dropWhileEnd, isPrefixOf)
 import Eval
 import Prelude hiding (lookup)
 import System.Console.Haskeline
@@ -103,46 +103,85 @@ help =
     "    (finalBearing (destination (antipode 54°N,154°E) 54° 1000m) 54°N,154°E)\n" ++
     "\n" ++
     "    Top level () can be ommitted: antipode 54N028E\n" ++
+    "\n  Position calculations (Frames):\n\n" ++
+    "     The following calculations work with both ellipsoidal and derived earth model\n" ++
+    "     WGS84 ellipsoid is used if model is omitted\n" ++
+    "\n     deltaBetween pos1 pos2 frame (earth)  delta between pos1 and pos2 in frame originating at pos1\n" ++
+    "     nedBetween pos1 pos2 (earth)          NED between pos1 and pos2 in frame N originating at pos1\n" ++
+    "     target pos frame delta (earth)        target position from pos and delta in frame originating at pos\n" ++
+    "     targetN pos delta (earth)             target position from pos and NED in frame N originating at pos\n" ++
     "\n  Position calculations (Spherical Earth):\n\n" ++
     "     The following calculations assume a spherical earth model with a radius\n" ++
     "     derived from the WGS84 ellipsoid: " ++
     show r84 ++
     "\n" ++
-    "\n       antipode pos                   antipodal point of pos\n" ++
-    "       crossTrackDistance pos gc      signed distance from pos to great circle gc\n" ++
-    "       destination pos ang len        destination position from pos having travelled len\n" ++
-    "                                      on initial bearing ang (either in text form or decimal degrees)\n" ++
-    "       finalBearing pos1 pos2         initial bearing from pos1 to pos2\n" ++
-    "       initialBearing pos1 pos2       bearing arriving at pos2 from pos1\n" ++
-    "       interpolate pos1 pos2 (0..1)   position at fraction between pos1 and pos2\n" ++
-    "       intersections gc1 gc2          intersections between great circles gc1 and gc2\n" ++
-    "                                      exactly 0 or 2 intersections\n" ++
-    "       insideSurface pos [pos]        is p inside surface polygon?\n" ++
-    "       mean [pos]                     geographical mean surface position of [pos]\n" ++
-    "       surfaceDistance pos1 pos2      surface distance between pos1 and pos2\n" ++
+    "\n     antipode pos                          antipodal point of pos\n" ++
+    "     crossTrackDistance pos gc             signed distance from pos to great circle gc\n" ++
+    "     destination pos ang len               destination position from pos having travelled len\n" ++
+    "                                           on initial bearing ang (either in text form or decimal degrees)\n" ++
+    "     finalBearing pos1 pos2                initial bearing from pos1 to pos2\n" ++
+    "     initialBearing pos1 pos2              bearing arriving at pos2 from pos1\n" ++
+    "     interpolate pos1 pos2 (0..1)          position at fraction between pos1 and pos2\n" ++
+    "     intersections gc1 gc2                 intersections between great circles gc1 and gc2\n" ++
+    "                                           exactly 0 or 2 intersections\n" ++
+    "     insideSurface pos [pos]               is p inside surface polygon?\n" ++
+    "     mean [pos]                            geographical mean surface position of [pos]\n" ++
+    "     surfaceDistance pos1 pos2             surface distance between pos1 and pos2\n" ++
+    "\n  Kinematics calculations (Spherical Earth):\n\n" ++
+    "     The following calculations assume a spherical earth model with a radius\n" ++
+    "     derived from the WGS84 ellipsoid: " ++
+    show r84 ++
+    "\n" ++
+    "\n     position track dur                    position of track after duration\n" ++
+    "     cpa track1 track2                     closest point of approach between two tracks\n" ++
+    "     intercept track pos                   minimum speed of interceptor at pos to intercept target\n" ++
+    "     interceptBySpeed track pos spd        time needed by interceptor at pos and travelling at spd to intercept target\n" ++
+    "     interceptByTime track pos dur         speed needed by interceptor at pos to intercept target after duration\n" ++
     "\n  Constructors and conversions:\n\n" ++
-    "       geoPos latlong                 surface geographic position from latlong\n" ++
-    "       geoPos latlong height          geographic position from latlong and height\n" ++
-    "       geoPos lat long height         geographic position from decimal latitude, longitude and height\n" ++
-    "       geoPos lat long metres         geographic position from decimal latitude, longitude and metres\n" ++
-    "       greatCircle pos1 pos2          great circle passing by pos1 and pos2\n" ++
-    "       greatCircle pos ang            great circle passing by pos and heading on bearing ang\n" ++
-    "       toKilometres len               length to kilometres\n" ++
-    "       toMetres len                   length to metres\n" ++
-    "       toNauticalMiles len            length to nautical miles\n" ++
-    "       toNVector pos                  n-vector corresponding to pos\n" ++
-    "\n  Supported Lat/Long formats:\n\n" ++
-    "       DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
-    "       d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
-    "         ^ zeroes can be ommitted and separtors can also be d, m, s\n" ++
-    "       decimal°[N|S],decimal°[E|W]     - 51.885°N,13,1°E\n" ++
-    "\n  Supported Angle formats:\n\n" ++
-    "       d°m's    - 55°36'21.154\n" ++
-    "       decimal° - 51.885°\n" ++
-    "\n  Supported Length formats: {l}m, {l}km, {l}Nm\n\n" ++
-    "\n  Every evaluated result can be saved by prefixing the expression with \"{var} = \"\n" ++
+    "     ecef len len len                      earth-centred earth-fixed position from x, y, z lengths\n" ++
+    "     ecef metres metres metres             earth-centred earth-fixed position from x, y, z metres\n" ++
+    "     toEcef pos (earth)                    geographic position to ECEF position using earth model\n" ++
+    "                                           WGS84 ellipsoid is used if model is omitted\n" ++
+    "     fromEcef ecef (earth)                 ECEF position to geographic position using earth model\n" ++
+    "                                           WGS84 ellipsoid is used if model is omitted\n" ++
+    "     frameB ang ang ang                    body frame (vehicle) from yaw, pitch and roll angles\n" ++
+    "     frameL ang                            local frame from wander azimuth angle\n" ++
+    "     frameN                                north, east, down frame\n" ++
+    "     delta len len len                     delta from lengths\n" ++
+    "     delta metres metres metres            delta from metres\n" ++
+    "     ned len len len                       north, east, down from lengths\n" ++
+    "     ned metres metres metres              north, east, down from metres\n" ++
+    "     geo latlong                           surface geographic position from latlong\n" ++
+    "     geo latlong height                    geographic position from latlong and height\n" ++
+    "     geo lat long height                   geographic position from decimal latitude, longitude and height\n" ++
+    "     geo lat long metres                   geographic position from decimal latitude, longitude and metres\n" ++
+    "     toNVector pos                         n-vector corresponding to pos\n" ++
+    "     greatCircle pos1 pos2                 great circle passing by pos1 and pos2\n" ++
+    "     greatCircle pos ang                   great circle passing by pos and heading on bearing ang\n" ++
+    "     greatCircle track                     great circle from track\n" ++
+    "     track pos ang spd                     track at pos, heading on bearing ang and travelling at speed spd\n" ++
+    "\n  Supported lat/long formats:\n\n" ++
+    "    DD(MM)(SS)[N|S]DDD(MM)(SS)[E|W] - 553621N0130209E\n" ++
+    "    d°m's\"[N|S],d°m's\"[E|W]         - 55°36'21\"N,13°2'9\"E\n" ++
+    "    ^ zeroes can be ommitted and separtors can also be d, m, s\n" ++
+    "    decimal°[N|S],decimal°[E|W]     - 51.885°N,13,1°E\n" ++
+    "\n  Supported angle formats:\n\n" ++
+    "    d°m's    - 55°36'21.154\n" ++
+    "    decimal° - 51.885°\n" ++
+    "\n  Supported length formats: {l}m, {l}km, {l}nm, {l}ft\n" ++
+    "\n  Supported speed formats: {s}m/s, {s}km/h, {s}mph, {s}kt, {s}ft/s\n" ++
+    "\n  Supported duration formats: (-)nHnMn.nS\n" ++
+    "\n  Supported earth models:\n\n" ++
+    "    ellipsoidal: wgs84, grs80, wgs72\n" ++
+    "    spherical  : s84, s80, s72\n" ++
+    "\n\n  Every evaluated result can be saved by prefixing the expression with \"{var} = \"\n" ++
     "  Saved results can subsequently be used when calling a function\n" ++
-    "    jord> a = antipode 54N028E\n" ++ "    jord> antipode a\n"
+    "\n  Examples:\n\n" ++
+    "    jord> a = antipode 54N028E\n" ++
+    "    jord> antipode a\n" ++
+    "    jord> f = frameB 10d 20d 30d\n" ++
+    "    jord> d = delta 3000 2000 100\n" ++
+    "    jord> p0 = geo 49.66618 3.45063 0\n" ++ "    jord> target p0 f d wgs84\n"
 
 save :: Result -> String -> Vault -> Vault
 save (Right v) k vault = insert k v vault
@@ -150,33 +189,7 @@ save _ _ vault = vault
 
 showR :: Result -> Either String String
 showR (Left err) = Left err
-showR (Right v) = Right (showV v)
-
-showV :: Value -> String
-showV (Ang a) = "angle: " ++ show a ++ " (" ++ show (toDecimalDegrees a) ++ ")"
-showV (Bool b) = show b
-showV (Double d) = show d
-showV (Gc gc) = "great circle: " ++ show gc
-showV (Len l) = "length: " ++ show l
-showV (Geo g) =
-    "latitude, longitude: " ++
-    show ll ++
-    " (" ++
-    show (toDecimalDegrees (latitude ll)) ++
-    ", " ++ show (toDecimalDegrees (longitude ll)) ++ ") - height: " ++ show h
-  where
-    ll = pos g
-    h = height g
-showV (NVec nv) =
-    "n-vector: (" ++ show x ++ ", " ++ show y ++ ", " ++ show z ++ ") - height: " ++ show h
-  where
-    v = vec (pos nv)
-    x = vx v
-    y = vy v
-    z = vz v
-    h = height nv
-showV (Vals []) = "empty"
-showV (Vals vs) = "\n  " ++ intercalate "\n  " (map showV vs)
+showR (Right v) = Right (show v)
 
 showVar :: String -> Value -> String
-showVar n v = n ++ "=" ++ showV v
+showVar n v = n ++ "=" ++ show v

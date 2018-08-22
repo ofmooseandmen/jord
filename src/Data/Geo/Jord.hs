@@ -18,34 +18,40 @@
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.AngularPosition
+    , module Data.Geo.Jord.Duration
     , module Data.Geo.Jord.Earth
     , module Data.Geo.Jord.EcefPosition
     , module Data.Geo.Jord.Frames
     , module Data.Geo.Jord.Geodetics
+    , module Data.Geo.Jord.Kinematics
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
     , module Data.Geo.Jord.NVector
     , module Data.Geo.Jord.Quantity
     , module Data.Geo.Jord.Rotation
-    , module Data.Geo.Jord.Transform
+    , module Data.Geo.Jord.Speed
+    , module Data.Geo.Jord.Transformation
     , module Data.Geo.Jord.Vector3d
     , jordVersion
     ) where
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Duration
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.EcefPosition
 import Data.Geo.Jord.Frames
 import Data.Geo.Jord.Geodetics
+import Data.Geo.Jord.Kinematics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Rotation
-import Data.Geo.Jord.Transform
+import Data.Geo.Jord.Speed
+import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
 
 -- | version.
 jordVersion :: String
-jordVersion = "0.3.1.0"
+jordVersion = "0.4.0.0"

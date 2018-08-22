@@ -26,14 +26,8 @@ module Eval
 
 import Control.Monad.Fail
 import Data.Bifunctor
-import Data.Geo.Jord.Angle
-import Data.Geo.Jord.AngularPosition
-import Data.Geo.Jord.Geodetics
-import Data.Geo.Jord.LatLong
-import Data.Geo.Jord.Length
-import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Transform
+import Data.Either (rights)
+import Data.Geo.Jord
 import Data.List hiding (delete, insert, lookup)
 import Data.Maybe
 import Prelude hiding (fail, lookup)
@@ -44,13 +38,124 @@ import Text.Read (readEither, readMaybe)
 data Value
     = Ang Angle -- ^ angle
     | Bool Bool -- ^ boolean
+    | Cpa (Cpa (AngularPosition NVector)) -- ^ CPA
+    | Dlt Delta -- ^ delta
+    | Dur Duration -- ^ duration
     | Double Double -- ^ double
-    | Len Length -- ^ length
+    | Ep EcefPosition -- ^ ECEF position
+    | Em Earth -- ^ earth model
+    | FrmB Angle
+           Angle
+           Angle -- ^ yaw, pitch and roll of Body frame
+    | FrmL Angle -- ^ wander azimuth of Local frame
+    | FrmN -- ^ North, east, down frame
     | Gc GreatCircle -- ^ great circle
-    | Geo (AngularPosition LatLong) -- ^ latitude, longitude and height
-    | NVec (AngularPosition NVector) -- ^ n-vector and height
+    | Gp (AngularPosition LatLong) -- ^ latitude, longitude and height
+    | Intp (Intercept (AngularPosition NVector)) -- ^ Intercept
+    | Len Length -- ^ length
+    | Ned Ned -- ^ north east down
+    | Np (AngularPosition NVector) -- ^ n-vector and height
+    | Spd Speed -- ^ speed
+    | Trk (Track (AngularPosition NVector)) -- ^ track
     | Vals [Value] -- array of values
-    deriving (Eq, Show)
+
+-- | show value.
+instance Show Value where
+    show (Ang a) = "angle: " ++ showAng a
+    show (Bool b) = show b
+    show (Cpa c) =
+        "closest point of approach:" ++
+        "\n      time    : " ++
+        show (cpaTime c) ++
+        "\n      distance: " ++
+        showLen (cpaDistance c) ++
+        "\n      pos1    : " ++
+        showLl (fromNVector . cpaPosition1 $ c :: LatLong) ++
+        "\n      pos2    : " ++ showLl (fromNVector . cpaPosition2 $ c :: LatLong)
+    show (Dlt d) =
+        "Delta:" ++
+        "\n      x: " ++
+        showLen (dx d) ++ "\n      y: " ++ showLen (dy d) ++ "\n      z: " ++ showLen (dz d)
+    show (Dur d) = "duration: " ++ show d
+    show (Double d) = show d
+    show (Em m) = "Earth model: " ++ show m
+    show (Ep p) =
+        "ECEF:" ++
+        "\n      x: " ++
+        showLen (ex p) ++ "\n      y: " ++ showLen (ey p) ++ "\n      z: " ++ showLen (ez p)
+    show (FrmB y p r) =
+        "Body (vehicle) frame:" ++
+        "\n      yaw  : " ++
+        showAng y ++ "\n      pitch: " ++ showAng p ++ "\n      roll : " ++ showAng r
+    show (FrmL w) = "Local frame:" ++ "\n      wander azimuth: " ++ showAng w
+    show FrmN = "North, East, Down frame"
+    show (Gc gc) = "great circle: " ++ show gc
+    show (Gp g) = "latlong: " ++ showLl ll ++ "\n      height : " ++ showLen h
+      where
+        ll = pos g
+        h = height g
+    show (Intp i) =
+        "intercept:" ++
+        "\n      time               : " ++
+        show (interceptTime i) ++
+        "\n      distance           : " ++
+        showLen (interceptDistance i) ++
+        "\n      pos                : " ++
+        showLl (fromNVector . interceptPosition $ i :: LatLong) ++
+        "\n      interceptor speed  : " ++
+        showSpd (interceptorSpeed i) ++
+        "\n      interceptor bearing: " ++ showAng (interceptorBearing i)
+    show (Len l) = "length: " ++ showLen l
+    show (Ned d) =
+        "NED:" ++
+        "\n      north: " ++
+        showLen (north d) ++
+        "\n      east : " ++ showLen (east d) ++ "\n      down : " ++ showLen (down d)
+    show (Np nv) =
+        "n-vector: " ++
+        show x ++ ", " ++ show y ++ ", " ++ show z ++ "\n      height  : " ++ showLen h
+      where
+        v = vec (pos nv)
+        x = vx v
+        y = vy v
+        z = vz v
+        h = height nv
+    show (Trk t) =
+        "track:" ++
+        "\n      position: " ++
+        showLl (fromNVector . trackPos $ t :: LatLong) ++
+        "\n      height  : " ++
+        showLen (height . trackPos $ t) ++
+        "\n      bearing : " ++
+        showAng (trackBearing t) ++ "\n      speed   : " ++ showSpd (trackSpeed t)
+    show (Spd s) = "speed: " ++ showSpd s
+    show (Vals []) = "empty"
+    show (Vals vs) = "\n  " ++ intercalate "\n\n  " (map show vs)
+
+showAng :: Angle -> String
+showAng a = show a ++ " (" ++ show (toDecimalDegrees a) ++ ")"
+
+showLl :: LatLong -> String
+showLl ll =
+    show ll ++
+    " (" ++
+    show (toDecimalDegrees (latitude ll)) ++ ", " ++ show (toDecimalDegrees (longitude ll)) ++ ")"
+
+showLen :: Length -> String
+showLen l =
+    show (toMetres l) ++
+    "m <-> " ++
+    show (toKilometres l) ++
+    "km <-> " ++ show (toNauticalMiles l) ++ "nm <-> " ++ show (toFeet l) ++ "ft"
+
+showSpd :: Speed -> String
+showSpd s =
+    show (toKilometresPerHour s) ++
+    "km/h <-> " ++
+    show (toMetresPerSecond s) ++
+    "m/s <-> " ++
+    show (toKnots s) ++
+    "kt <-> " ++ show (toMilesPerHour s) ++ "mph <-> " ++ show (toFeetPerSecond s) ++ "ft/s"
 
 -- | 'Either' an error or a 'Value'.
 type Result = Either String Value
@@ -93,7 +198,7 @@ instance MonadFail (Either String) where
 --
 -- @
 --     dest = eval "destination 54°N,154°E 54° 1000m" -- Right Ll
---     dest = eval "toNVector (destination 54°N,154°E 54° 1000m)" -- Right NVec
+--     dest = eval "toNVector (destination 54°N,154°E 54° 1000m)" -- Right Np
 -- @
 --
 -- Every function call must be wrapped between parentheses, however they can be ommitted for the top level call.
@@ -115,12 +220,12 @@ convert :: Result -> Bool -> Result
 convert r True = r
 convert r False =
     case r of
-        Right v@(NVec _) -> Right (toGeo v)
+        Right v@(Np _) -> Right (toGeo v)
         Right (Vals vs) -> Right (Vals (map toGeo vs))
         oth -> oth
 
 toGeo :: Value -> Value
-toGeo (NVec v) = Geo (fromNVector v)
+toGeo (Np v) = Gp (fromNVector v)
 toGeo val = val
 
 -- | All supported functions.
@@ -128,19 +233,34 @@ functions :: [String]
 functions =
     [ "antipode"
     , "crossTrackDistance"
+    , "cpa"
+    , "delta"
+    , "deltaBetween"
     , "destination"
+    , "ecef"
+    , "frameB"
+    , "frameL"
+    , "frameN"
     , "finalBearing"
-    , "geoPos"
+    , "fromEcef"
+    , "geo"
     , "greatCircle"
     , "initialBearing"
+    , "intercept"
+    , "interceptBySpeed"
+    , "interceptByTime"
     , "interpolate"
     , "intersections"
     , "insideSurface"
     , "mean"
+    , "ned"
+    , "nedBetween"
+    , "position"
     , "surfaceDistance"
-    , "toKilometres"
-    , "toMetres"
-    , "toNauticalMiles"
+    , "target"
+    , "targetN"
+    , "track"
+    , "toEcef"
     , "toNVector"
     ]
 
@@ -162,7 +282,7 @@ expr :: (MonadFail m) => String -> m (Bool, Expr)
 expr s = do
     ts <- tokenise s
     ast <- parse ts
-    fmap (expectVec ts,) (transform ast)
+    fmap (expectVec ts, ) (transform ast)
 
 expectVec :: [Token] -> Bool
 expectVec (_:Func "toNVector":_) = True
@@ -171,131 +291,210 @@ expectVec _ = False
 evalExpr :: Expr -> Vault -> Result
 evalExpr (Param p) vault =
     case lookup p vault of
-        Just (Geo geo) -> Right (NVec (toNVector geo))
+        Just (Gp geo) -> Right (Np (toNVector geo))
         Just v -> Right v
         Nothing -> tryRead p
 evalExpr (Antipode a) vault =
     case evalExpr a vault of
-        (Right (NVec p)) -> Right (NVec (antipode p))
+        (Right (Np p)) -> Right (Np (antipode p))
         r -> Left ("Call error: antipode " ++ showErr [r])
+evalExpr (ClosestPointOfApproach a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Trk t1), Right (Trk t2)] ->
+            maybe (Left "closest point of approach in the past") (Right . Cpa) (cpa84 t1 t2)
+        r -> Left ("Call error: cpa " ++ showErr r)
 evalExpr (CrossTrackDistance a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p), Right (Gc gc)] -> Right (Len (crossTrackDistance84 p gc))
+        [Right (Np p), Right (Gc gc)] -> Right (Len (crossTrackDistance84 p gc))
         r -> Left ("Call error: crossTrackDistance " ++ showErr r)
+evalExpr (DeltaBetween a b c d) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault, evalEarth d] of
+        [Right (Np p1), Right (Np p2), Right (FrmB y p r), Right (Em m)] ->
+            Right (Dlt (deltaBetween p1 p2 (frameB y p r) m))
+        [Right (Np p1), Right (Np p2), Right (FrmL w), Right (Em m)] ->
+            Right (Dlt (deltaBetween p1 p2 (frameL w) m))
+        [Right (Np p1), Right (Np p2), Right FrmN, Right (Em m)] ->
+            Right (Dlt (deltaBetween p1 p2 frameN m))
+        r -> Left ("Call error: deltaBetween " ++ showErr r)
+evalExpr (DeltaV a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Len x), Right (Len y), Right (Len z)] -> Right (Dlt (delta x y z))
+        [Right (Double x), Right (Double y), Right (Double z)] -> Right (Dlt (deltaMetres x y z))
+        r -> Left ("Call error: delta " ++ showErr r)
 evalExpr (Destination a b c) vault =
     case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
-        [Right (NVec p), Right (Ang a'), Right (Len l)] -> Right (NVec (destination84 p a' l))
-        [Right (NVec p), Right (Double a'), Right (Len l)] ->
-            Right (NVec (destination84 p (decimalDegrees a') l))
+        [Right (Np p), Right (Ang a'), Right (Len l)] -> Right (Np (destination84 p a' l))
+        [Right (Np p), Right (Double a'), Right (Len l)] ->
+            Right (Np (destination84 p (decimalDegrees a') l))
         r -> Left ("Call error: destination " ++ showErr r)
+evalExpr (Ecef a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Len x), Right (Len y), Right (Len z)] -> Right (Ep (ecef x y z))
+        [Right (Double x), Right (Double y), Right (Double z)] -> Right (Ep (ecefMetres x y z))
+        r -> Left ("Call error: ecef " ++ showErr r)
+evalExpr (FrameB a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Ang a'), Right (Ang b'), Right (Ang c')] -> Right (FrmB a' b' c')
+        r -> Left ("Call error: frameB " ++ showErr r)
+evalExpr (FrameL a) vault =
+    case evalExpr a vault of
+        (Right (Ang a')) -> Right (FrmL a')
+        r -> Left ("Call error: frameL " ++ showErr [r])
+evalExpr FrameN _ = Right FrmN
+evalExpr (FromEcef a b) vault =
+    case [evalExpr a vault, evalEarth b] of
+        [Right (Ep p), Right (Em m)] -> Right (Np (fromEcef p m))
+        r -> Left ("Call error: fromEcef " ++ showErr r)
 evalExpr (FinalBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] ->
+        [Right (Np p1), Right (Np p2)] ->
             maybe
                 (Left "Call error: finalBearing identical points")
                 (Right . Ang)
                 (finalBearing p1 p2)
         r -> Left ("Call error: finalBearing " ++ showErr r)
-evalExpr (GeoPos as) vault =
+evalExpr (Geo as) vault =
     case vs of
-        [Right p@(NVec _)] -> Right p
-        [Right (NVec v), Right (Len h)] -> Right (NVec (AngularPosition (pos v) h))
+        [Right p@(Np _)] -> Right p
+        [Right (Np v), Right (Len h)] -> Right (Np (AngularPosition (pos v) h))
         [Right (Double lat), Right (Double lon)] ->
             bimap
-                (\e -> "Call error: geoPos : " ++ e)
-                (NVec . toNVector)
+                (\e -> "Call error: geo " ++ e)
+                (Np . toNVector)
                 (decimalLatLongHeightE lat lon zero)
         [Right (Double lat), Right (Double lon), Right (Len h)] ->
-            bimap
-                (\e -> "Call error: geoPos : " ++ e)
-                (NVec . toNVector)
-                (decimalLatLongHeightE lat lon h)
+            bimap (\e -> "Call error: geo " ++ e) (Np . toNVector) (decimalLatLongHeightE lat lon h)
         [Right (Double lat), Right (Double lon), Right (Double h)] ->
             bimap
-                (\e -> "Call error: geoPos : " ++ e)
-                (NVec . toNVector)
+                (\e -> "Call error: geo " ++ e)
+                (Np . toNVector)
                 (decimalLatLongHeightE lat lon (metres h))
-        r -> Left ("Call error: geoPos " ++ showErr r)
+        r -> Left ("Call error: geo " ++ showErr r)
   where
     vs = map (`evalExpr` vault) as
-evalExpr (GreatCircleSC a b) vault =
-    case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] -> bimap id Gc (greatCircleE p1 p2)
-        [Right (NVec p), Right (Ang a')] -> Right (Gc (greatCircleBearing p a'))
+evalExpr (GreatCircleE as) vault =
+    case fmap (`evalExpr` vault) as of
+        [Right (Np p1), Right (Np p2)] -> bimap id Gc (greatCircleE (p1, p2))
+        [Right (Np p), Right (Ang a')] -> bimap id Gc (greatCircleE (p, a'))
+        [Right (Trk t)] -> bimap id Gc (greatCircleE t)
         r -> Left ("Call error: greatCircle " ++ showErr r)
 evalExpr (InitialBearing a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] ->
+        [Right (Np p1), Right (Np p2)] ->
             maybe
                 (Left "Call error: initialBearing identical points")
                 (Right . Ang)
                 (initialBearing p1 p2)
         r -> Left ("Call error: initialBearing " ++ showErr r)
+evalExpr (Intercept a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Trk t), Right (Np i)] ->
+            maybe (Left "intercept impossible") (Right . Intp) (intercept84 t i)
+        r -> Left ("Call error: intercept " ++ showErr r)
+evalExpr (InterceptBySpeed a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Trk t), Right (Np i), Right (Spd s)] ->
+            maybe (Left "intercept impossible") (Right . Intp) (interceptBySpeed84 t i s)
+        r -> Left ("Call error: interceptBySpeed " ++ showErr r)
+evalExpr (InterceptByTime a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Trk t), Right (Np i), Right (Dur d)] ->
+            maybe (Left "intercept impossible") (Right . Intp) (interceptByTime84 t i d)
+        r -> Left ("Call error: interceptByTime " ++ showErr r)
 evalExpr (Interpolate a b c) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] -> Right (NVec (interpolate p1 p2 c))
+        [Right (Np p1), Right (Np p2)] -> Right (Np (interpolate p1 p2 c))
         r -> Left ("Call error: interpolate " ++ showErr r)
 evalExpr (Intersections a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
         [Right (Gc gc1), Right (Gc gc2)] ->
             maybe
                 (Right (Vals []))
-                (\is -> Right (Vals [NVec (fst is), NVec (snd is)]))
+                (\is -> Right (Vals [Np (fst is), Np (snd is)]))
                 (intersections gc1 gc2 :: Maybe (AngularPosition NVector, AngularPosition NVector))
         r -> Left ("Call error: intersections " ++ showErr r)
 evalExpr (InsideSurface as) vault =
     let m = map (`evalExpr` vault) as
-        ps = [p | Right (NVec p) <- m]
+        ps = [p | Right (Np p) <- m]
      in if length m == length ps && length ps > 3
             then Right (Bool (insideSurface (head ps) (tail ps)))
             else Left ("Call error: insideSurface " ++ showErr m)
 evalExpr (Mean as) vault =
     let m = map (`evalExpr` vault) as
-        ps = [p | Right (NVec p) <- m]
+        ps = [p | Right (Np p) <- m]
      in if length m == length ps
-            then maybe (Left ("Call error: mean " ++ showErr m)) (Right . NVec) (mean ps)
+            then maybe (Left ("Call error: mean " ++ showErr m)) (Right . Np) (mean ps)
             else Left ("Call error: mean " ++ showErr m)
+evalExpr (NedBetween a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalEarth c] of
+        [Right (Np p1), Right (Np p2), Right (Em m)] -> Right (Ned (nedBetween p1 p2 m))
+        r -> Left ("Call error: nedBetween " ++ showErr r)
+evalExpr (NedV a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Len x), Right (Len y), Right (Len z)] -> Right (Ned (ned x y z))
+        [Right (Double x), Right (Double y), Right (Double z)] -> Right (Ned (nedMetres x y z))
+        r -> Left ("Call error: ned " ++ showErr r)
+evalExpr (Position a b) vault =
+    case [evalExpr a vault, evalExpr b vault] of
+        [Right (Trk t), Right (Dur d)] -> Right (Np (position84 t d))
+        r -> Left ("Call error: position " ++ showErr r)
 evalExpr (SurfaceDistance a b) vault =
     case [evalExpr a vault, evalExpr b vault] of
-        [Right (NVec p1), Right (NVec p2)] -> Right (Len (surfaceDistance84 p1 p2))
+        [Right (Np p1), Right (Np p2)] -> Right (Len (surfaceDistance84 p1 p2))
         r -> Left ("Call error: surfaceDistance " ++ showErr r)
-evalExpr (ToKilometres e) vault =
-    case evalExpr e vault of
-        (Right (Len l)) -> Right (Double (toKilometres l))
-        r -> Left ("Call error: toKilometres" ++ showErr [r])
-evalExpr (ToMetres e) vault =
-    case evalExpr e vault of
-        (Right (Len l)) -> Right (Double (toMetres l))
-        r -> Left ("Call error: toMetres" ++ showErr [r])
-evalExpr (ToNauticalMiles e) vault =
-    case evalExpr e vault of
-        (Right (Len l)) -> Right (Double (toNauticalMiles l))
-        r -> Left ("Call error: toNauticalMiles" ++ showErr [r])
+evalExpr (Target a b c d) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault, evalEarth d] of
+        [Right (Np p0), Right (FrmB y p r), Right (Dlt d'), Right (Em m)] ->
+            Right (Np (target p0 (frameB y p r) d' m))
+        [Right (Np p0), Right (FrmL w), Right (Dlt d'), Right (Em m)] ->
+            Right (Np (target p0 (frameL w) d' m))
+        [Right (Np p0), Right FrmN, Right (Dlt d'), Right (Em m)] ->
+            Right (Np (target p0 frameN d' m))
+        r -> Left ("Call error: target " ++ showErr r)
+evalExpr (TargetN a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalEarth c] of
+        [Right (Np p0), Right (Ned d), Right (Em m)] -> Right (Np (targetN p0 d m))
+        r -> Left ("Call error: targetN " ++ showErr r)
+evalExpr (TrackE a b c) vault =
+    case [evalExpr a vault, evalExpr b vault, evalExpr c vault] of
+        [Right (Np p), Right (Ang b'), Right (Spd s)] -> Right (Trk (Track p b' s))
+        r -> Left ("Call error: track " ++ showErr r)
+evalExpr (ToEcef a b) vault =
+    case [evalExpr a vault, evalEarth b] of
+        [Right (Np p), Right (Em m)] -> Right (Ep (toEcef p m))
+        r -> Left ("Call error: toEcef " ++ showErr r)
 evalExpr (ToNVector a) vault =
     case evalExpr a vault of
-        r@(Right (NVec _)) -> r
+        r@(Right (Np _)) -> r
         r -> Left ("Call error: toNVector " ++ showErr [r])
+
+evalEarth :: String -> Result
+evalEarth "wgs84" = Right (Em wgs84)
+evalEarth "grs80" = Right (Em grs80)
+evalEarth "wgs72" = Right (Em wgs72)
+evalEarth "s84" = Right (Em s84)
+evalEarth "s80" = Right (Em s80)
+evalEarth "s72" = Right (Em s72)
+evalEarth s = Left s
 
 showErr :: [Result] -> String
 showErr rs = " > " ++ intercalate " & " (map (either id show) rs)
 
 tryRead :: String -> Result
-tryRead s =
-    case r of
-        [a@(Right (Ang _)), _, _, _] -> a
-        [_, l@(Right (Len _)), _, _] -> l
-        [_, _, Right (Geo geo), _] -> Right (NVec (toNVector geo))
-        [_, _, _, d@(Right (Double _))] -> d
-        _ -> Left ("couldn't read " ++ s)
+tryRead s
+    | null r = Left ("couldn't read " ++ s)
+    | otherwise = Right (head r)
   where
     r =
-        map
-            ($ s)
-            [ readE readAngleE Ang
-            , readE readLengthE Len
-            , readE readLatLongE (\ll -> Geo (AngularPosition ll zero))
-            , readE readEither Double
-            ]
+        rights
+            (map ($ s)
+                 [ readE readAngleE Ang
+                 , readE readLengthE Len
+                 , readE readSpeedE Spd
+                 , readE readDurationE Dur
+                 , readE readLatLongE (\ll -> Np (toNVector (AngularPosition ll zero)))
+                 , readE readEither Double
+                 ])
 
 readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
 readE p v s = bimap id v (p s)
@@ -399,18 +598,44 @@ walkParams n ts@(h:t) acc
 data Expr
     = Param String
     | Antipode Expr
+    | ClosestPointOfApproach Expr
+                             Expr
     | CrossTrackDistance Expr
                          Expr
+    | DeltaBetween Expr
+                   Expr
+                   Expr
+                   String
+    | DeltaV Expr
+             Expr
+             Expr
     | Destination Expr
                   Expr
                   Expr
+    | Ecef Expr
+           Expr
+           Expr
+    | FrameB Expr
+             Expr
+             Expr
+    | FrameL Expr
+    | FrameN
     | FinalBearing Expr
                    Expr
-    | GeoPos [Expr]
-    | GreatCircleSC Expr
-                    Expr
+    | FromEcef Expr
+               String
+    | Geo [Expr]
+    | GreatCircleE [Expr]
     | InitialBearing Expr
                      Expr
+    | Intercept Expr
+                Expr
+    | InterceptBySpeed Expr
+                       Expr
+                       Expr
+    | InterceptByTime Expr
+                      Expr
+                      Expr
     | Interpolate Expr
                   Expr
                   Double
@@ -418,40 +643,107 @@ data Expr
                     Expr
     | InsideSurface [Expr]
     | Mean [Expr]
+    | NedBetween Expr
+                 Expr
+                 String
+    | NedV Expr
+           Expr
+           Expr
+    | Position Expr
+               Expr
     | SurfaceDistance Expr
                       Expr
-    | ToKilometres Expr
-    | ToMetres Expr
-    | ToNauticalMiles Expr
+    | Target Expr
+             Expr
+             Expr
+             String
+    | TargetN Expr
+              Expr
+              String
+    | TrackE Expr
+             Expr
+             Expr
+    | ToEcef Expr
+             String
     | ToNVector Expr
     deriving (Show)
 
 transform :: (MonadFail m) => Ast -> m Expr
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
+transform (Call "cpa" [e1, e2]) = do
+    t1 <- transform e1
+    t2 <- transform e2
+    return (ClosestPointOfApproach t1 t2)
 transform (Call "crossTrackDistance" [e1, e2]) = do
     p <- transform e1
     gc <- transform e2
     return (CrossTrackDistance p gc)
+transform (Call "delta" [e1, e2, e3]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    p3 <- transform e3
+    return (DeltaV p1 p2 p3)
+transform (Call "deltaBetween" [e1, e2, e3]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    f <- transform e3
+    return (DeltaBetween p1 p2 f "wgs84")
+transform (Call "deltaBetween" [e1, e2, e3, Lit s]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    f <- transform e3
+    return (DeltaBetween p1 p2 f s)
 transform (Call "destination" [e1, e2, e3]) = do
     p1 <- transform e1
     p2 <- transform e2
     p3 <- transform e3
     return (Destination p1 p2 p3)
+transform (Call "ecef" [e1, e2, e3]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    p3 <- transform e3
+    return (Ecef p1 p2 p3)
+transform (Call "frameB" [e1, e2, e3]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    p3 <- transform e3
+    return (FrameB p1 p2 p3)
+transform (Call "frameL" [e]) = fmap FrameL (transform e)
+transform (Call "frameN" []) = return FrameN
+transform (Call "fromEcef" [e]) = do
+    p <- transform e
+    return (FromEcef p "wgs84")
+transform (Call "fromEcef" [e, Lit s]) = do
+    p <- transform e
+    return (FromEcef p s)
 transform (Call "finalBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (FinalBearing p1 p2)
-transform (Call "geoPos" e) = do
+transform (Call "geo" e) = do
     ps <- mapM transform e
-    return (GeoPos ps)
-transform (Call "greatCircle" [e1, e2]) = do
-    p1 <- transform e1
-    p2 <- transform e2
-    return (GreatCircleSC p1 p2)
+    return (Geo ps)
+transform (Call "greatCircle" e) = do
+    ps <- mapM transform e
+    return (GreatCircleE ps)
 transform (Call "initialBearing" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (InitialBearing p1 p2)
+transform (Call "intercept" [e1, e2]) = do
+    t <- transform e1
+    i <- transform e2
+    return (Intercept t i)
+transform (Call "interceptBySpeed" [e1, e2, e3]) = do
+    t <- transform e1
+    i <- transform e2
+    s <- transform e3
+    return (InterceptBySpeed t i s)
+transform (Call "interceptTime" [e1, e2, e3]) = do
+    t <- transform e1
+    i <- transform e2
+    d <- transform e3
+    return (InterceptByTime t i d)
 transform (Call "interpolate" [e1, e2, Lit s]) = do
     p1 <- transform e1
     p2 <- transform e2
@@ -469,13 +761,56 @@ transform (Call "insideSurface" e) = do
 transform (Call "mean" e) = do
     ps <- mapM transform e
     return (Mean ps)
+transform (Call "ned" [e1, e2, e3]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    p3 <- transform e3
+    return (NedV p1 p2 p3)
+transform (Call "nedBetween" [e1, e2]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (NedBetween p1 p2 "wgs84")
+transform (Call "nedBetween" [e1, e2, Lit s]) = do
+    p1 <- transform e1
+    p2 <- transform e2
+    return (NedBetween p1 p2 s)
+transform (Call "position" [e1, e2]) = do
+    t <- transform e1
+    d <- transform e2
+    return (Position t d)
 transform (Call "surfaceDistance" [e1, e2]) = do
     p1 <- transform e1
     p2 <- transform e2
     return (SurfaceDistance p1 p2)
-transform (Call "toKilometres" [e]) = fmap ToKilometres (transform e)
-transform (Call "toMetres" [e]) = fmap ToMetres (transform e)
-transform (Call "toNauticalMiles" [e]) = fmap ToNauticalMiles (transform e)
+transform (Call "target" [e1, e2, e3]) = do
+    p0 <- transform e1
+    f <- transform e2
+    d <- transform e3
+    return (Target p0 f d "wgs84")
+transform (Call "target" [e1, e2, e3, Lit s]) = do
+    p0 <- transform e1
+    f <- transform e2
+    d <- transform e3
+    return (Target p0 f d s)
+transform (Call "targetN" [e1, e2]) = do
+    p0 <- transform e1
+    d <- transform e2
+    return (TargetN p0 d "wgs84")
+transform (Call "targetN" [e1, e2, Lit s]) = do
+    p0 <- transform e1
+    d <- transform e2
+    return (TargetN p0 d s)
+transform (Call "track" [e1, e2, e3]) = do
+    p0 <- transform e1
+    b <- transform e2
+    s <- transform e3
+    return (TrackE p0 b s)
+transform (Call "toEcef" [e]) = do
+    p <- transform e
+    return (ToEcef p "wgs84")
+transform (Call "toEcef" [e, Lit s]) = do
+    p <- transform e
+    return (ToEcef p s)
 transform (Call "toNVector" [e]) = fmap ToNVector (transform e)
 transform (Call f e) = fail ("Semantic error: " ++ f ++ " does not accept " ++ show e)
 transform (Lit s) = return (Param s)

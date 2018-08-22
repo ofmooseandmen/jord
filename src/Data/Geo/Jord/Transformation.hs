@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 -- |
--- Module:      Data.Geo.Jord.Transform
+-- Module:      Data.Geo.Jord.Transformation
 -- Copyright:   (c) 2018 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -15,7 +15,7 @@
 --
 -- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
 --
-module Data.Geo.Jord.Transform
+module Data.Geo.Jord.Transformation
     ( NTransform(..)
     , ETransform(..)
     , nvectorToLatLong
@@ -92,7 +92,7 @@ instance ETransform EcefPosition where
 
 -- | @nvectorToLatLong v@ transforms 'NVector' @v@ to an equivalent 'LatLong'.
 --
--- Same as 'toNVector'.
+-- See also 'toNVector'.
 nvectorToLatLong :: NVector -> LatLong
 nvectorToLatLong nv = latLong lat lon
   where

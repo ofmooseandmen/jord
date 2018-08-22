@@ -40,20 +40,20 @@ instance IsVector3d EcefPosition where
 ecef :: Length -> Length -> Length -> EcefPosition
 ecef x y z = EcefPosition (Vector3d (toMetres x) (toMetres y) (toMetres z))
 
--- | 'EcefPosition' from given x, y and z length in _metres_.
+-- | 'EcefPosition' from given x, y and z length in __metres__.
 --
 -- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
 ecefMetres :: Double -> Double -> Double -> EcefPosition
 ecefMetres x y z = ecef (metres x) (metres y) (metres z)
 
--- | x coordinate of the given '$tc'EcefPosition'.
+-- | x coordinate of the given 'EcefPosition'.
 ex :: EcefPosition -> Length
 ex (EcefPosition v) = metres (vx v)
 
--- | y coordinate of the given '$tc'EcefPosition'.
+-- | y coordinate of the given 'EcefPosition'.
 ey :: EcefPosition -> Length
 ey (EcefPosition v) = metres (vy v)
 
--- | z coordinate of the given '$tc'EcefPosition'.
+-- | z coordinate of the given 'EcefPosition'.
 ez :: EcefPosition -> Length
 ez (EcefPosition v) = metres (vz v)

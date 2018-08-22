@@ -34,6 +34,9 @@ module Data.Geo.Jord.Frames
     , Delta
     , delta
     , deltaMetres
+    , dx
+    , dy
+    , dz
     -- * Delta in the north, east, down frame
     , Ned
     , ned
@@ -43,7 +46,7 @@ module Data.Geo.Jord.Frames
     , down
     , bearing
     , elevation
-    , norm
+    , slantRange
     -- * Calculations
     , deltaBetween
     , nedBetween
@@ -59,7 +62,7 @@ import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Rotation
-import Data.Geo.Jord.Transform
+import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
 
 -- | class for reference frames.
@@ -198,9 +201,21 @@ newtype Delta =
 delta :: Length -> Length -> Length -> Delta
 delta x y z = Delta (Vector3d (toMetres x) (toMetres y) (toMetres z))
 
--- | 'Delta' from given x, y and z length in _metres_.
+-- | 'Delta' from given x, y and z length in __metres__.
 deltaMetres :: Double -> Double -> Double -> Delta
 deltaMetres x y z = delta (metres x) (metres y) (metres z)
+
+-- | x component of given 'Delta'.
+dx :: Delta -> Length
+dx (Delta v) = metres (vx v)
+
+-- | y component of given 'Delta'.
+dy :: Delta -> Length
+dy (Delta v) = metres (vy v)
+
+-- | z component of given 'Delta'.
+dz :: Delta -> Length
+dz (Delta v) = metres (vz v)
 
 -- | North, east and down delta (thus in frame 'FrameN').
 newtype Ned =
@@ -211,7 +226,7 @@ newtype Ned =
 ned :: Length -> Length -> Length -> Ned
 ned n e d = Ned (Vector3d (toMetres n) (toMetres e) (toMetres d))
 
--- | 'Ned' from given north, east and down in _metres_.
+-- | 'Ned' from given north, east and down in __metres__.
 nedMetres :: Double -> Double -> Double -> Ned
 nedMetres n e d = ned (metres n) (metres e) (metres d)
 
@@ -240,12 +255,20 @@ bearing v =
 elevation :: Ned -> Angle
 elevation (Ned v) = negate' (asin' (vz v / vnorm v))
 
--- | @norm v@ computes the norm of the NED vector @v@.
-norm :: Ned -> Length
-norm (Ned v) = metres (vnorm v)
+-- | @slantRange v@ computes the distance from origin in the local system of the NED vector @v@.
+slantRange :: Ned -> Length
+slantRange (Ned v) = metres (vnorm v)
 
 -- | @deltaBetween p1 p2 f e@ computes the exact 'Delta' between the two positions @p1@ and @p2@ in frame @f@
 -- using earth model @e@.
+--
+-- @
+--     let p1 = decimalLatLongHeight 1 2 (metres (-3))
+--     let p2 = decimalLatLongHeight 4 5 (metres (-6))
+--     let w = decimalDegrees 5 -- wander azimuth
+--     let d = deltaBetween p1 p2 (frameL w) wgs84
+--     d = deltaMetres 359490.579 302818.523 17404.272
+-- @
 deltaBetween :: (ETransform a, Frame c) => a -> a -> (a -> Earth -> c) -> Earth -> Delta
 deltaBetween p1 p2 f e = deltaMetres (vx d) (vy d) (vz d)
   where
@@ -263,6 +286,16 @@ deltaBetween p1 p2 f e = deltaMetres (vx d) (vy d) (vz d)
 -- the north, east, and down directions will change (relative to Earth) for different places.
 --
 -- Position @p1@ must be outside the poles for the north and east directions to be defined.
+--
+-- @
+--     let p1 = decimalLatLongHeight 1 2 (metres (-3))
+--     let p2 = decimalLatLongHeight 4 5 (metres (-6))
+--     let d1 = nedBetween p1 p2 wgs84
+--     let d2 = deltaBetween p1 p2 frameN wgs84
+--     north d1 = dx d2
+--     east d1 = dy d2
+--     down d1 = dz d2
+-- @
 nedBetween :: (ETransform a) => a -> a -> Earth -> Ned
 nedBetween p1 p2 e = nedMetres (vx d) (vy d) (vz d)
   where
@@ -270,6 +303,15 @@ nedBetween p1 p2 e = nedMetres (vx d) (vy d) (vz d)
 
 -- | @target p0 f d e@ computes the target position from position @p0@ and delta @d@ using in frame @f@
 -- and using earth model @e@.
+--
+-- @
+--     let p0 = decimalLatLongHeight 49.66618 3.45063 zero
+--     let y = decimalDegrees 10 -- yaw
+--     let r = decimalDegrees 20 -- roll
+--     let p = decimalDegrees 30 -- pitch
+--     let d = deltaMetres 3000 2000 100
+--     target p0 (frameB y r p) d wgs84 = decimalLatLongHeight 49.6918016 3.4812669 (metres 6.007)
+-- @
 target :: (ETransform a, Frame c) => a -> (a -> Earth -> c) -> Delta -> Earth -> a
 target p0 f (Delta d) e = fromEcef (ecefMetres (vx e0 + vx c) (vy e0 + vy c) (vz e0 + vz c)) e
   where
@@ -278,6 +320,11 @@ target p0 f (Delta d) e = fromEcef (ecefMetres (vx e0 + vx c) (vy e0 + vy c) (vz
     c = vrotate d rm
 
 -- | @targetN p0 d e@ computes the target position from position @p0@ and north, east, down @d@ using earth model @e@.
+--
+-- @
+--     let p0 = decimalLatLongHeight 49.66618 3.45063 zero
+--     targetN p0 (nedMeters 100 200 300) wgs84 = target p0 frameN (deltaMetres 100 200 300) wgs84
+-- @
 targetN :: (ETransform a) => a -> Ned -> Earth -> a
 targetN p0 (Ned d) = target p0 frameN (Delta d)
 

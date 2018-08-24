@@ -15,11 +15,10 @@ spec =
                 let p1 = decimalLatLongHeight 53.1882691 0.1332741 (metres 15000)
                 let t = Track p0 (decimalDegrees 96.0217) (kilometresPerHour 124.8)
                 position84 t (hours 1) `shouldBe` p1
-            it "handles poles" $
+            it "handles poles" $ do
                 -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
                 -- track at north pole travelling at 20015.114352200002km/h and true north reaches the
                 -- south pole after 1 hour.
-             do
                 let t = Track (decimalLatLong 90 0) zero (kilometresPerHour 20015.114352200002)
                 position84 t (hours 1) `shouldBe` decimalLatLong (-90) 180.0
             it "return p0 if speed is 0" $ do
@@ -136,13 +135,19 @@ spec =
                 let t = Track tp b (metresPerSecond 400)
                 let i = interceptBySpeed84 t ip (metresPerSecond 500)
                 fmap interceptTime i `shouldBe` Just (seconds 2.5)
-            it "returns the time needed for intercept to take place" $ do
+            it "returns the speed needed for intercept to take place" $ do
                 let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
                 let ip = decimalLatLong 20 (-60)
                 let i = interceptBySpeed84 t ip (knots 700)
                 fmap interceptTime i `shouldBe` Just (seconds 2764.692)
                 fmap interceptorBearing i `shouldBe` Just (decimalDegrees 25.93541277)
                 fmap interceptDistance i `shouldBe` Just (kilometres 995.5960805999999)
+            it "returns the same as intercept when called with minimum speed" $ do
+                let t = Track (decimalLatLong 45 50) (decimalDegrees 54) (knots 500)
+                let ip = decimalLatLong 70 30
+                let mi = intercept84 t ip
+                let i = interceptBySpeed84 t ip (fromJust (fmap interceptorSpeed mi))
+                fmap interceptTime i `shouldBe` fmap interceptTime mi
         describe "interceptByTime" $ do
             it "returns Nothing if duration is zero" $
                 interceptByTime84

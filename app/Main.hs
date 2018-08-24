@@ -135,8 +135,8 @@ help =
     "\n     position track dur                    position of track after duration\n" ++
     "     cpa track1 track2                     closest point of approach between two tracks\n" ++
     "     intercept track pos                   minimum speed of interceptor at pos to intercept target\n" ++
-    "     interceptBySpeed track pos spd        time needed by interceptor at pos and travelling at spd to intercept target\n" ++
-    "     interceptByTime track pos dur         speed needed by interceptor at pos to intercept target after duration\n" ++
+    "     intercept track pos spd               time needed by interceptor at pos and travelling at spd to intercept target\n" ++
+    "     intercept track pos dur               speed needed by interceptor at pos to intercept target after duration\n" ++
     "\n  Constructors and conversions:\n\n" ++
     "     ecef len len len                      earth-centred earth-fixed position from x, y, z lengths\n" ++
     "     ecef metres metres metres             earth-centred earth-fixed position from x, y, z metres\n" ++

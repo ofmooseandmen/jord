@@ -8,6 +8,7 @@
 --
 -- Geographic position calculations (distance, bearing, intersection, etc...) on great circles using
 -- the algorithms described in <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>.
+-- and in <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry>
 --
 -- See <http://www.navlab.net/nvector Position calculations - simple and exact solutions>
 --
@@ -54,4 +55,4 @@ import Data.Geo.Jord.Vector3d
 
 -- | version.
 jordVersion :: String
-jordVersion = "0.4.0.0"
+jordVersion = "0.4.1.0"

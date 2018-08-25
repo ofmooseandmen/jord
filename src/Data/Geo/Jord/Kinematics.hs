@@ -270,17 +270,13 @@ timeToIntercept p2 s2 c20 p1 r = intMinNrRec v10 v20 (vec c20) s2 w2 r s0 t0 0
 
 -- | time to intercept with speed.
 timeToInterceptSpeed :: (NTransform a) => a -> Speed -> Course -> a -> Speed -> Length -> Double
-timeToInterceptSpeed p2 s2 c20 p1 s1 r
-  | t0 < 0 = t0
-  | otherwise = intSpdNrRec v10 w1 v20 (vec c20) s2 w2 r s0 t0 0
+timeToInterceptSpeed p2 s2 c20 p1 s1 r = intSpdNrRec v10 w1 v20 (vec c20) s2 w2 r s0 t0 0
   where
     v10 = vec . pos . toNVector $ p1
     v20 = vec . pos . toNVector $ p2
-    s1mps = toMetresPerSecond s1
-    s2mps = toMetresPerSecond s2
     rm = toMetres r
-    w2 = s2mps / rm
-    w1 = s1mps / rm
+    w2 = toMetresPerSecond s2 / rm
+    w1 = toMetresPerSecond s1 / rm
     t0 = 0.1
     s0 = ad v10 v20
 

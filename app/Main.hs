@@ -64,9 +64,11 @@ evalS s state
     | null s = (Right "", state)
     | head s == ':' = evalC w state
     | (v:"=":e) <- w =
-        let r = eval (unwords e) state
-            state' = save r v state
-         in (showR r state', state')
+        if (elem v functions)
+            then (Left (v ++ " is a reserved keyword"), state)
+            else let r = eval (unwords e) state
+                     state' = save r v state
+                  in (showR r state', state')
     | otherwise = (showR (eval s state) state, state)
   where
     w = words s

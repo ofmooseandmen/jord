@@ -11,7 +11,9 @@
 module Data.Geo.Jord.LatLong
     (
     -- * The 'LatLong' type
-      LatLong(latitude, longitude)
+      LatLong
+    , latitude
+    , longitude
     -- * Smart constructors
     , latLong
     , latLongE

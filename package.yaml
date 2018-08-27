@@ -46,6 +46,10 @@ library:
 executables:
   jord-exe:
     main:                Main.hs
+    other-modules:
+      - Eval
+      - Show
+      - State
     source-dirs:         app
     dependencies:
     - jord

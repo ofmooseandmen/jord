@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8cafae2fe2186e459b78085f4faef82c2959d16edb7bc167b0727ac297e707a9
+-- hash: 7710cef1545699151a4207c29a268327d2f17ff0a5c3256a90cd3698d3fbff38
 
 name:           jord
 version:        0.4.1.0
@@ -59,7 +59,8 @@ executable jord-exe
   main-is: Main.hs
   other-modules:
       Eval
-      Paths_jord
+      Show
+      State
   hs-source-dirs:
       app
   ghc-options: -Wall

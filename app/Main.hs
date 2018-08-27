@@ -105,9 +105,9 @@ help s =
     "    :units length speed    sets length and speed units used for display\n" ++
     "                           see supported length and speed format\n" ++
     "                           currently: length = " ++
-    (lengthUnit s) ++
+    lengthUnit s ++
     "; speed = " ++
-    (speedUnit s) ++
+    speedUnit s ++
     "\n" ++
     "\n Jord expressions:\n\n" ++
     "    (f x y) where f is one of function described below and x and y\n" ++

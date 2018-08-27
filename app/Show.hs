@@ -89,7 +89,7 @@ showV (Trk t) s =
     showAng (trackBearing t) ++ "\n      speed   : " ++ showSpeed (trackSpeed t) s
 showV (Spd spd) s = "speed: " ++ showSpeed spd s
 showV (Vals []) _ = "empty"
-showV (Vals vs) s = "\n  " ++ intercalate "\n\n  " (map (\v -> showV v s) vs)
+showV (Vals vs) s = "\n  " ++ intercalate "\n\n  " (map (`showV` s) vs)
 
 showAng :: Angle -> String
 showAng a = show a ++ " (" ++ show (toDecimalDegrees a) ++ ")"

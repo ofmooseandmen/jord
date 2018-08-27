@@ -72,8 +72,8 @@ data Units =
 emptyState :: State
 emptyState = State (Units len spd) (Vault [])
   where
-    len = (\l -> show (toKilometres l) ++ "km")
-    spd = (\s -> show (toKilometresPerHour s) ++ "km/h")
+    len l = show (toKilometres l) ++ "km"
+    spd s = show (toKilometresPerHour s) ++ "km/h"
 
 -- | sets length and or speed units, ignore all invalid units.
 setUnits :: [String] -> State -> State

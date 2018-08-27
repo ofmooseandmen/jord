@@ -321,7 +321,7 @@ evalEarth "s72" = Right (Em s72)
 evalEarth s = Left s
 
 showErr :: [Result] -> State -> String
-showErr rs s = " > " ++ intercalate " & " (map (either id (\r -> showV r s)) rs)
+showErr rs s = " > " ++ intercalate " & " (map (either id (`showV` s)) rs)
 
 tryRead :: String -> Result
 tryRead s

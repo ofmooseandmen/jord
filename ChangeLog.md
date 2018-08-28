@@ -3,6 +3,7 @@
 - Fixed interceptBySpeed
 - Nautical miles symbol is "nm"
 - REPL: intercept for intercept, interceptBySpeed and interceptByTime
+- REPL: show length and speed in user selected unit
 
 ### 0.4.0.0
 

@@ -74,13 +74,14 @@ evalS s state
     w = words s
 
 evalC :: [String] -> State -> (Either String String, State)
-evalC [":show", v] state = (evalShow v state, state)
-evalC [":delete", v] state = (Right ("deleted var: " ++ v), delete v state)
-evalC [":reset"] _ = (Right "REPL reset ", emptyState)
 evalC [":help"] state = (Right (help state), state)
 evalC [":?"] state = (Right (help state), state)
+evalC [":show", v] state = (evalShow v state, state)
+evalC [":delete", v] state = (Right ("deleted var: " ++ v), delete v state)
 evalC [":units", u1, u2] state = evalUnits [u1, u2] state
 evalC [":units", u] state = evalUnits [u] state
+evalC [":units"] state = showUnits state
+evalC [":reset"] _ = (Right "REPL reset ", emptyState)
 evalC c state = (Left ("Unsupported command " ++ unwords c ++ "; :? for help"), state)
 
 evalShow :: String -> State -> Either String String
@@ -88,10 +89,10 @@ evalShow n state =
     maybe (Left ("Unbound variable: " ++ n)) (\v -> Right (showVar n v state)) (lookup n state)
 
 evalUnits :: [String] -> State -> (Either String String, State)
-evalUnits us s =
-    (Right ("Units:\n  length = " ++ lengthUnit s' ++ "\n  speed = " ++ speedUnit s'), s')
-  where
-    s' = setUnits us s
+evalUnits us s = showUnits (setUnits us s)
+
+showUnits :: State -> (Either String String, State)
+showUnits s = (Right ("Units:\n  length = " ++ lengthUnit s ++ "\n  speed  = " ++ speedUnit s), s)
 
 help :: State -> String
 help s =
@@ -101,16 +102,17 @@ help s =
     "\n Commands available from the prompt:\n\n" ++
     "    :help, :?              display this list of commands\n" ++
     "    :quit, :q              quit jord\n" ++
-    "    :show {var}            shows {var}\n" ++
-    "    :delete {var}          deletes {var}\n" ++
-    "    :reset                 resets REPL to default state (including deleting all variables)\n" ++
-    "    :units length speed    sets length and speed units used for display\n" ++
+    "    :show {var}            show {var}\n" ++
+    "    :delete {var}          delete {var}\n" ++
+    "    :units length speed    set length and speed units used for display\n" ++
     "                           see supported length and speed format\n" ++
     "                           currently: length = " ++
     lengthUnit s ++
     "; speed = " ++
     speedUnit s ++
     "\n" ++
+    "    :units                 show length and speed units used for display\n" ++
+    "    :reset                 reset REPL to default state (including deleting all variables)\n" ++
     "\n Jord expressions:\n\n" ++
     "    (f x y) where f is one of function described below and x and y\n" ++
     "    are either parameters in one of the format described below or\n" ++

@@ -256,7 +256,7 @@ timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
     c20 = vec c2
     w2 = toMetresPerSecond s2 / rm
 
--- | time to intercept with minimum speed.
+-- | time to intercept with minimum speed
 timeToIntercept :: (NTransform a) => a -> Speed -> Course -> a -> Length -> Double
 timeToIntercept p2 s2 c20 p1 r = intMinNrRec v10 v20 (vec c20) s2 w2 r s0 t0 0
   where
@@ -274,13 +274,11 @@ timeToInterceptSpeed p2 s2 c20 p1 s1 r = intSpdNrRec v10 w1 v20 (vec c20) s2 w2 
   where
     v10 = vec . pos . toNVector $ p1
     v20 = vec . pos . toNVector $ p2
-    s1mps = toMetresPerSecond s1
-    s2mps = toMetresPerSecond s2
     rm = toMetres r
-    w2 = s2mps / rm
-    w1 = s1mps / rm
+    w2 = toMetresPerSecond s2 / rm
+    w1 = toMetresPerSecond s1 / rm
+    t0 = 0.1
     s0 = ad v10 v20
-    t0 = rm * s0 / s2mps
 
 rx :: Angle -> [Vector3d]
 rx a = [Vector3d 1 0 0, Vector3d 0 c s, Vector3d 0 (-s) c]

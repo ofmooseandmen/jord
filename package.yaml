@@ -1,5 +1,5 @@
 name:                jord
-version:             0.4.0.0
+version:             0.4.1.0
 github:              ofmooseandmen/jord
 license:             BSD3
 author:              Cedric Liegeois
@@ -46,6 +46,10 @@ library:
 executables:
   jord-exe:
     main:                Main.hs
+    other-modules:
+      - Eval
+      - Show
+      - State
     source-dirs:         app
     dependencies:
     - jord

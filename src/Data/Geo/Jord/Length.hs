@@ -118,10 +118,10 @@ length :: ReadP Length
 length = do
     v <- number
     skipSpaces
-    u <- string "m" <|> string "km" <|> string "Nm" <|> string "ft"
+    u <- string "m" <|> string "km" <|> string "nm" <|> string "ft"
     case u of
         "m" -> return (metres v)
         "km" -> return (kilometres v)
-        "Nm" -> return (nauticalMiles v)
+        "nm" -> return (nauticalMiles v)
         "ft" -> return (feet v)
         _ -> pfail

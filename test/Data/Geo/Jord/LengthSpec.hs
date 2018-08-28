@@ -10,7 +10,7 @@ spec = do
     describe "Reading valid lengths" $ do
         it "reads -15.2m" $ readLength "-15.2m" `shouldBe` metres (-15.2)
         it "reads 154km" $ readLength "154km" `shouldBe` kilometres 154
-        it "reads 1000Nm" $ readLength "1000Nm" `shouldBe` nauticalMiles 1000
+        it "reads 1000nm" $ readLength "1000nm" `shouldBe` nauticalMiles 1000
         it "reads 25000ft" $ readLength "25000ft" `shouldBe` feet 25000
     describe "Reading invalid lengths" $ do
         it "fails to read 5" $ readLengthE "5" `shouldBe` Left "couldn't read length 5"

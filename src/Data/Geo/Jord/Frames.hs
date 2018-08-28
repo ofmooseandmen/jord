@@ -87,24 +87,12 @@ class Frame a where
 --
 --      * Comments: The frame is fixed to the vehicle.
 --
-data FrameB =
-    FrameB Angle
-           Angle
-           Angle
-           Vector3d
-    deriving (Eq, Show)
-
--- | body yaw angle (vertical axis).
-yaw :: FrameB -> Angle
-yaw (FrameB a _ _ _) = a
-
--- | body pitch angle (transverse axis).
-pitch :: FrameB -> Angle
-pitch (FrameB _ a _ _) = a
-
--- | body roll angle (longitudinal axis).
-roll :: FrameB -> Angle
-roll (FrameB _ _ a _) = a
+data FrameB = FrameB
+    { yaw :: Angle -- ^ body yaw angle (vertical axis).
+    , pitch :: Angle -- ^ body pitch angle (transverse axis).
+    , roll :: Angle -- ^ body roll angle (longitudinal axis).
+    , bOrg :: Vector3d -- ^ frame origin (n-vector).
+    } deriving (Eq, Show)
 
 -- | 'FrameB' from given yaw, pitch, roll, position (origin) and earth model.
 frameB :: (ETransform a) => Angle -> Angle -> Angle -> a -> Earth -> FrameB
@@ -136,14 +124,10 @@ instance Frame FrameB where
 -- this angle is called the wander azimuth angle. The L-frame is well suited for general
 -- calculations, as it is non-singular.
 --
-data FrameL =
-    FrameL Angle
-           LatLong
-    deriving (Eq, Show)
-
--- | wander azimuth: angle between x-axis of the frame L and the north direction.
-wanderAzimuth :: FrameL -> Angle
-wanderAzimuth (FrameL a _) = a
+data FrameL = FrameL
+    { wanderAzimuth :: Angle -- ^ wander azimuth: angle between x-axis of the frame L and the north direction.
+    , lOrg :: LatLong -- ^ frame origin (latlong).
+    } deriving (Eq, Show)
 
 -- | R_EL: frame L to Earth
 instance Frame FrameL where
@@ -174,9 +158,9 @@ frameL w p e = FrameL w ll
 -- the x- and y-axes are not defined here. Hence, this coordinate frame is not suitable for
 -- general calculations.
 --
-newtype FrameN =
-    FrameN Vector3d
-    deriving (Eq, Show)
+newtype FrameN = FrameN
+    { nOrg :: Vector3d -- ^ frame origin (n-vector).
+    } deriving (Eq, Show)
 
 -- | R_EN: frame N to Earth
 instance Frame FrameN where

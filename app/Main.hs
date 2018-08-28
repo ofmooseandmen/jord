@@ -14,6 +14,8 @@ import Data.Geo.Jord
 import Data.List ((\\), dropWhileEnd, isPrefixOf)
 import Eval
 import Prelude hiding (lookup)
+import Show
+import State
 import System.Console.Haskeline
 
 search :: String -> [Completion]
@@ -39,7 +41,7 @@ main = do
     putStrLn
         ("jord interpreter, version " ++
          jordVersion ++ ": https://github.com/ofmooseandmen/jord  :? for help")
-    runInputT mySettings $ withInterrupt $ loop emptyVault
+    runInputT mySettings $ withInterrupt $ loop emptyState
   where
     loop state = do
         input <- handleInterrupt (return (Just "")) $ getInputLine "jord> "
@@ -57,44 +59,60 @@ printS (Left err) = outputStrLn ("jord> " ++ err)
 printS (Right "") = return ()
 printS (Right r) = outputStrLn ("jord> " ++ r)
 
-evalS :: String -> Vault -> (Either String String, Vault)
-evalS s vault
-    | null s = (Right "", vault)
-    | head s == ':' = evalC w vault
+evalS :: String -> State -> (Either String String, State)
+evalS s state
+    | null s = (Right "", state)
+    | head s == ':' = evalC w state
     | (v:"=":e) <- w =
-        let r = eval (unwords e) vault
-            vault' = save r v vault
-         in (showR r, vault')
-    | otherwise = (showR (eval s vault), vault)
+        if v `elem` functions
+            then (Left (v ++ " is a reserved keyword"), state)
+            else let r = eval (unwords e) state
+                     state' = save r v state
+                  in (showR r state', state')
+    | otherwise = (showR (eval s state) state, state)
   where
     w = words s
 
-evalC :: [String] -> Vault -> (Either String String, Vault)
-evalC [":show", v] vault = (evalShow v vault, vault)
-evalC [":delete", v] vault = evalDel (Just v) vault
-evalC [":clear"] vault = evalDel Nothing vault
-evalC [":help"] vault = (Right help, vault)
-evalC [":?"] vault = (Right help, vault)
-evalC c vault = (Left ("Unsupported command " ++ unwords c ++ "; :? for help"), vault)
+evalC :: [String] -> State -> (Either String String, State)
+evalC [":help"] state = (Right (help state), state)
+evalC [":?"] state = (Right (help state), state)
+evalC [":show", v] state = (evalShow v state, state)
+evalC [":delete", v] state = (Right ("deleted var: " ++ v), delete v state)
+evalC [":units", u1, u2] state = evalUnits [u1, u2] state
+evalC [":units", u] state = evalUnits [u] state
+evalC [":units"] state = showUnits state
+evalC [":reset"] _ = (Right "REPL reset ", emptyState)
+evalC c state = (Left ("Unsupported command " ++ unwords c ++ "; :? for help"), state)
 
-evalShow :: String -> Vault -> Either String String
-evalShow n vault = maybe (Left ("Unbound variable: " ++ n)) (Right . showVar n) (lookup n vault)
+evalShow :: String -> State -> Either String String
+evalShow n state =
+    maybe (Left ("Unbound variable: " ++ n)) (\v -> Right (showVar n v state)) (lookup n state)
 
-evalDel :: Maybe String -> Vault -> (Either String String, Vault)
-evalDel (Just n) vault = (Right ("deleted var: " ++ n), delete n vault)
-evalDel Nothing _ = (Right "deleted all variable ", emptyVault)
+evalUnits :: [String] -> State -> (Either String String, State)
+evalUnits us s = showUnits (setUnits us s)
 
-help :: String
-help =
+showUnits :: State -> (Either String String, State)
+showUnits s = (Right ("Units:\n  length = " ++ lengthUnit s ++ "\n  speed  = " ++ speedUnit s), s)
+
+help :: State -> String
+help s =
     "\njord interpreter, version " ++
     jordVersion ++
     "\n" ++
     "\n Commands available from the prompt:\n\n" ++
     "    :help, :?              display this list of commands\n" ++
     "    :quit, :q              quit jord\n" ++
-    "    :show {var}            shows {var}\n" ++
-    "    :delete {var}          deletes {var}\n" ++
-    "    :clear                 deletes all variable(s)\n" ++
+    "    :show {var}            show {var}\n" ++
+    "    :delete {var}          delete {var}\n" ++
+    "    :units length speed    set length and speed units used for display\n" ++
+    "                           see supported length and speed format\n" ++
+    "                           currently: length = " ++
+    lengthUnit s ++
+    "; speed = " ++
+    speedUnit s ++
+    "\n" ++
+    "    :units                 show length and speed units used for display\n" ++
+    "    :reset                 reset REPL to default state (including deleting all variables)\n" ++
     "\n Jord expressions:\n\n" ++
     "    (f x y) where f is one of function described below and x and y\n" ++
     "    are either parameters in one of the format described below or\n" ++
@@ -113,7 +131,7 @@ help =
     "\n  Position calculations (Spherical Earth):\n\n" ++
     "     The following calculations assume a spherical earth model with a radius\n" ++
     "     derived from the WGS84 ellipsoid: " ++
-    show r84 ++
+    showLength r84 s ++
     "\n" ++
     "\n     antipode pos                          antipodal point of pos\n" ++
     "     crossTrackDistance pos gc             signed distance from pos to great circle gc\n" ++
@@ -130,13 +148,13 @@ help =
     "\n  Kinematics calculations (Spherical Earth):\n\n" ++
     "     The following calculations assume a spherical earth model with a radius\n" ++
     "     derived from the WGS84 ellipsoid: " ++
-    show r84 ++
+    showLength r84 s ++
     "\n" ++
     "\n     position track dur                    position of track after duration\n" ++
     "     cpa track1 track2                     closest point of approach between two tracks\n" ++
     "     intercept track pos                   minimum speed of interceptor at pos to intercept target\n" ++
-    "     interceptBySpeed track pos spd        time needed by interceptor at pos and travelling at spd to intercept target\n" ++
-    "     interceptByTime track pos dur         speed needed by interceptor at pos to intercept target after duration\n" ++
+    "     intercept track pos spd               time needed by interceptor at pos and travelling at spd to intercept target\n" ++
+    "     intercept track pos dur               speed needed by interceptor at pos to intercept target after duration\n" ++
     "\n  Constructors and conversions:\n\n" ++
     "     ecef len len len                      earth-centred earth-fixed position from x, y, z lengths\n" ++
     "     ecef metres metres metres             earth-centred earth-fixed position from x, y, z metres\n" ++
@@ -183,13 +201,13 @@ help =
     "    jord> d = delta 3000 2000 100\n" ++
     "    jord> p0 = geo 49.66618 3.45063 0\n" ++ "    jord> target p0 f d wgs84\n"
 
-save :: Result -> String -> Vault -> Vault
-save (Right v) k vault = insert k v vault
-save _ _ vault = vault
+save :: Result -> String -> State -> State
+save (Right v) k state = insert k v state
+save _ _ state = state
 
-showR :: Result -> Either String String
-showR (Left err) = Left err
-showR (Right v) = Right (show v)
+showR :: Result -> State -> Either String String
+showR (Left err) _ = Left err
+showR (Right v) s = Right (showV v s)
 
-showVar :: String -> Value -> String
-showVar n v = n ++ "=" ++ show v
+showVar :: String -> Value -> State -> String
+showVar n v s = n ++ "=" ++ showV v s

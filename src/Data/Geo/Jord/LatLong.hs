@@ -41,8 +41,8 @@ import Text.Read hiding (pfail)
 
 -- | Horizontal position defined by its geodetic latitude and longitude.
 data LatLong = LatLong
-    { latitude :: Angle
-    , longitude :: Angle
+    { latitude :: Angle -- ^ geodetic latitude
+    , longitude :: Angle -- ^ longitude
     } deriving (Eq)
 
 -- | See 'readLatLong'.

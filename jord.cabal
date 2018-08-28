@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d5d4605fa04ebe153819f4c5504dd3c5eba07d29bfbba53cd81dcf0ca724d145
+-- hash: 465ee6d810fd8e1a40de24706a5cd6de046314fe59921d251087dcef87f6bffa
 
 name:           jord
 version:        0.5.0.0
@@ -53,6 +53,21 @@ library
   ghc-options: -Wall
   build-depends:
       base >=4.9 && <5
+  default-language: Haskell2010
+
+executable jord-benchmarks-exe
+  main-is: Main.hs
+  other-modules:
+      GeodeticsBG
+      TransformationBG
+      Paths_jord
+  hs-source-dirs:
+      benchmarks
+  ghc-options: -Wall
+  build-depends:
+      base >=4.9 && <5
+    , criterion
+    , jord
   default-language: Haskell2010
 
 executable jord-exe

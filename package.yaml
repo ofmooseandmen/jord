@@ -54,6 +54,12 @@ executables:
     dependencies:
     - jord
     - haskeline >= 0.7 && < 0.8
+  jord-benchmarks-exe:
+    main:                Main.hs
+    source-dirs:         benchmarks
+    dependencies:
+    - jord
+    - criterion
 
 tests:
   jord-test:

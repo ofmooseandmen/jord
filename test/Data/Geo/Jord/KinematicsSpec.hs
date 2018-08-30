@@ -116,6 +116,11 @@ spec =
                             (fromJust (fmap interceptorSpeed i))
                 fmap interceptPosition i `shouldBe`
                     Just (position84 interceptor (fromJust (fmap interceptTime i)))
+            it "returns the ..." $ do
+                let t = Track (decimalLatLong 45 67) (decimalDegrees 54) (knots 500)
+                let ip = (decimalLatLong 44 66)
+                let i = intercept84 t ip
+                fmap interceptorSpeed i `shouldBe` Just (knots 536.7)
         describe "interceptBySpeed" $ do
             it "returns Nothing if target and interceptor are at the same position" $
                 interceptBySpeed84

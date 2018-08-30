@@ -438,5 +438,6 @@ d2sdt2 s w2 v10v20 v10c20 sinw2t cosw2t =
 
 -- | angle in radians between 2 n-vectors (as vector3d), copied from Geodetics
 -- without the sign and returing radians.
+-- FIXME: move to internal module.
 ad :: Vector3d -> Vector3d -> Double
 ad v1 v2 = atan2 (vnorm (vcross v1 v2)) (vdot v1 v2)

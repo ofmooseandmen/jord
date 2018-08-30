@@ -15,6 +15,7 @@ bggeodetics =
         , bench "finalBearing" $ whnf (finalBearing nv1) nv2
         , bench "initialBearing" $ whnf (initialBearing nv1) nv2
         , bench "interpolate" $ whnf (interpolate nv1 nv2) 0.5
+        , bench "surfaceDistance" $ whnf (surfaceDistance84 nv1) nv2
         ]
 
 nv1 :: NVector

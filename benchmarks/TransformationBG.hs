@@ -12,12 +12,12 @@ bgtransformation =
         [ bench "latLongToNVector" $ whnf latLongToNVector ll
         , bench "nvectorToLatLong" $ whnf nvectorToLatLong nv
         , bgroup
-              "Ellipsoidal (WGS84)"
+              "Ellipsoidal"
               [ bench "ecefToNVector" $ whnf (`ecefToNVector` wgs84) ep
               , bench "nvectorToEcef" $ whnf (`nvectorToEcef` wgs84) ap
               ]
         , bgroup
-              "Spherical (S84)"
+              "Spherical"
               [ bench "ecefToNVector" $ whnf (`ecefToNVector` s84) ep
               , bench "nvectorToEcef" $ whnf (`nvectorToEcef` s84) ap
               ]

@@ -44,7 +44,7 @@ library:
     - Data.Geo.Jord.Parse
 
 executables:
-  jord-exe:
+  jord-repl:
     main:                Main.hs
     other-modules:
       - Eval
@@ -54,8 +54,12 @@ executables:
     dependencies:
     - jord
     - haskeline >= 0.7 && < 0.8
-  jord-benchmarks-exe:
+  jord-benchmarks:
     main:                Main.hs
+    other-modules:
+      - GeodeticsBG
+      - KinematicsBG
+      - TransformationBG
     source-dirs:         benchmarks
     dependencies:
     - jord

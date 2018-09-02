@@ -107,8 +107,8 @@ spec =
                 let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
                 let ip = decimalLatLong 20 (-60)
                 let i = intercept84 t ip
-                fmap interceptorSpeed i `shouldBe` Just (knots 52.837096)
-                fmap interceptTime i `shouldBe` Just (seconds 5947.698)
+                fmap interceptorSpeed i `shouldBe` Just (knots 52.633367756059)
+                fmap interceptTime i `shouldBe` Just (seconds 5993.831)
                 let interceptor =
                         Track
                             ip

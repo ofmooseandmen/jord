@@ -160,7 +160,7 @@ cpa84 t1 t2 = cpa t1 t2 r84
 --
 --     * interceptor and target are at the same position
 --
---     * interceptor is on the great circle of target and behind as the minimum speed would be target speed + epsillon
+--     * interceptor is "behind" the target
 --
 -- @
 --     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
@@ -172,8 +172,8 @@ cpa84 t1 t2 = cpa t1 t2 r84
 intercept :: (Eq a, NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
 intercept t@(Track tp tb ts) p r = interceptByTime t p (seconds d) r
   where
-    ct0 = course tp tb
-    d = timeToIntercept tp ts ct0 p r
+    c2 = vec (course tp tb)
+    d = timeToIntercept tp ts c2 p r
 
 -- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
 intercept84 :: (Eq a, NTransform a) => Track a -> a -> Maybe (Intercept a)
@@ -190,8 +190,8 @@ intercept84 t p = intercept t p r84
 interceptBySpeed :: (Eq a, NTransform a) => Track a -> a -> Speed -> Length -> Maybe (Intercept a)
 interceptBySpeed t@(Track tp tb ts) p s r = interceptByTime t p (seconds d) r
   where
-    ct0 = course tp tb
-    d = timeToInterceptSpeed tp ts ct0 p s r
+    c2 = vec (course tp tb)
+    d = timeToInterceptSpeed tp ts c2 p s r
 
 -- | 'interceptBySpeed' using the mean radius of the WGS84 reference ellipsoid.
 interceptBySpeed84 :: (Eq a, NTransform a) => Track a -> a -> Speed -> Maybe (Intercept a)
@@ -241,8 +241,8 @@ position' p0 s c sec r = fromNVector (nvectorHeight (nvector (vx v1) (vy v1) (vz
 position'' :: Vector3d -> Speed -> Vector3d -> Double -> Length -> Vector3d
 position'' v0 s c sec r = v1
   where
-    w = toMetresPerSecond s / toMetres r
-    v1 = vadd (vscale v0 (cos (w * sec))) (vscale c (sin (w * sec)))
+    a = toMetresPerSecond s / toMetres r * sec
+    v1 = vadd (vscale v0 (cos a)) (vscale c (sin a))
 
 -- | time to CPA.
 timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Length -> Double
@@ -257,28 +257,31 @@ timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
     w2 = toMetresPerSecond s2 / rm
 
 -- | time to intercept with minimum speed
-timeToIntercept :: (NTransform a) => a -> Speed -> Course -> a -> Length -> Double
-timeToIntercept p2 s2 c20 p1 r = intMinNrRec v10 v20 (vec c20) s2 w2 r s0 t0 0
+timeToIntercept :: (NTransform a) => a -> Speed -> Vector3d -> a -> Length -> Double
+timeToIntercept p2 s2 c2 p1 r = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 r) t0 0
   where
     v10 = vec . pos . toNVector $ p1
     v20 = vec . pos . toNVector $ p2
+    v10v20 = vdot v10 v20
+    v10c2 = vdot v10 c2
     s2mps = toMetresPerSecond s2
     rm = toMetres r
     w2 = s2mps / rm
-    s0 = ad v10 v20
-    t0 = rm * s0 / s2mps
+    s0 = ad v10 v20 -- initial angular distance between target and interceptor
+    t0 = rm * s0 / s2mps -- assume target is travelling towards interceptor
 
 -- | time to intercept with speed.
-timeToInterceptSpeed :: (NTransform a) => a -> Speed -> Course -> a -> Speed -> Length -> Double
-timeToInterceptSpeed p2 s2 c20 p1 s1 r = intSpdNrRec v10 w1 v20 (vec c20) s2 w2 r s0 t0 0
+timeToInterceptSpeed :: (NTransform a) => a -> Speed -> Vector3d -> a -> Speed -> Length -> Double
+timeToInterceptSpeed p2 s2 c2 p1 s1 r = intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 r) t0 0
   where
     v10 = vec . pos . toNVector $ p1
     v20 = vec . pos . toNVector $ p2
+    v10v20 = vdot v10 v20
+    v10c2 = vdot v10 c2
     rm = toMetres r
-    w2 = toMetresPerSecond s2 / rm
     w1 = toMetresPerSecond s1 / rm
+    w2 = toMetresPerSecond s2 / rm
     t0 = 0.1
-    s0 = ad v10 v20
 
 rx :: Angle -> [Vector3d]
 rx a = [Vector3d 1 0 0, Vector3d 0 c s, Vector3d 0 (-s) c]
@@ -357,84 +360,47 @@ cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     fi = cpaStep v10 c10 w1 v20 c20 w2 ti
     ti1 = ti - fi
 
+sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Length -> Double -> Double
+sep v10 v20 c2 s2 r ti = ad v10 (position'' v20 s2 c2 ti r)
+
 -- | Newton-Raphson for min speed intercept.
 -- note: this should always converge to the minimum time given
 -- that the assumptions made in the proof of quadratic convergence are met
-intMinNrRec ::
-       Vector3d
-    -> Vector3d
-    -> Vector3d
-    -> Speed
-    -> Double
-    -> Length
-    -> Double
-    -> Double
-    -> Int
-    -> Double
-intMinNrRec v10 v20 c20 s2 w2 r si ti i
+intMinNrRec :: Double -> Double -> Double -> (Double -> Double) -> Double -> Int -> Double
+intMinNrRec v10v20 v10c2 w2 st ti i
     | i == 50 = -1.0 -- no convergence
     | abs fi < 1e-12 = ti1
-    | otherwise = intMinNrRec v10 v20 c20 s2 w2 r si1 ti1 (i + 1)
+    | otherwise = intMinNrRec v10v20 v10c2 w2 st ti1 (i + 1)
   where
-    fi = intMinStep v10 v20 c20 w2 si ti
+    cosw2t = cos (w2 * ti)
+    sinw2t = sin (w2 * ti)
+    v10dv2dt = (-w2) * (v10v20 * sinw2t - v10c2 * cosw2t)
+    v10d2v2dt2 = (-1.0 * w2 * w2) * (v10v20 * cosw2t + v10c2 * sinw2t)
+    si = st ti
+    sinS = sin si
+    f = ti * ((-v10dv2dt) / sinS) - si
+    d2sdt2 = (-1.0 / sinS) * ((cos si / (sinS * sinS)) * v10dv2dt * v10dv2dt + v10d2v2dt2)
+    df = ti * d2sdt2
+    fi = f / df
     ti1 = ti - fi
-    v2t = position'' v20 s2 c20 ti1 r
-    si1 = ad v10 v2t
-
-intMinStep :: Vector3d -> Vector3d -> Vector3d -> Double -> Double -> Double -> Double
-intMinStep v10 v20 c20 w2 s t =
-    dsdt s w2 v10v20 v10c20 sinw2t cosw2t / d2sdt2 s w2 v10v20 v10c20 sinw2t cosw2t
-  where
-    cosw2t = cos (w2 * t)
-    sinw2t = sin (w2 * t)
-    v10v20 = vdot v10 v20
-    v10c20 = vdot v10 c20
 
 -- | Newton-Raphson for speed intercept.
 -- note: this should always converge to the minimum time given
 -- that the assumptions made in the proof of quadratic convergence are met
-intSpdNrRec ::
-       Vector3d
-    -> Double
-    -> Vector3d
-    -> Vector3d
-    -> Speed
-    -> Double
-    -> Length
-    -> Double
-    -> Double
-    -> Int
-    -> Double
-intSpdNrRec v10 w1 v20 c20 s2 w2 r si ti i
+intSpdNrRec :: Double -> Double -> Double -> Double -> (Double -> Double) -> Double -> Int -> Double
+intSpdNrRec v10v20 v10c2 w1 w2 st ti i
     | i == 50 = -1.0 -- no convergence
     | abs fi < 1e-12 = ti1
-    | otherwise = intSpdNrRec v10 w1 v20 c20 s2 w2 r si1 ti1 (i + 1)
+    | otherwise = intSpdNrRec v10v20 v10c2 w1 w2 st ti1 (i + 1)
   where
-    fi = intSpdStep v10 w1 v20 c20 w2 si ti
+    cosw2t = cos (w2 * ti)
+    sinw2t = sin (w2 * ti)
+    si = st ti
+    f = si / ti - w1
+    dsdt = (w2 * (v10v20 * sinw2t - v10c2 * cosw2t)) / sin si
+    df = (dsdt - (si / ti)) / ti
+    fi = f / df
     ti1 = ti - fi
-    v2t = position'' v20 s2 c20 ti1 r
-    si1 = ad v10 v2t
-
-intSpdStep :: Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Double -> Double
-intSpdStep v10 w1 v20 c20 w2 s t = f / df
-  where
-    cosw2t = cos (w2 * t)
-    sinw2t = sin (w2 * t)
-    v10v20 = vdot v10 v20
-    v10c20 = vdot v10 c20
-    f = s / t - w1
-    df = (1.0 / t) * (dsdt s w2 v10v20 v10c20 sinw2t cosw2t - s / t)
-
-dsdt :: Double -> Double -> Double -> Double -> Double -> Double -> Double
-dsdt s w2 v10v20 v10c20 sinw2t cosw2t =
-    ((-1.0) / sin s) * ((-w2) * (v10v20 * sinw2t - v10c20 * cosw2t))
-
-d2sdt2 :: Double -> Double -> Double -> Double -> Double -> Double -> Double
-d2sdt2 s w2 v10v20 v10c20 sinw2t cosw2t =
-    ((-1.0) / sin s) * (cos s / (sins * sins) * x10d2x2dt2 * x10d2x2dt2 + x10d2x2dt2)
-  where
-    sins = sin s
-    x10d2x2dt2 = negate (w2 * w2) * (v10v20 * cosw2t + v10c20 * sinw2t)
 
 -- | angle in radians between 2 n-vectors (as vector3d), copied from Geodetics
 -- without the sign and returing radians.

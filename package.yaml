@@ -1,5 +1,5 @@
 name:                jord
-version:             0.4.1.0
+version:             0.4.2.0
 github:              ofmooseandmen/jord
 license:             BSD3
 author:              Cedric Liegeois
@@ -44,7 +44,7 @@ library:
     - Data.Geo.Jord.Parse
 
 executables:
-  jord-exe:
+  jord-repl:
     main:                Main.hs
     other-modules:
       - Eval

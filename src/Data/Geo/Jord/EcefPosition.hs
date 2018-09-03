@@ -26,7 +26,7 @@ import Data.Geo.Jord.Vector3d
 --
 -- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
 --
--- Note: on a spherical model earth, an n-vector is equivalent to a normalised version of an (ECEF) cartesian coordinate.
+-- Note: on a spherical model earth, an /n/-vector is equivalent to a normalised version of an (ECEF) cartesian coordinate.
 newtype EcefPosition =
     EcefPosition Vector3d
     deriving (Eq, Show)

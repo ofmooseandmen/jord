@@ -15,10 +15,11 @@ spec =
                 let p1 = decimalLatLongHeight 53.1882691 0.1332741 (metres 15000)
                 let t = Track p0 (decimalDegrees 96.0217) (kilometresPerHour 124.8)
                 position84 t (hours 1) `shouldBe` p1
-            it "handles poles" $ do
+            it "handles poles" $
                 -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
                 -- track at north pole travelling at 20015.114352200002km/h and true north reaches the
                 -- south pole after 1 hour.
+             do
                 let t = Track (decimalLatLong 90 0) zero (kilometresPerHour 20015.114352200002)
                 position84 t (hours 1) `shouldBe` decimalLatLong (-90) 180.0
             it "return p0 if speed is 0" $ do
@@ -85,13 +86,9 @@ spec =
                     (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
                     (decimalLatLong 30 30) `shouldBe`
                 Nothing
-            it "returns Nothing if interceptor is on the great circle of target and behind" $ do
-                -- minimum speed would be ideally target speed + epsillon.
-                let ip = decimalLatLong 20 30
-                let px = destination84 ip (decimalDegrees 20) (kilometres 1)
-                let tp = interpolate ip px 0.25
-                let b = fromJust (initialBearing tp px)
-                let t = Track tp b (knots 400)
+            it "returns Nothing if interceptor is behing target" $ do
+                let t = Track (decimalLatLong 45 67) (decimalDegrees 54) (knots 400)
+                let ip = decimalLatLong 44 66
                 intercept84 t ip `shouldBe` Nothing
             it "handles interceptor on the great circle of target and in front" $ do
                 let tp = decimalLatLong 20 30
@@ -103,12 +100,12 @@ spec =
                 fmap interceptorSpeed i `shouldBe` Just zero
                 fmap interceptPosition i `shouldBe` Just ip
                 fmap interceptTime i `shouldBe` Just (seconds 1.215)
-            it "returns the minimum speed required for intercept to take place" $ do
-                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
-                let ip = decimalLatLong 20 (-60)
+            it "returns Nothing if interceptor is behing target" $ do
+                let t = Track (decimalLatLong 45 67) (decimalDegrees 181) (knots 400)
+                let ip = decimalLatLong 44 66
                 let i = intercept84 t ip
-                fmap interceptorSpeed i `shouldBe` Just (knots 52.837096)
-                fmap interceptTime i `shouldBe` Just (seconds 5947.698)
+                fmap interceptorSpeed i `shouldBe` Just (knots 228.5538171521)
+                fmap interceptTime i `shouldBe` Just (seconds 808.770)
                 let interceptor =
                         Track
                             ip
@@ -116,11 +113,19 @@ spec =
                             (fromJust (fmap interceptorSpeed i))
                 fmap interceptPosition i `shouldBe`
                     Just (position84 interceptor (fromJust (fmap interceptTime i)))
-            it "returns the ..." $ do
-                let t = Track (decimalLatLong 45 67) (decimalDegrees 54) (knots 500)
-                let ip = (decimalLatLong 44 66)
+            it "returns the minimum speed required for intercept to take place" $ do
+                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
+                let ip = decimalLatLong 20 (-60)
                 let i = intercept84 t ip
-                fmap interceptorSpeed i `shouldBe` Just (knots 536.7)
+                fmap interceptorSpeed i `shouldBe` Just (knots 52.633367756059)
+                fmap interceptTime i `shouldBe` Just (seconds 5993.831)
+                let interceptor =
+                        Track
+                            ip
+                            (fromJust (fmap interceptorBearing i))
+                            (fromJust (fmap interceptorSpeed i))
+                fmap interceptPosition i `shouldBe`
+                    Just (position84 interceptor (fromJust (fmap interceptTime i)))
         describe "interceptBySpeed" $ do
             it "returns Nothing if target and interceptor are at the same position" $
                 interceptBySpeed84
@@ -132,14 +137,6 @@ spec =
                 let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
                 let ip = decimalLatLong 20 (-60)
                 interceptBySpeed84 t ip (knots 50) `shouldBe` Nothing
-            it "handles interceptor on the great circle of target and behind" $ do
-                let ip = decimalLatLong 20 30
-                let px = destination84 ip (decimalDegrees 20) (kilometres 1)
-                let tp = interpolate ip px 0.25
-                let b = fromJust (initialBearing tp px)
-                let t = Track tp b (metresPerSecond 400)
-                let i = interceptBySpeed84 t ip (metresPerSecond 500)
-                fmap interceptTime i `shouldBe` Just (seconds 2.5)
             it "returns the speed needed for intercept to take place" $ do
                 let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
                 let ip = decimalLatLong 20 (-60)
@@ -182,10 +179,11 @@ spec =
                 fmap interceptPosition i `shouldBe` Just (decimalLatLong 28.1366797 (-55.4559475))
                 fmap interceptDistance i `shouldBe` Just (metres 1015302.3815)
                 fmap interceptTime i `shouldBe` Just (seconds 2700)
-            it "handles the poles" $ do
+            it "handles the poles" $
                 -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
                 -- target at north pole travelling at 500km/h and true north can be intercepted from
                 -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 180 degrees.
+             do
                 let t = Track (decimalLatLong 90 0) zero (kilometresPerHour 500)
                 let ip = decimalLatLong (-90) 0
                 let i = interceptByTime84 t ip (seconds 3600)

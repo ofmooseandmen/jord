@@ -1,5 +1,12 @@
 ### 0.5.0.0
 
+- Benchmarks
+
+### 0.4.2.0
+
+- Fixed intercept
+- jord-exe renamed jord-repl
+
 ### 0.4.1.0
 
 - Fixed interceptBySpeed

@@ -15,7 +15,7 @@
 module Data.Geo.Jord.Kinematics
     (
     -- * The 'Track' type.
-      Track(..)
+    Track(..)
     -- * The 'Course' type.
     , Course
     -- * The 'Cpa' type.
@@ -166,14 +166,13 @@ cpa84 t1 t2 = cpa t1 t2 r84
 --     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
 --     let ip = (decimalLatLong 20 (-60))
 --     let i = intercept t ip r84
---     fmap interceptorSpeed i = Just (knots 52.837096)
---     fmap interceptTime i = Just (seconds 5947.698)
+--     fmap interceptorSpeed i = Just (knots 52.633367756059)
+--     fmap interceptTime i = Just (seconds 5993.831)
 -- @
 intercept :: (Eq a, NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
-intercept t@(Track tp tb ts) p r = interceptByTime t p (seconds d) r
+intercept t p r = interceptByTime t p (seconds d) r
   where
-    c2 = vec (course tp tb)
-    d = timeToIntercept tp ts c2 p r
+    d = timeToIntercept t p r
 
 -- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
 intercept84 :: (Eq a, NTransform a) => Track a -> a -> Maybe (Intercept a)
@@ -186,12 +185,14 @@ intercept84 t p = intercept t p r84
 --
 --     * interceptor and target are at the same position
 --
---     * interceptor speed is below minimum speed
+--     * interceptor speed is below minimum speed returned by 'intercept'
 interceptBySpeed :: (Eq a, NTransform a) => Track a -> a -> Speed -> Length -> Maybe (Intercept a)
-interceptBySpeed t@(Track tp tb ts) p s r = interceptByTime t p (seconds d) r
+interceptBySpeed t p s r
+    | minInt == Nothing = Nothing
+    | fmap interceptorSpeed minInt == Just s = minInt
+    | otherwise = interceptByTime t p (seconds (timeToInterceptSpeed t p s r)) r
   where
-    c2 = vec (course tp tb)
-    d = timeToInterceptSpeed tp ts c2 p s r
+    minInt = intercept t p r
 
 -- | 'interceptBySpeed' using the mean radius of the WGS84 reference ellipsoid.
 interceptBySpeed84 :: (Eq a, NTransform a) => Track a -> a -> Speed -> Maybe (Intercept a)
@@ -213,6 +214,9 @@ interceptBySpeed84 t p s = interceptBySpeed t p s r84
 --     fmap interceptDistance i = Just (metres 1015302.3815)
 --     fmap interceptTime i = Just (seconds 2700)
 -- @
+--
+-- Note: contrary to 'intercept' and 'interceptBySpeed' this function handles
+-- cases where the interceptor has to catch up the target.
 interceptByTime :: (Eq a, NTransform a) => Track a -> a -> Duration -> Length -> Maybe (Intercept a)
 interceptByTime t p d r
     | toMilliseconds d <= 0 = Nothing
@@ -257,11 +261,12 @@ timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
     w2 = toMetresPerSecond s2 / rm
 
 -- | time to intercept with minimum speed
-timeToIntercept :: (NTransform a) => a -> Speed -> Vector3d -> a -> Length -> Double
-timeToIntercept p2 s2 c2 p1 r = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 r) t0 0
+timeToIntercept :: (NTransform a) => Track a -> a -> Length -> Double
+timeToIntercept (Track p2 b2 s2) p1 r = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 r) t0 0
   where
     v10 = vec . pos . toNVector $ p1
     v20 = vec . pos . toNVector $ p2
+    c2 = vec (course p2 b2)
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
     s2mps = toMetresPerSecond s2
@@ -271,11 +276,13 @@ timeToIntercept p2 s2 c2 p1 r = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 r
     t0 = rm * s0 / s2mps -- assume target is travelling towards interceptor
 
 -- | time to intercept with speed.
-timeToInterceptSpeed :: (NTransform a) => a -> Speed -> Vector3d -> a -> Speed -> Length -> Double
-timeToInterceptSpeed p2 s2 c2 p1 s1 r = intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 r) t0 0
+timeToInterceptSpeed :: (NTransform a) => Track a -> a -> Speed -> Length -> Double
+timeToInterceptSpeed (Track p2 b2 s2) p1 s1 r =
+    intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 r) t0 0
   where
     v10 = vec . pos . toNVector $ p1
     v20 = vec . pos . toNVector $ p2
+    c2 = vec (course p2 b2)
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
     rm = toMetres r
@@ -348,28 +355,21 @@ cpaStep v10 c10 w1 v20 c20 w2 t =
     d = cpaD v10 c10 w1 v20 c20 w2
 
 -- | Newton-Raphson for CPA time.
--- note: this should always converge to the minimum time given
--- that the assumptions made in the proof of quadratic convergence are met
 cpaNrRec ::
        Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     | i == 50 = -1.0 -- no convergence
-    | abs fi < 1e-12 = ti1
+    | abs fi < 1e-8 = ti1
     | otherwise = cpaNrRec v10 c10 w1 v20 c20 w2 ti1 (i + 1)
   where
     fi = cpaStep v10 c10 w1 v20 c20 w2 ti
     ti1 = ti - fi
 
-sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Length -> Double -> Double
-sep v10 v20 c2 s2 r ti = ad v10 (position'' v20 s2 c2 ti r)
-
 -- | Newton-Raphson for min speed intercept.
--- note: this should always converge to the minimum time given
--- that the assumptions made in the proof of quadratic convergence are met
 intMinNrRec :: Double -> Double -> Double -> (Double -> Double) -> Double -> Int -> Double
 intMinNrRec v10v20 v10c2 w2 st ti i
     | i == 50 = -1.0 -- no convergence
-    | abs fi < 1e-12 = ti1
+    | abs fi < 1e-8 = ti1
     | otherwise = intMinNrRec v10v20 v10c2 w2 st ti1 (i + 1)
   where
     cosw2t = cos (w2 * ti)
@@ -378,19 +378,19 @@ intMinNrRec v10v20 v10c2 w2 st ti i
     v10d2v2dt2 = (-1.0 * w2 * w2) * (v10v20 * cosw2t + v10c2 * sinw2t)
     si = st ti
     sinS = sin si
-    f = ti * ((-v10dv2dt) / sinS) - si
-    d2sdt2 = (-1.0 / sinS) * ((cos si / (sinS * sinS)) * v10dv2dt * v10dv2dt + v10d2v2dt2)
+    a = (-1.0) / sinS
+    b = cos si / (sinS * sinS)
+    f = ti * a * v10dv2dt - si
+    d2sdt2 = a * (b * v10dv2dt * v10dv2dt + v10d2v2dt2)
     df = ti * d2sdt2
     fi = f / df
     ti1 = ti - fi
 
 -- | Newton-Raphson for speed intercept.
--- note: this should always converge to the minimum time given
--- that the assumptions made in the proof of quadratic convergence are met
 intSpdNrRec :: Double -> Double -> Double -> Double -> (Double -> Double) -> Double -> Int -> Double
 intSpdNrRec v10v20 v10c2 w1 w2 st ti i
     | i == 50 = -1.0 -- no convergence
-    | abs fi < 1e-12 = ti1
+    | abs fi < 1e-8 = ti1
     | otherwise = intSpdNrRec v10v20 v10c2 w1 w2 st ti1 (i + 1)
   where
     cosw2t = cos (w2 * ti)
@@ -401,6 +401,11 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
     df = (dsdt - (si / ti)) / ti
     fi = f / df
     ti1 = ti - fi
+
+-- | angular separation in radians at ti between v10 and track with initial position v20,
+-- course c2 and speed s2.
+sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Length -> Double -> Double
+sep v10 v20 c2 s2 r ti = ad v10 (position'' v20 s2 c2 ti r)
 
 -- | angle in radians between 2 n-vectors (as vector3d), copied from Geodetics
 -- without the sign and returing radians.

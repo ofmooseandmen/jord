@@ -58,6 +58,7 @@ import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Speed
 import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
+import Data.Maybe (isNothing)
 
 -- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
 data Track a = Track
@@ -170,9 +171,7 @@ cpa84 t1 t2 = cpa t1 t2 r84
 --     fmap interceptTime i = Just (seconds 5993.831)
 -- @
 intercept :: (Eq a, NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
-intercept t p r = interceptByTime t p (seconds d) r
-  where
-    d = timeToIntercept t p r
+intercept t p r = interceptByTime t p (seconds (timeToIntercept t p r)) r
 
 -- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
 intercept84 :: (Eq a, NTransform a) => Track a -> a -> Maybe (Intercept a)
@@ -188,7 +187,7 @@ intercept84 t p = intercept t p r84
 --     * interceptor speed is below minimum speed returned by 'intercept'
 interceptBySpeed :: (Eq a, NTransform a) => Track a -> a -> Speed -> Length -> Maybe (Intercept a)
 interceptBySpeed t p s r
-    | minInt == Nothing = Nothing
+    | isNothing minInt = Nothing
     | fmap interceptorSpeed minInt == Just s = minInt
     | otherwise = interceptByTime t p (seconds (timeToInterceptSpeed t p s r)) r
   where
@@ -252,7 +251,7 @@ position'' v0 s c sec r = v1
 timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Length -> Double
 timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
   where
-    v10 = vec . pos . toNVector $ p1
+    v10 = vec3d p1
     c10 = vec c1
     rm = toMetres r
     w1 = toMetresPerSecond s1 / rm
@@ -264,8 +263,8 @@ timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
 timeToIntercept :: (NTransform a) => Track a -> a -> Length -> Double
 timeToIntercept (Track p2 b2 s2) p1 r = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 r) t0 0
   where
-    v10 = vec . pos . toNVector $ p1
-    v20 = vec . pos . toNVector $ p2
+    v10 = vec3d p1
+    v20 = vec3d p2
     c2 = vec (course p2 b2)
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
@@ -280,8 +279,8 @@ timeToInterceptSpeed :: (NTransform a) => Track a -> a -> Speed -> Length -> Dou
 timeToInterceptSpeed (Track p2 b2 s2) p1 s1 r =
     intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 r) t0 0
   where
-    v10 = vec . pos . toNVector $ p1
-    v20 = vec . pos . toNVector $ p2
+    v10 = vec3d p1
+    v20 = vec3d p2
     c2 = vec (course p2 b2)
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
@@ -411,3 +410,6 @@ sep v10 v20 c2 s2 r ti = ad v10 (position'' v20 s2 c2 ti r)
 -- without the sign and returing radians.
 ad :: Vector3d -> Vector3d -> Double
 ad v1 v2 = atan2 (vnorm (vcross v1 v2)) (vdot v1 v2)
+
+vec3d :: (NTransform a) => a -> Vector3d
+vec3d = vec . pos . toNVector

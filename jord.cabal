@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9ff35d98d9fcb1e263910cb2752a59733058e6930d4ece16536f0094705360ba
+-- hash: 8bc0043cf9b7f8b4b203c71df609cfa6cc47735768a22d31029d559d8f49ad70
 
 name:           jord
 version:        0.4.2.0
@@ -55,7 +55,7 @@ library
       base >=4.9 && <5
   default-language: Haskell2010
 
-executable jord-exe
+executable jord-repl
   main-is: Main.hs
   other-modules:
       Eval

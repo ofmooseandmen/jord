@@ -44,7 +44,7 @@ library:
     - Data.Geo.Jord.Parse
 
 executables:
-  jord-exe:
+  jord-repl:
     main:                Main.hs
     other-modules:
       - Eval

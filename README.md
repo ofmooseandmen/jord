@@ -9,13 +9,13 @@
 ## What is this?
 
 Jord is a [Haskell](https://www.haskell.org) library that implements various geographical position calculations using the algorithms described in [Gade, K. (2010). A Non-singular Horizontal Position Representation](http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf) and in
-[Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry](https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf)
+[Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry](https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf):
 
-- Transformation between ECEF (earth-centred, earth-fixed), Latitude/Longitude and *n*-vector positions for spherical and ellipsoidal earth model.
-- Transformation between Latitude/Longitude and *n*-vector positions.
-- Local, Body and North, East, Down Frames: delta between positions, target position from reference position and delta.
-- Geodetics: surface distance, initial & final bearing, interpolated position, great circle intersections, cross track distance, ...
-- Kinematics: position from p0, bearing and speed, closest point of approach between tracks, intercept (time, speed, min speed).
+- transformation between ECEF (earth-centred, earth-fixed), latitude/longitude and [*n*-vector](https://www.navlab.net/nvector) positions for spherical and ellipsoidal earth model,
+- transformation between latitude/longitude and *n*-vector positions,
+- local, body and north, east, down Frames: delta between positions, target position from reference position and delta,
+- geodetics: surface distance, initial & final bearing, interpolated position, great circle intersections, cross track distance, ...,
+- kinematics: position from p0, bearing and speed, closest point of approach between tracks, intercept (time, speed, minimum speed).
 
 ## How do I build it?
 

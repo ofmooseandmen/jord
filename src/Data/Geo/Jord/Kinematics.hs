@@ -358,7 +358,7 @@ cpaNrRec ::
        Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     | i == 50 = -1.0 -- no convergence
-    | abs fi < 1e-8 = ti1
+    | abs fi < 1e-11 = ti1
     | otherwise = cpaNrRec v10 c10 w1 v20 c20 w2 ti1 (i + 1)
   where
     fi = cpaStep v10 c10 w1 v20 c20 w2 ti
@@ -368,7 +368,7 @@ cpaNrRec v10 c10 w1 v20 c20 w2 ti i
 intMinNrRec :: Double -> Double -> Double -> (Double -> Double) -> Double -> Int -> Double
 intMinNrRec v10v20 v10c2 w2 st ti i
     | i == 50 = -1.0 -- no convergence
-    | abs fi < 1e-8 = ti1
+    | abs fi < 1e-11 = ti1
     | otherwise = intMinNrRec v10v20 v10c2 w2 st ti1 (i + 1)
   where
     cosw2t = cos (w2 * ti)
@@ -389,7 +389,7 @@ intMinNrRec v10v20 v10c2 w2 st ti i
 intSpdNrRec :: Double -> Double -> Double -> Double -> (Double -> Double) -> Double -> Int -> Double
 intSpdNrRec v10v20 v10c2 w1 w2 st ti i
     | i == 50 = -1.0 -- no convergence
-    | abs fi < 1e-8 = ti1
+    | abs fi < 1e-11 = ti1
     | otherwise = intSpdNrRec v10v20 v10c2 w1 w2 st ti1 (i + 1)
   where
     cosw2t = cos (w2 * ti)

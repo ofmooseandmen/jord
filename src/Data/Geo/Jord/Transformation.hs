@@ -35,17 +35,17 @@ import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
--- | Transformation between positions and 'AngularPosition' of 'NVector'.
+-- | Transformation between position and /n/-vector and height.
 class NTransform a where
     toNVector :: a -> AngularPosition NVector -- ^ position to 'AngularPosition' of 'NVector'.
     fromNVector :: AngularPosition NVector -> a -- ^ 'AngularPosition' of 'NVector' and height to position.
 
--- | 'NVector' <-> 'AngularPosition' of 'NVector'.
+-- | 'NVector' to, from 'AngularPosition' of 'NVector'.
 instance NTransform NVector where
     toNVector nv = AngularPosition nv zero
     fromNVector = pos
 
--- | 'LatLong' <-> 'AngularPosition' of 'NVector'.
+-- | 'LatLong' to, from 'AngularPosition' of 'NVector'.
 instance NTransform LatLong where
     toNVector ll = AngularPosition (latLongToNVector ll) zero
     fromNVector = nvectorToLatLong . pos
@@ -55,32 +55,32 @@ instance NTransform (AngularPosition NVector) where
     toNVector = id
     fromNVector = id
 
--- | 'AngularPosition' of 'LatLong' <-> 'AngularPosition' of 'NVector'.
+-- | 'AngularPosition' of 'LatLong' to, from 'AngularPosition' of 'NVector'.
 instance NTransform (AngularPosition LatLong) where
     toNVector (AngularPosition ll h) = AngularPosition (latLongToNVector ll) h
     fromNVector (AngularPosition nv h) = AngularPosition (nvectorToLatLong nv) h
 
--- | Transformation between 'EcefPosition' and angular or n-vector positions.
+-- | Transformation between 'EcefPosition' and angular or /n/-vector positions.
 class ETransform a where
     toEcef :: a -> Earth -> EcefPosition -- ^ position and earth model to to 'EcefPosition'.
     fromEcef :: EcefPosition -> Earth -> a -- ^ 'EcefPosition' and earth model to position.
 
--- | 'NVector' <-> 'EcefPosition'.
+-- | 'NVector' to, from 'EcefPosition'.
 instance ETransform NVector where
     fromEcef p e = pos (ecefToNVector p e)
     toEcef v = nvectorToEcef (nvectorHeight v zero)
 
--- | 'LatLong' <-> 'EcefPosition'.
+-- | 'LatLong' to, from 'EcefPosition'.
 instance ETransform LatLong where
     fromEcef p e = fromNVector (nvectorHeight (fromEcef p e :: NVector) zero)
     toEcef = toEcef . toNVector
 
--- | 'AngularPosition' of 'NVector' <-> 'EcefPosition'.
+-- | 'AngularPosition' of 'NVector' to, from 'EcefPosition'.
 instance ETransform (AngularPosition NVector) where
     fromEcef = ecefToNVector
     toEcef = nvectorToEcef
 
--- | 'AngularPosition' of 'LatLong' <-> 'EcefPosition'.
+-- | 'AngularPosition' of 'LatLong' to, from 'EcefPosition'.
 instance ETransform (AngularPosition LatLong) where
     fromEcef p e = fromNVector (ecefToNVector p e)
     toEcef = nvectorToEcef . toNVector

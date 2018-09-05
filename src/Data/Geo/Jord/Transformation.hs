@@ -16,7 +16,8 @@
 -- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
 --
 module Data.Geo.Jord.Transformation
-    ( NTransform(..)
+    ( IsNVector(..)
+    , NTransform(..)
     , ETransform(..)
     , nvectorToLatLong
     , latLongToNVector
@@ -35,29 +36,48 @@ import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
+-- | Class for every data that can be converted to a /n/-vector and height.
+--
+-- This class is usefull when conversion back to @a@ is not required, for bidirectional
+-- conversion, use 'NTransform'.
+--
+class IsNVector a where
+    toNVector :: a -> AngularPosition NVector -- ^ data to 'AngularPosition' of 'NVector'.
+
 -- | Transformation between position and /n/-vector and height.
-class NTransform a where
-    toNVector :: a -> AngularPosition NVector -- ^ position to 'AngularPosition' of 'NVector'.
+class (IsNVector a) => NTransform a where
     fromNVector :: AngularPosition NVector -> a -- ^ 'AngularPosition' of 'NVector' and height to position.
+
+-- | 'NVector' to 'AngularPosition' of 'NVector'.
+instance IsNVector NVector where
+    toNVector nv = AngularPosition nv zero
 
 -- | 'NVector' to, from 'AngularPosition' of 'NVector'.
 instance NTransform NVector where
-    toNVector nv = AngularPosition nv zero
     fromNVector = pos
+
+-- | 'LatLong' to 'AngularPosition' of 'NVector'.
+instance IsNVector LatLong where
+    toNVector ll = AngularPosition (latLongToNVector ll) zero
 
 -- | 'LatLong' to, from 'AngularPosition' of 'NVector'.
 instance NTransform LatLong where
-    toNVector ll = AngularPosition (latLongToNVector ll) zero
     fromNVector = nvectorToLatLong . pos
+
+-- | 'IsNVector' identity.
+instance IsNVector (AngularPosition NVector) where
+    toNVector = id
 
 -- | 'NTransform' identity.
 instance NTransform (AngularPosition NVector) where
-    toNVector = id
     fromNVector = id
+
+-- | 'AngularPosition' of 'LatLong' to 'AngularPosition' of 'NVector'.
+instance IsNVector (AngularPosition LatLong) where
+    toNVector (AngularPosition ll h) = AngularPosition (latLongToNVector ll) h
 
 -- | 'AngularPosition' of 'LatLong' to, from 'AngularPosition' of 'NVector'.
 instance NTransform (AngularPosition LatLong) where
-    toNVector (AngularPosition ll h) = AngularPosition (latLongToNVector ll) h
     fromNVector (AngularPosition nv h) = AngularPosition (nvectorToLatLong nv) h
 
 -- | Transformation between 'EcefPosition' and angular or /n/-vector positions.

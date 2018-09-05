@@ -33,7 +33,7 @@ import Control.Applicative hiding (many)
 import Control.Monad.Fail
 import Data.Char
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Parse
+import Data.Geo.Jord.Parser
 import Data.Maybe
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP

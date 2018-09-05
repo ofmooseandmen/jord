@@ -19,7 +19,7 @@ module Data.Geo.Jord.Duration
     , minutes
     , seconds
     , hms
-    -- * Accessors
+    -- * Conversions
     , toHours
     , toMinutes
     , toSeconds
@@ -30,7 +30,7 @@ module Data.Geo.Jord.Duration
     ) where
 
 import Control.Monad.Fail
-import Data.Geo.Jord.Parse
+import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP

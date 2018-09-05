@@ -34,6 +34,7 @@ library:
     - Data.Geo.Jord.Kinematics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
+    - Data.Geo.Jord.Neighbours
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Rotation
@@ -41,7 +42,8 @@ library:
     - Data.Geo.Jord.Transformation
     - Data.Geo.Jord.Vector3d
   other-modules:
-    - Data.Geo.Jord.Parse
+    - Data.Geo.Jord.Internal
+    - Data.Geo.Jord.Parser
 
 executables:
   jord-repl:

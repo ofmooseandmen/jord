@@ -51,6 +51,7 @@ import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Duration
 import Data.Geo.Jord.Earth
 import Data.Geo.Jord.Geodetics
+import Data.Geo.Jord.Internal(ad, nvec)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -251,11 +252,11 @@ position'' v0 s c sec r = v1
 timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Length -> Double
 timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
   where
-    v10 = vec3d p1
+    v10 = nvec p1
     c10 = vec c1
     rm = toMetres r
     w1 = toMetresPerSecond s1 / rm
-    v20 = vec . pos . toNVector $ p2
+    v20 = nvec p2
     c20 = vec c2
     w2 = toMetresPerSecond s2 / rm
 
@@ -263,8 +264,8 @@ timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
 timeToIntercept :: (NTransform a) => Track a -> a -> Length -> Double
 timeToIntercept (Track p2 b2 s2) p1 r = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 r) t0 0
   where
-    v10 = vec3d p1
-    v20 = vec3d p2
+    v10 = nvec p1
+    v20 = nvec p2
     c2 = vec (course p2 b2)
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
@@ -279,8 +280,8 @@ timeToInterceptSpeed :: (NTransform a) => Track a -> a -> Speed -> Length -> Dou
 timeToInterceptSpeed (Track p2 b2 s2) p1 s1 r =
     intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 r) t0 0
   where
-    v10 = vec3d p1
-    v20 = vec3d p2
+    v10 = nvec p1
+    v20 = nvec p2
     c2 = vec (course p2 b2)
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
@@ -405,11 +406,3 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
 -- course c2 and speed s2.
 sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Length -> Double -> Double
 sep v10 v20 c2 s2 r ti = ad v10 (position'' v20 s2 c2 ti r)
-
--- | angle in radians between 2 n-vectors (as vector3d), copied from Geodetics
--- without the sign and returing radians.
-ad :: Vector3d -> Vector3d -> Double
-ad v1 v2 = atan2 (vnorm (vcross v1 v2)) (vdot v1 v2)
-
-vec3d :: (NTransform a) => a -> Vector3d
-vec3d = vec . pos . toNVector

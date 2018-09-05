@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 825b1e2cc25fc252dbc0ba6298d339ea46d3989e80cecb8c2d6b1f2c8d88c844
+-- hash: af417301c630990e1666ef5005058a747542a0af9dca18ceca792bd779d33faf
 
 name:           jord
 version:        0.5.0.0
@@ -40,6 +40,7 @@ library
       Data.Geo.Jord.Kinematics
       Data.Geo.Jord.LatLong
       Data.Geo.Jord.Length
+      Data.Geo.Jord.Neighbours
       Data.Geo.Jord.NVector
       Data.Geo.Jord.Quantity
       Data.Geo.Jord.Rotation
@@ -47,7 +48,8 @@ library
       Data.Geo.Jord.Transformation
       Data.Geo.Jord.Vector3d
   other-modules:
-      Data.Geo.Jord.Parse
+      Data.Geo.Jord.Internal
+      Data.Geo.Jord.Parser
   hs-source-dirs:
       src
   ghc-options: -Wall

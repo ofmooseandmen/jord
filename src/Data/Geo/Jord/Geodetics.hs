@@ -40,6 +40,7 @@ import Data.Fixed
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth (r84)
+import Data.Geo.Jord.Internal(nvec, sad)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -99,8 +100,8 @@ instance (NTransform a, Show a) => IsGreatCircle (a, a) where
             Right
                 (GreatCircle (vcross v1 v2) ("passing by " ++ show (ll p1) ++ " & " ++ show (ll p2)))
       where
-        v1 = vector3d p1
-        v2 = vector3d p2
+        v1 = nvec p1
+        v2 = nvec p2
 
 -- | 'GreatCircle' passing by the given position and heading on given bearing.
 --
@@ -111,7 +112,7 @@ instance (NTransform a, Show a) => IsGreatCircle (a, Angle) where
     greatCircleE (p, b) =
         Right (GreatCircle (vsub n' e') ("passing by " ++ show (ll p) ++ " heading on " ++ show b))
       where
-        v = vector3d p
+        v = nvec p
         e = vcross (vec northPole) v -- easting
         n = vcross v e -- northing
         e' = vscale e (cos' b / vnorm e)
@@ -121,16 +122,16 @@ instance (NTransform a, Show a) => IsGreatCircle (a, Angle) where
 -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
 -- signed + if @p1@ is clockwise looking along @n@, - in opposite direction.
 angularDistance :: (NTransform a) => a -> a -> Maybe a -> Angle
-angularDistance p1 p2 n = angularDistance' v1 v2 vn
+angularDistance p1 p2 n = sad' v1 v2 vn
   where
-    v1 = vector3d p1
-    v2 = vector3d p2
-    vn = fmap vector3d n
+    v1 = nvec p1
+    v2 = nvec p2
+    vn = fmap nvec n
 
 -- | @antipode p@ computes the antipodal horizontal position of @p@:
 -- the horizontal position on the surface of the Earth which is diametrically opposite to @p@.
 antipode :: (NTransform a) => a -> a
-antipode p = fromNVector (angular (vscale (vector3d nv) (-1.0)) h)
+antipode p = fromNVector (angular (vscale (nvec nv) (-1.0)) h)
   where
     (AngularPosition nv h) = toNVector p
 
@@ -150,7 +151,7 @@ antipode p = fromNVector (angular (vscale (vector3d nv) (-1.0)) h)
 -- @
 crossTrackDistance :: (NTransform a) => a -> GreatCircle -> Length -> Length
 crossTrackDistance p gc =
-    arcLength (sub (angularDistance' (normal gc) (vector3d p) Nothing) (decimalDegrees 90))
+    arcLength (sub (sad' (normal gc) (nvec p) Nothing) (decimalDegrees 90))
 
 -- | 'crossTrackDistance' using the mean radius of the WGS84 reference ellipsoid.
 crossTrackDistance84 :: (NTransform a) => a -> GreatCircle -> Length
@@ -201,10 +202,10 @@ finalBearing p1 p2 = fmap (\b -> normalise b (decimalDegrees 180)) (initialBeari
 initialBearing :: (Eq a, NTransform a) => a -> a -> Maybe Angle
 initialBearing p1 p2
     | p1 == p2 = Nothing
-    | otherwise = Just (normalise (angularDistance' gc1 gc2 (Just v1)) (decimalDegrees 360))
+    | otherwise = Just (normalise (sad' gc1 gc2 (Just v1)) (decimalDegrees 360))
   where
-    v1 = vector3d p1
-    v2 = vector3d p2
+    v1 = nvec p1
+    v2 = nvec p2
     gc1 = vcross v1 v2 -- great circle through p1 & p2
     gc2 = vcross v1 (vec northPole) -- great circle through p1 & north pole
 
@@ -266,13 +267,13 @@ insideSurface p ps
     | otherwise =
         let aSum =
                 foldl
-                    (\a v' -> add a (uncurry angularDistance' v' (Just v)))
+                    (\a v' -> add a (uncurry sad' v' (Just v)))
                     (decimalDegrees 0)
                     (egdes (map (vsub v) vs))
          in abs (toDecimalDegrees aSum) > 180.0
   where
-    v = vector3d p
-    vs = fmap vector3d ps
+    v = nvec p
+    vs = fmap nvec ps
 
 -- | Computes the intersections between the two given 'GreatCircle's.
 -- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
@@ -314,7 +315,7 @@ mean ps =
         then Just (fromNVector (angular (vunit (foldl vadd vzero vs)) zero))
         else Nothing
   where
-    vs = fmap vector3d ps
+    vs = fmap nvec ps
     ts = filter (\l -> length l == 2) (subsequences vs)
     antipodals =
         filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
@@ -327,15 +328,9 @@ surfaceDistance p1 p2 = arcLength (angularDistance p1 p2 Nothing)
 surfaceDistance84 :: (NTransform a) => a -> a -> Length
 surfaceDistance84 p1 p2 = surfaceDistance p1 p2 r84
 
--- | Angle between the two given n-vectors.
--- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
--- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
-angularDistance' :: Vector3d -> Vector3d -> Maybe Vector3d -> Angle
-angularDistance' v1 v2 n = atan2' sinO cosO
-  where
-    sign = maybe 1 (signum . vdot (vcross v1 v2)) n
-    sinO = sign * vnorm (vcross v1 v2)
-    cosO = vdot v1 v2
+-- | Signed angular distance - see 'sad'.
+sad' :: Vector3d -> Vector3d -> Maybe Vector3d -> Angle
+sad' v1 v2 n = radians (sad v1 v2 n)
 
 -- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
 egdes :: [Vector3d] -> [(Vector3d, Vector3d)]
@@ -347,9 +342,6 @@ lrph h0 h1 f = metres h
     h0' = toMetres h0
     h1' = toMetres h1
     h = h0' + (h1' - h0') * f
-
-vector3d :: (NTransform a) => a -> Vector3d
-vector3d = vec . pos . toNVector
 
 angular :: Vector3d -> Length -> AngularPosition NVector
 angular v = nvectorHeight (nvector (vx v) (vy v) (vz v))

@@ -34,7 +34,6 @@ library:
     - Data.Geo.Jord.Kinematics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
-    - Data.Geo.Jord.Neighbours
     - Data.Geo.Jord.NVector
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Rotation

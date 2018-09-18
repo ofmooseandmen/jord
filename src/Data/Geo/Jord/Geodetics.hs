@@ -18,7 +18,12 @@ module Data.Geo.Jord.Geodetics
     -- * The 'GreatCircle' type
       GreatCircle
     , IsGreatCircle(..)
+    -- * The 'GreatArc' type
+    , GreatArc
+    , IsGreatArc(..)
     -- * Calculations
+    , alongTrackDistance
+    , alongTrackDistance84
     , angularDistance
     , antipode
     , crossTrackDistance
@@ -40,7 +45,7 @@ import Data.Fixed
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth (r84)
-import Data.Geo.Jord.Internal(nvec, sad)
+import Data.Geo.Jord.Internal (nvec, sad)
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
@@ -60,20 +65,18 @@ import Prelude hiding (fail)
 --
 -- See 'greatCircle', 'greatCircleE', 'greatCircleF' or 'greatCircleBearing' constructors.
 --
-data GreatCircle = GreatCircle
-    { normal :: Vector3d
-    , dscr :: String
-    } deriving (Eq)
+data GreatCircle =
+    GreatCircle Vector3d
+                String
+    deriving (Eq)
 
 instance Show GreatCircle where
-    show = dscr
+    show (GreatCircle _ s) = s
 
 -- | Class for data from which a 'GreatCircle' can be computed.
-class (Show a) =>
-      IsGreatCircle a
-    where
+class (Show a) => IsGreatCircle a where
     greatCircle :: a -> GreatCircle -- ^ 'GreatCircle' from @a@, if 'greateCircleE' returns a 'Left', this function 'error's.
-    greatCircle a = fromMaybe (error (show a ++ " do not define a Great Circle")) (greatCircleF a)
+    greatCircle a = fromMaybe (error (show a ++ " does not define a Great Circle")) (greatCircleF a)
     greatCircleE :: a -> Either String GreatCircle -- ^ 'GreatCircle' from @a@, A 'Left' indicates an error.
     greatCircleF :: (MonadFail m) => a -> m GreatCircle -- ^ 'GreatCircle' from @a@, if 'greateCircleE' returns a 'Left', this function 'fail's.
     greatCircleF a =
@@ -82,6 +85,31 @@ class (Show a) =>
             Right gc -> return gc
       where
         e = greatCircleE a
+
+-- | A closed segment of 'GreatCircle'. It represent the shortest path on the __surface__ of the Earth
+--  from between the two positions.
+data GreatArc =
+    GreatArc NVector
+             NVector
+             GreatCircle
+             String
+    deriving (Eq)
+
+instance Show GreatArc where
+    show (GreatArc _ _ _ s) = s
+
+-- | Class for data from which a 'GreatArc' can be computed.
+class (Show a) => IsGreatArc a where
+    greatArc :: a -> GreatArc -- ^ 'GreatCircle' from @a@, if 'greatArcE' returns a 'Left', this function 'error's.
+    greatArc a = fromMaybe (error (show a ++ " does not define a Great Arc")) (greatArcF a)
+    greatArcE :: a -> Either String GreatArc -- ^ 'GreatArc' from @a@, A 'Left' indicates an error.
+    greatArcF :: (MonadFail m) => a -> m GreatArc -- ^ 'GreatArc' from @a@, if 'greatArcE' returns a 'Left', this function 'fail's.
+    greatArcF a =
+        case e of
+            Left err -> fail err
+            Right ga -> return ga
+      where
+        e = greatArcE a
 
 -- | 'GreatCircle' passing by both given positions'. A 'Left' indicates that given positions are
 -- equal or antipodal.
@@ -118,6 +146,48 @@ instance (NTransform a, Show a) => IsGreatCircle (a, Angle) where
         e' = vscale e (cos' b / vnorm e)
         n' = vscale n (sin' b / vnorm n)
 
+-- | 'GreatCircle' from given 'GreatArc'.
+instance IsGreatCircle GreatArc where
+    greatCircleE (GreatArc _ _ g _) = Right g
+
+-- | 'GreatArc' passing by both given positions'. A 'Left' indicates that given positions are
+-- equal or antipodal.
+--
+-- @
+--     let p1 = decimalLatLongHeight 45.0 (-143.5) (metres 1500)
+--     let p2 = decimalLatLongHeight 46.0 14.5 (metres 3000)
+--     greatArc (p1, p2) -- heights are ignored, great arc are always at earth surface.
+-- @
+instance (NTransform a, Show a) => IsGreatArc (a, a) where
+    greatArcE ps@(p1, p2) =
+        case greatCircleE ps of
+            Left e -> Left e
+            Right gcv ->
+                Right
+                    (GreatArc
+                         (pos . toNVector $ p1)
+                         (pos . toNVector $ p2)
+                         gcv
+                         ("passing by " ++ show (ll p1) ++ " & " ++ show (ll p2)))
+
+-- | @alongTrackDistance p ga r@ how far position @p@ is along a path described
+-- by great arc @ga@: if a perpendicular is drawn from @p@  to the great arc, the
+-- along-track distance is the signed distance from the start point to where the
+-- perpendicular crosses the path.
+--
+-- @
+--     let p = decimalLatLong 53.2611 (-0.7972)
+--     let ga = greatArc (decimalLatLong 53.3206 (-1.7297)) (decimalLatLong 53.1887 0.1334)
+--     alongTrackDistance p ga r84 -- 62.3315757 kilometres
+-- @
+alongTrackDistance :: (NTransform a) => a -> GreatArc -> Length -> Length
+alongTrackDistance p (GreatArc s _ (GreatCircle n _) _) =
+    arcLength (sad' (nvec s) (vcross (vcross n (nvec p)) n) (Just n))
+
+-- | 'alongTrackDistance' using the mean radius of the WGS84 reference ellipsoid.
+alongTrackDistance84 :: (NTransform a) => a -> GreatArc -> Length
+alongTrackDistance84 p ga = alongTrackDistance p ga r84
+
 -- | @angularDistance p1 p2 n@ computes the angle between the horizontal positions @p1@ and @p2@.
 -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
 -- signed + if @p1@ is clockwise looking along @n@, - in opposite direction.
@@ -135,7 +205,7 @@ antipode p = fromNVector (angular (vscale (nvec nv) (-1.0)) h)
   where
     (AngularPosition nv h) = toNVector p
 
--- | @crossTrackDistance p gc@ computes the signed distance from horizontal position @p@ to great circle @gc@.
+-- | @crossTrackDistance p gc r@ computes the signed distance from horizontal position @p@ to great circle @gc@.
 -- Returns a negative 'Length' if position if left of great circle,
 -- positive 'Length' if position if right of great circle; the orientation of the
 -- great circle is therefore important:
@@ -143,15 +213,15 @@ antipode p = fromNVector (angular (vscale (nvec nv) (-1.0)) h)
 -- @
 --     let gc1 = greatCircle (decimalLatLong 51 0) (decimalLatLong 52 1)
 --     let gc2 = greatCircle (decimalLatLong 52 1) (decimalLatLong 51 0)
---     crossTrackDistance p gc1 = (- crossTrackDistance p gc2)
+--     crossTrackDistance p gc1 r84 = (- crossTrackDistance p gc2 r84)
 --
 --     let p = decimalLatLong 53.2611 (-0.7972)
 --     let gc = greatCircleBearing (decimalLatLong 53.3206 (-1.7297)) (decimalDegrees 96.0)
 --     crossTrackDistance p gc r84 -- -305.663 metres
 -- @
 crossTrackDistance :: (NTransform a) => a -> GreatCircle -> Length -> Length
-crossTrackDistance p gc =
-    arcLength (sub (sad' (normal gc) (nvec p) Nothing) (decimalDegrees 90))
+crossTrackDistance p (GreatCircle n _) =
+    arcLength (sub (sad' n (nvec p) Nothing) (decimalDegrees 90))
 
 -- | 'crossTrackDistance' using the mean radius of the WGS84 reference ellipsoid.
 crossTrackDistance84 :: (NTransform a) => a -> GreatCircle -> Length
@@ -287,12 +357,12 @@ insideSurface p ps
 --     i2 = antipode i1
 -- @
 intersections :: (NTransform a) => GreatCircle -> GreatCircle -> Maybe (a, a)
-intersections gc1 gc2
+intersections (GreatCircle n1 _) (GreatCircle n2 _)
     | (vnorm i :: Double) == 0.0 = Nothing
     | otherwise
     , let ni = fromNVector (angular (vunit i) zero) = Just (ni, antipode ni)
   where
-    i = vcross (normal gc1) (normal gc2)
+    i = vcross n1 n2
 
 -- | @mean ps@ computes the mean geographic horitzontal position of @ps@, if it is defined.
 --

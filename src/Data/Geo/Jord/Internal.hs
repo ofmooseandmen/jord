@@ -12,7 +12,6 @@ module Data.Geo.Jord.Internal
     ( ad
     , nvec
     , sad
-    , sdist
     ) where
 
 import Data.Geo.Jord.AngularPosition (pos)
@@ -36,7 +35,3 @@ sad v1 v2 n = atan2 sinO cosO
     sign = maybe 1 (signum . vdot (vcross v1 v2)) n
     sinO = sign * vnorm (vcross v1 v2)
     cosO = vdot v1 v2
-
--- | surface distance between 2 /n/-vectors (as 'Vector3d') and radius in __metres__.
-sdist :: Vector3d -> Vector3d -> Double -> Double
-sdist v1 v2 r = ad v1 v2 * r

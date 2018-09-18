@@ -9,6 +9,19 @@ import Test.Hspec
 
 spec :: Spec
 spec = do
+    describe "alongTrackDistance" $ do
+        it "returns a positive length when position is ahead start of great arc" $ do
+            let p = decimalLatLong 53.2611 (-0.7972)
+            let ga = greatArc (decimalLatLong 53.3206 (-1.7297), decimalLatLong 53.1887 0.1334)
+            alongTrackDistance p ga r84 `shouldBe` kilometres 62.3315757
+        it "returns a negative length when position is ahead start of great arc" $ do
+            let p = decimalLatLong 53.3206 (-1.7297)
+            let ga = greatArc (decimalLatLong 53.2611 (-0.7972), decimalLatLong 53.1887 0.1334)
+            alongTrackDistance p ga r84 `shouldBe` kilometres (-62.3293209)
+        it "returns a 0 when position is start of great arc" $ do
+            let p = decimalLatLong 53.2611 (-0.7972)
+            let ga = greatArc (p, decimalLatLong 53.1887 0.1334)
+            alongTrackDistance p ga r84 `shouldBe` zero
     describe "antipode" $ do
         it "returns the antipodal point" $ do
             let p = latLongHeight (readLatLong "484137N0061105E") (metres 15000)

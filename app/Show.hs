@@ -48,7 +48,9 @@ showV (FrmB y p r) _ =
     showAng y ++ "\n      pitch: " ++ showAng p ++ "\n      roll : " ++ showAng r
 showV (FrmL w) _ = "Local frame:" ++ "\n      wander azimuth: " ++ showAng w
 showV FrmN _ = "North, East, Down frame"
-showV (Gc gc) _ = "great circle: " ++ show gc
+showV (Gc gc) _ =
+    "great circle: passing by " ++
+    (showLl . nvectorToLatLong . gcPos $ gc) ++ " heading on " ++ (showAng . gcBearing $ gc)
 showV (Gp g) s = "latlong: " ++ showLl ll ++ "\n      height : " ++ showLength h s
   where
     ll = pos g

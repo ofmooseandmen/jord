@@ -114,7 +114,7 @@ functions =
     , "intercept"
     , "interpolate"
     , "intersections"
-    , "insideSurface"
+    , "isInsideSurface"
     , "mean"
     , "ned"
     , "nedBetween"
@@ -256,12 +256,12 @@ evalExpr (Intersections a b) state =
                 (\is -> Right (Vals [Np (fst is), Np (snd is)]))
                 (intersections gc1 gc2 :: Maybe (AngularPosition NVector, AngularPosition NVector))
         r -> Left ("Call error: intersections " ++ showErr r state)
-evalExpr (InsideSurface as) state =
+evalExpr (IsInsideSurface as) state =
     let m = map (`evalExpr` state) as
         ps = [p | Right (Np p) <- m]
      in if length m == length ps && length ps > 3
-            then Right (Bool (insideSurface (head ps) (tail ps)))
-            else Left ("Call error: insideSurface " ++ showErr m state)
+            then Right (Bool (isInsideSurface (head ps) (tail ps)))
+            else Left ("Call error: isInsideSurface " ++ showErr m state)
 evalExpr (Mean as) state =
     let m = map (`evalExpr` state) as
         ps = [p | Right (Np p) <- m]
@@ -477,7 +477,7 @@ data Expr
                   Double
     | Intersections Expr
                     Expr
-    | InsideSurface [Expr]
+    | IsInsideSurface [Expr]
     | Mean [Expr]
     | NedBetween Expr
                  Expr
@@ -580,9 +580,9 @@ transform (Call "intersections" [e1, e2]) = do
     gc1 <- transform e1
     gc2 <- transform e2
     return (Intersections gc1 gc2)
-transform (Call "insideSurface" e) = do
+transform (Call "isInsideSurface" e) = do
     ps <- mapM transform e
-    return (InsideSurface ps)
+    return (IsInsideSurface ps)
 transform (Call "mean" e) = do
     ps <- mapM transform e
     return (Mean ps)

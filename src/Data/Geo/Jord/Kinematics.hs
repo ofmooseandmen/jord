@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 -- |
 -- Module:      Data.Geo.Jord.Kinematics
 -- Copyright:   (c) 2018 Cedric Liegeois
@@ -69,8 +71,16 @@ data Track a = Track
     } deriving (Eq, Show)
 
 -- | 'GreatCircle' from track.
-instance (NTransform a, Show a) => IsGreatCircle (Track a) where
+instance NTransform a => IsGreatCircle (Track a) where
     greatCircleE t = greatCircleE (trackPos t, trackBearing t)
+
+-- | 'GreatArc' from track and duration using the mean radius of the WGS84 reference ellipsoid.
+instance NTransform a => IsGreatArc (Track a, Duration) where
+    greatArcE (t, d) = greatArcE (t, d, r84)
+
+-- | 'GreatArc' from track, duration and earth mean radius.
+instance NTransform a => IsGreatArc (Track a, Duration, Length) where
+    greatArcE (t, d, r) = greatArcE (trackPos t, position t d r)
 
 -- | 'Course' represents the cardinal direction in which the vehicle is to be steered.
 newtype Course =

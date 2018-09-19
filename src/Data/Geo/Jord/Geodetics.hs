@@ -18,9 +18,13 @@ module Data.Geo.Jord.Geodetics
     -- * The 'GreatCircle' type
       GreatCircle
     , IsGreatCircle(..)
+    , gcPos
+    , gcBearing
     -- * The 'GreatArc' type
     , GreatArc
     , IsGreatArc(..)
+    , gaStart
+    , gaEnd
     -- * Calculations
     , alongTrackDistance
     , alongTrackDistance84
@@ -33,8 +37,10 @@ module Data.Geo.Jord.Geodetics
     , finalBearing
     , initialBearing
     , interpolate
+    , intersection
     , intersections
-    , insideSurface
+    , isBetween
+    , isInsideSurface
     , mean
     , surfaceDistance
     , surfaceDistance84
@@ -46,14 +52,13 @@ import Data.Geo.Jord.Angle
 import Data.Geo.Jord.AngularPosition
 import Data.Geo.Jord.Earth (r84)
 import Data.Geo.Jord.Internal (nvec, sad)
-import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.NVector
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
 import Data.List (subsequences)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Prelude hiding (fail)
 
 -- | A circle on the __surface__ of the Earth which lies in a plane passing through
@@ -63,20 +68,17 @@ import Prelude hiding (fail)
 -- It is internally represented as its normal vector - i.e. the normal vector
 -- to the plane containing the great circle.
 --
--- See 'greatCircle', 'greatCircleE', 'greatCircleF' or 'greatCircleBearing' constructors.
---
-data GreatCircle =
-    GreatCircle Vector3d
-                String
-    deriving (Eq)
-
-instance Show GreatCircle where
-    show (GreatCircle _ s) = s
+-- see 'IsGreatCircle'.
+data GreatCircle = GreatCircle
+    { gcNormal :: Vector3d -- ^ normal vector to the plane containing the great circle
+    , gcPos :: NVector -- ^ position (/n/-vector) on the great circle
+    , gcBearing :: Angle -- ^ bearing from 'gcPos'.
+    } deriving (Eq, Show)
 
 -- | Class for data from which a 'GreatCircle' can be computed.
-class (Show a) => IsGreatCircle a where
+class IsGreatCircle a where
     greatCircle :: a -> GreatCircle -- ^ 'GreatCircle' from @a@, if 'greateCircleE' returns a 'Left', this function 'error's.
-    greatCircle a = fromMaybe (error (show a ++ " does not define a Great Circle")) (greatCircleF a)
+    greatCircle a = fromMaybe (error "Could not make a Great Circle") (greatCircleF a)
     greatCircleE :: a -> Either String GreatCircle -- ^ 'GreatCircle' from @a@, A 'Left' indicates an error.
     greatCircleF :: (MonadFail m) => a -> m GreatCircle -- ^ 'GreatCircle' from @a@, if 'greateCircleE' returns a 'Left', this function 'fail's.
     greatCircleF a =
@@ -88,20 +90,18 @@ class (Show a) => IsGreatCircle a where
 
 -- | A closed segment of 'GreatCircle'. It represent the shortest path on the __surface__ of the Earth
 --  from between the two positions.
-data GreatArc =
-    GreatArc NVector
-             NVector
-             GreatCircle
-             String
-    deriving (Eq)
-
-instance Show GreatArc where
-    show (GreatArc _ _ _ s) = s
+--
+-- see 'IsGreatArc'.
+data GreatArc = GreatArc
+    { gaNormal :: Vector3d -- ^ normal vector to the plane containing the great circle
+    , gaStart :: NVector -- ^ start position (/n/-vector) of the great arc
+    , gaEnd :: NVector -- ^ end position (/n/-vector) of the great arc
+    } deriving (Eq, Show)
 
 -- | Class for data from which a 'GreatArc' can be computed.
-class (Show a) => IsGreatArc a where
+class IsGreatArc a where
     greatArc :: a -> GreatArc -- ^ 'GreatCircle' from @a@, if 'greatArcE' returns a 'Left', this function 'error's.
-    greatArc a = fromMaybe (error (show a ++ " does not define a Great Arc")) (greatArcF a)
+    greatArc a = fromMaybe (error "Could not make a Great Arc") (greatArcF a)
     greatArcE :: a -> Either String GreatArc -- ^ 'GreatArc' from @a@, A 'Left' indicates an error.
     greatArcF :: (MonadFail m) => a -> m GreatArc -- ^ 'GreatArc' from @a@, if 'greatArcE' returns a 'Left', this function 'fail's.
     greatArcF a =
@@ -119,28 +119,30 @@ class (Show a) => IsGreatArc a where
 --     let p2 = decimalLatLongHeight 46.0 14.5 (metres 3000)
 --     greatCircle (p1, p2) -- heights are ignored, great circle are always at earth surface.
 -- @
-instance (NTransform a, Show a) => IsGreatCircle (a, a) where
+instance NTransform a => IsGreatCircle (a, a) where
     greatCircleE (p1, p2)
         | v1 == v2 = Left "Invalid Great Circle: positions are equal"
         | (realToFrac (vnorm (vadd v1 v2)) :: Nano) == 0 =
             Left "Invalid Great Circle: positions are antipodal"
-        | otherwise =
-            Right
-                (GreatCircle (vcross v1 v2) ("passing by " ++ show (ll p1) ++ " & " ++ show (ll p2)))
+        | isNothing b = Left "Invalid Great Circle: positions are equal"
+        | otherwise = Right (GreatCircle (vcross v1 v2) nv1 (fromJust b))
       where
-        v1 = nvec p1
-        v2 = nvec p2
+        nv1 = pos . toNVector $ p1
+        v1 = vec nv1
+        nv2 = pos . toNVector $ p2
+        v2 = vec nv2
+        b = initialBearing nv1 nv2
 
 -- | 'GreatCircle' passing by the given position and heading on given bearing.
 --
 -- @
 --     greatCircle (readLatLong "283321N0290700W", decimalDegrees 33.0)
 -- @
-instance (NTransform a, Show a) => IsGreatCircle (a, Angle) where
-    greatCircleE (p, b) =
-        Right (GreatCircle (vsub n' e') ("passing by " ++ show (ll p) ++ " heading on " ++ show b))
+instance NTransform a => IsGreatCircle (a, Angle) where
+    greatCircleE (p, b) = Right (GreatCircle (vsub n' e') nv b)
       where
-        v = nvec p
+        nv = pos . toNVector $ p
+        v = nvec nv
         e = vcross (vec northPole) v -- easting
         n = vcross v e -- northing
         e' = vscale e (cos' b / vnorm e)
@@ -148,7 +150,10 @@ instance (NTransform a, Show a) => IsGreatCircle (a, Angle) where
 
 -- | 'GreatCircle' from given 'GreatArc'.
 instance IsGreatCircle GreatArc where
-    greatCircleE (GreatArc _ _ g _) = Right g
+    greatCircleE (GreatArc n s e) =
+        case initialBearing s e of
+            Nothing -> Left "Could not computed initial bearing"
+            (Just b) -> Right (GreatCircle n s b)
 
 -- | 'GreatArc' passing by both given positions'. A 'Left' indicates that given positions are
 -- equal or antipodal.
@@ -158,17 +163,12 @@ instance IsGreatCircle GreatArc where
 --     let p2 = decimalLatLongHeight 46.0 14.5 (metres 3000)
 --     greatArc (p1, p2) -- heights are ignored, great arc are always at earth surface.
 -- @
-instance (NTransform a, Show a) => IsGreatArc (a, a) where
+instance NTransform a => IsGreatArc (a, a) where
     greatArcE ps@(p1, p2) =
         case greatCircleE ps of
             Left e -> Left e
             Right gcv ->
-                Right
-                    (GreatArc
-                         (pos . toNVector $ p1)
-                         (pos . toNVector $ p2)
-                         gcv
-                         ("passing by " ++ show (ll p1) ++ " & " ++ show (ll p2)))
+                Right (GreatArc (gcNormal gcv) (pos . toNVector $ p1) (pos . toNVector $ p2))
 
 -- | @alongTrackDistance p ga r@ how far position @p@ is along a path described
 -- by great arc @ga@: if a perpendicular is drawn from @p@  to the great arc, the
@@ -181,7 +181,7 @@ instance (NTransform a, Show a) => IsGreatArc (a, a) where
 --     alongTrackDistance p ga r84 -- 62.3315757 kilometres
 -- @
 alongTrackDistance :: (NTransform a) => a -> GreatArc -> Length -> Length
-alongTrackDistance p (GreatArc s _ (GreatCircle n _) _) =
+alongTrackDistance p (GreatArc n s _) =
     arcLength (sad' (nvec s) (vcross (vcross n (nvec p)) n) (Just n))
 
 -- | 'alongTrackDistance' using the mean radius of the WGS84 reference ellipsoid.
@@ -220,7 +220,7 @@ antipode p = fromNVector (angular (vscale (nvec nv) (-1.0)) h)
 --     crossTrackDistance p gc r84 -- -305.663 metres
 -- @
 crossTrackDistance :: (NTransform a) => a -> GreatCircle -> Length -> Length
-crossTrackDistance p (GreatCircle n _) =
+crossTrackDistance p (GreatCircle n _ _) =
     arcLength (sub (sad' n (nvec p) Nothing) (decimalDegrees 90))
 
 -- | 'crossTrackDistance' using the mean radius of the WGS84 reference ellipsoid.
@@ -309,7 +309,39 @@ interpolate p0 p1 f
     iv = vunit (vadd v0 (vscale (vsub v1 v0) f))
     ih = lrph h0 h1 f
 
--- | @insideSurface p ps@ determines whether the @p@ is inside the polygon defined by the list of positions @ps@.
+-- | Computes the intersection between the two given 'GreatArc's.
+-- TODO: code example
+intersection :: (NTransform a) => GreatArc -> GreatArc -> Maybe a
+intersection ga1 ga2 = Nothing
+
+-- | Computes the intersections between the two given 'GreatCircle's.
+-- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
+-- in which case 'Nothing' is returned.
+--
+-- @
+--     let gc1 = greatCircleBearing (decimalLatLong 51.885 0.235) (decimalDegrees 108.63)
+--     let gc2 = greatCircleBearing (decimalLatLong 49.008 2.549) (decimalDegrees 32.72)
+--     let (i1, i2) = fromJust (intersections gc1 gc2)
+--     i1 = decimalLatLong 50.9017226 4.4942782
+--     i2 = antipode i1
+-- @
+intersections :: (NTransform a) => GreatCircle -> GreatCircle -> Maybe (a, a)
+intersections (GreatCircle n1 _ _) (GreatCircle n2 _ _)
+    | isNothing i = Nothing
+    | otherwise
+    , let ni = fromNVector (angular (fromJust i) zero) = Just (ni, antipode ni)
+  where
+    i = intersections' n1 n2
+
+-- | @isBetween p ga@ determines whether position @p@ is between start and end points
+-- of great arc @ga@.
+-- If @p@ is not on the great arc, returns whether @p@ is within the area bound
+-- by perpendiculars to the great arc at each point (in the same hemisphere).
+--
+isBetween :: (NTransform a) => a -> GreatArc -> Bool
+isBetween p ga = False
+
+-- | @isInsideSurface p ps@ determines whether the @p@ is inside the polygon defined by the list of positions @ps@.
 -- The polygon is closed if needed (i.e. if @head ps /= last ps@).
 --
 -- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
@@ -326,13 +358,13 @@ interpolate p0 p1 f
 --     let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
 --     let hoor = decimalLatLong 55.9295 13.5297
 --     let hassleholm = decimalLatLong 56.1589 13.7668
---     insideSurface hoor polygon = True
---     insideSurface hassleholm polygon = False
+--     isInsideSurface hoor polygon = True
+--     isInsideSurface hassleholm polygon = False
 -- @
-insideSurface :: (Eq a, NTransform a) => a -> [a] -> Bool
-insideSurface p ps
+isInsideSurface :: (Eq a, NTransform a) => a -> [a] -> Bool
+isInsideSurface p ps
     | null ps = False
-    | head ps == last ps = insideSurface p (init ps)
+    | head ps == last ps = isInsideSurface p (init ps)
     | length ps < 3 = False
     | otherwise =
         let aSum =
@@ -344,25 +376,6 @@ insideSurface p ps
   where
     v = nvec p
     vs = fmap nvec ps
-
--- | Computes the intersections between the two given 'GreatCircle's.
--- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
--- in which case 'Nothing' is returned.
---
--- @
---     let gc1 = greatCircleBearing (decimalLatLong 51.885 0.235) (decimalDegrees 108.63)
---     let gc2 = greatCircleBearing (decimalLatLong 49.008 2.549) (decimalDegrees 32.72)
---     let (i1, i2) = fromJust (intersections gc1 gc2)
---     i1 = decimalLatLong 50.9017226 4.4942782
---     i2 = antipode i1
--- @
-intersections :: (NTransform a) => GreatCircle -> GreatCircle -> Maybe (a, a)
-intersections (GreatCircle n1 _) (GreatCircle n2 _)
-    | (vnorm i :: Double) == 0.0 = Nothing
-    | otherwise
-    , let ni = fromNVector (angular (vunit i) zero) = Just (ni, antipode ni)
-  where
-    i = vcross n1 n2
 
 -- | @mean ps@ computes the mean geographic horitzontal position of @ps@, if it is defined.
 --
@@ -416,5 +429,9 @@ lrph h0 h1 f = metres h
 angular :: Vector3d -> Length -> AngularPosition NVector
 angular v = nvectorHeight (nvector (vx v) (vy v) (vz v))
 
-ll :: (NTransform a) => a -> LatLong
-ll = nvectorToLatLong . pos . toNVector
+intersections' :: Vector3d -> Vector3d -> Maybe Vector3d
+intersections' gcN1 gcN2
+    | (vnorm i :: Double) == 0.0 = Nothing
+    | otherwise = Just (vunit i)
+  where
+    i = vcross gcN1 gcN2

@@ -144,28 +144,28 @@ spec = do
             let p4 = latLongHeight (readLatLong "55°36'21''N 13°02'09''E") (metres 20000)
             interpolate p3 p4 0.5 `shouldBe`
                 decimalLatLongHeight 54.7835574 5.1949856 (metres 15000)
-    describe "insideSurface" $ do
+    describe "isInsideSurface" $ do
         let p1 = decimalLatLong 45 1
         let p2 = decimalLatLong 45 2
         let p3 = decimalLatLong 46 1
         let p4 = decimalLatLong 46 2
         let p5 = decimalLatLong 45.1 1.1
-        it "return False if polygon is empty" $ insideSurface p1 [] `shouldBe` False
+        it "return False if polygon is empty" $ isInsideSurface p1 [] `shouldBe` False
         it "return False if polygon does not define at least a triangle" $
-            insideSurface p1 [p1, p2] `shouldBe` False
+            isInsideSurface p1 [p1, p2] `shouldBe` False
         it "returns True if point is inside polygon" $ do
             let polygon = [p1, p2, p4, p3]
-            insideSurface p5 polygon `shouldBe` True
+            isInsideSurface p5 polygon `shouldBe` True
         it "returns False if point is inside polygon" $ do
             let polygon = [p1, p2, p4, p3]
             let p = antipode p5
-            insideSurface p polygon `shouldBe` False
+            isInsideSurface p polygon `shouldBe` False
         it "returns False if point is a vertex of the polygon" $ do
             let polygon = [p1, p2, p4, p3]
-            insideSurface p1 polygon `shouldBe` False
+            isInsideSurface p1 polygon `shouldBe` False
         it "handles closed polygons" $ do
             let polygon = [p1, p2, p4, p3, p1]
-            insideSurface p5 polygon `shouldBe` True
+            isInsideSurface p5 polygon `shouldBe` True
         it "handles concave polygons" $ do
             let malmo = decimalLatLong 55.6050 13.0038
             let ystad = decimalLatLong 55.4295 13.82
@@ -175,8 +175,8 @@ spec = do
             let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
             let hoor = decimalLatLong 55.9295 13.5297
             let hassleholm = decimalLatLong 56.1589 13.7668
-            insideSurface hoor polygon `shouldBe` True
-            insideSurface hassleholm polygon `shouldBe` False
+            isInsideSurface hoor polygon `shouldBe` True
+            isInsideSurface hassleholm polygon `shouldBe` False
     describe "intersections" $ do
         it "returns nothing if both great circle are equals" $ do
             let gc = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)

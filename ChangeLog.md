@@ -1,6 +1,12 @@
 ### 0.5.0.0
 
-- Benchmarks
+- Added Benchmarks
+- Added GreatArc
+- Added GreatArc from tuple of positions
+- Added GreatArc from GreatCircle
+- Added GreatArc from Track and Duration
+- Added alongTrackDistance
+- Added intersection
 
 ### 0.4.2.0
 

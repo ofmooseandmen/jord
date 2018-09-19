@@ -144,6 +144,37 @@ spec = do
             let p4 = latLongHeight (readLatLong "55°36'21''N 13°02'09''E") (metres 20000)
             interpolate p3 p4 0.5 `shouldBe`
                 decimalLatLongHeight 54.7835574 5.1949856 (metres 15000)
+    describe "intersection" $ do
+        it "returns nothing if both great arc are equals" $ do
+            let ga = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            (intersection ga ga :: Maybe LatLong) `shouldBe` Nothing
+        it "returns nothing if both great arc are equals (opposite orientation)" $ do
+            let ga1 = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            let ga2 = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe` Nothing
+        it "returns the point where the two great arcs intersect" $ do
+            let spd = kilometresPerHour 1000
+            let t1 = Track (decimalLatLong 51.885 0.235) (decimalDegrees 108.63) spd
+            let t2 = Track (decimalLatLong 49.008 2.549) (decimalDegrees 32.72) spd
+            let oneHour = hours 1
+            let ga1 = greatArc (t1, oneHour)
+            let ga2 = greatArc (t2, oneHour)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe`
+                Just (decimalLatLong 50.9017225 4.494278333333333)
+    describe "intersections" $ do
+        it "returns nothing if both great circle are equals" $ do
+            let gc = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
+            (intersections gc gc :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
+        it "returns nothing if both great circle are equals (opposite orientation)" $ do
+            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            let gc2 = greatCircle (decimalLatLong 52.885 1.235, decimalLatLong 51.885 0.235)
+            (intersections gc1 gc2 :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
+        it "returns the two points where the two great circles intersect" $ do
+            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
+            let gc2 = greatCircle (decimalLatLong 49.008 2.549, decimalDegrees 32.72)
+            let (i1, i2) = fromJust (intersections gc1 gc2)
+            i1 `shouldBe` decimalLatLong 50.9017226 4.4942782
+            i2 `shouldBe` antipode i1
     describe "isInsideSurface" $ do
         let p1 = decimalLatLong 45 1
         let p2 = decimalLatLong 45 2
@@ -177,20 +208,6 @@ spec = do
             let hassleholm = decimalLatLong 56.1589 13.7668
             isInsideSurface hoor polygon `shouldBe` True
             isInsideSurface hassleholm polygon `shouldBe` False
-    describe "intersections" $ do
-        it "returns nothing if both great circle are equals" $ do
-            let gc = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
-            (intersections gc gc :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
-        it "returns nothing if both great circle are equals (opposite orientation)" $ do
-            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
-            let gc2 = greatCircle (decimalLatLong 52.885 1.235, decimalLatLong 51.885 0.235)
-            (intersections gc1 gc2 :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
-        it "returns the two points where the two great circles intersects" $ do
-            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
-            let gc2 = greatCircle (decimalLatLong 49.008 2.549, decimalDegrees 32.72)
-            let (i1, i2) = fromJust (intersections gc1 gc2)
-            i1 `shouldBe` decimalLatLong 50.9017226 4.4942782
-            i2 `shouldBe` antipode i1
     describe "mean" $ do
         it "returns Nothing if no point is given" $ (mean [] :: Maybe NVector) `shouldBe` Nothing
         it "returns the unique given point" $ do

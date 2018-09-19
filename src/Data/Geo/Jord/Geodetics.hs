@@ -310,9 +310,26 @@ interpolate p0 p1 f
     ih = lrph h0 h1 f
 
 -- | Computes the intersection between the two given 'GreatArc's.
--- TODO: code example
+--
+-- see also 'intersections'
+--
+-- @
+--     let spd = kilometresPerHour 1000
+--     let t1 = Track (decimalLatLong 51.885 0.235) (decimalDegrees 108.63) spd
+--     let t2 = Track (decimalLatLong 49.008 2.549) (decimalDegrees 32.72) spd
+--     let oneHour = hours 1
+--     let ga1 = greatArc (t1, oneHour)
+--     let ga2 = greatArc (t2, oneHour)
+--     intersection ga1 ga2 = Just (decimalLatLong 50.9017225 4.494278333333333)
+-- @
 intersection :: (NTransform a) => GreatArc -> GreatArc -> Maybe a
-intersection ga1 ga2 = Nothing
+intersection ga@(GreatArc n1 _ _) (GreatArc n2 _ _) =
+    case intersections' n1 n2 of
+        Nothing -> Nothing
+        (Just (i1, i2))
+            | isBetween i1 ga -> Just i1
+            | isBetween i2 ga -> Just i2
+            | otherwise -> Nothing
 
 -- | Computes the intersections between the two given 'GreatCircle's.
 -- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
@@ -326,12 +343,7 @@ intersection ga1 ga2 = Nothing
 --     i2 = antipode i1
 -- @
 intersections :: (NTransform a) => GreatCircle -> GreatCircle -> Maybe (a, a)
-intersections (GreatCircle n1 _ _) (GreatCircle n2 _ _)
-    | isNothing i = Nothing
-    | otherwise
-    , let ni = fromNVector (angular (fromJust i) zero) = Just (ni, antipode ni)
-  where
-    i = intersections' n1 n2
+intersections (GreatCircle n1 _ _) (GreatCircle n2 _ _) = intersections' n1 n2
 
 -- | @isBetween p ga@ determines whether position @p@ is between start and end points
 -- of great arc @ga@.
@@ -339,7 +351,19 @@ intersections (GreatCircle n1 _ _) (GreatCircle n2 _ _)
 -- by perpendiculars to the great arc at each point (in the same hemisphere).
 --
 isBetween :: (NTransform a) => a -> GreatArc -> Bool
-isBetween p ga = False
+isBetween p (GreatArc _ s e) = between && hemisphere
+  where
+    v0 = nvec p
+    v1 = nvec s
+    v2 = nvec e
+    v10 = vsub v0 v1
+    v12 = vsub v2 v1
+    v20 = vsub v0 v2
+    v21 = vsub v1 v2
+    e1 = vdot v10 v12 -- p is on e side of s
+    e2 = vdot v20 v21 -- p is on s side of e
+    between = e1 >= 0 && e2 >= 0
+    hemisphere = vdot v0 v1 >= 0 && vdot v0 v2 >= 0
 
 -- | @isInsideSurface p ps@ determines whether the @p@ is inside the polygon defined by the list of positions @ps@.
 -- The polygon is closed if needed (i.e. if @head ps /= last ps@).
@@ -429,9 +453,10 @@ lrph h0 h1 f = metres h
 angular :: Vector3d -> Length -> AngularPosition NVector
 angular v = nvectorHeight (nvector (vx v) (vy v) (vz v))
 
-intersections' :: Vector3d -> Vector3d -> Maybe Vector3d
-intersections' gcN1 gcN2
+intersections' :: (NTransform a) => Vector3d -> Vector3d -> Maybe (a, a)
+intersections' n1 n2
     | (vnorm i :: Double) == 0.0 = Nothing
-    | otherwise = Just (vunit i)
+    | otherwise
+    , let ni = fromNVector (angular (vunit i) zero) = Just (ni, antipode ni)
   where
-    i = vcross gcN1 gcN2
+    i = vcross n1 n2

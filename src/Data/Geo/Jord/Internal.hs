@@ -15,7 +15,7 @@ module Data.Geo.Jord.Internal
     ) where
 
 import Data.Geo.Jord.AngularPosition (pos)
-import Data.Geo.Jord.Transformation (IsNVector(..))
+import Data.Geo.Jord.Transformation (NTransform(..))
 import Data.Geo.Jord.Vector3d
 
 -- | angle in  __radians__ between 2 /n/-vectors (as 'Vector3d').
@@ -23,7 +23,7 @@ ad :: Vector3d -> Vector3d -> Double
 ad v1 v2 = sad v1 v2 Nothing
 
 -- | /n/-vector (as a 'Vector3d') from given position.
-nvec :: (IsNVector a) => a -> Vector3d
+nvec :: (NTransform a) => a -> Vector3d
 nvec = vec . pos . toNVector
 
 -- | Signed angle in __radians__ between 2 /n/-vectors (as 'Vector3d').

@@ -6,7 +6,7 @@
 - Added GreatArc from GreatCircle
 - Added GreatArc from Track and Duration
 - Added alongTrackDistance
-- Added intersection
+- Added GreatArcs intersection
 
 ### 0.4.2.0
 

@@ -37,7 +37,7 @@ import Data.Geo.Jord.Vector3d
 
 -- | Transformation between position and /n/-vector and height.
 class NTransform a where
-    toNVector :: a -> AngularPosition NVector -- ^ position to 'AngularPosition' of 'NVector'.
+    toNVector :: a -> AngularPosition NVector -- ^ data to 'AngularPosition' of 'NVector'.
     fromNVector :: AngularPosition NVector -> a -- ^ 'AngularPosition' of 'NVector' and height to position.
 
 -- | 'NVector' to, from 'AngularPosition' of 'NVector'.

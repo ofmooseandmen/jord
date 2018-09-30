@@ -17,6 +17,7 @@ module Data.Geo.Jord.Angle
     , dms
     , dmsE
     , dmsF
+    , radians
     -- * Calculations
     , arcLength
     , central
@@ -34,7 +35,9 @@ module Data.Geo.Jord.Angle
     , getMinutes
     , getSeconds
     , getMilliseconds
+    -- * Conversions
     , toDecimalDegrees
+    , toRadians
     -- * Read
     , angle
     , readAngle
@@ -46,7 +49,7 @@ import Control.Applicative
 import Control.Monad.Fail
 import Data.Fixed
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.Parse
+import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 import Data.Maybe
 import Prelude hiding (fail, length)
@@ -91,7 +94,7 @@ instance Quantity Angle where
 decimalDegrees :: Double -> Angle
 decimalDegrees dec = Angle (round (dec * 3600000.0))
 
--- | 'Angle' from the given given degrees, minutes, seconds and milliseconds.
+-- | 'Angle' from the given degrees, minutes, seconds and milliseconds.
 -- 'error's if given minutes, seconds and/or milliseconds are invalid.
 -- Degrees are not validated and can be any 'Int': they must be validated by the call site
 -- when used to represent a latitude or longitude.
@@ -103,7 +106,7 @@ dms degs mins secs millis =
               show mins ++ " or seconds=" ++ show secs ++ " or milliseconds=" ++ show millis))
         (dmsF degs mins secs millis)
 
--- | 'Angle' from the given given degrees, minutes, seconds and milliseconds.
+-- | 'Angle' from the given degrees, minutes, seconds and milliseconds.
 -- A 'Left' indicates that given minutes, seconds and/or milliseconds are invalid.
 -- Degrees are not validated and can be any 'Int': they must be validated by the call site
 -- when used to represent a latitude or longitude.
@@ -121,7 +124,7 @@ dmsE degs mins secs millis
              (fromIntegral millis / 3600000.0 :: Double))
             (signum degs)
 
--- | 'Angle' from the given given degrees, minutes, seconds and milliseconds.
+-- | 'Angle' from the given degrees, minutes, seconds and milliseconds.
 -- 'fail's if given minutes, seconds and/or milliseconds are invalid.
 -- Degrees are not validated and can be any 'Int': they must be validated by the call site
 -- when used to represent a latitude or longitude.
@@ -133,13 +136,17 @@ dmsF degs mins secs millis =
   where
     e = dmsE degs mins secs millis
 
+-- | 'Angle' from the given radians.
+radians :: Double -> Angle
+radians r = decimalDegrees (r / pi * 180.0)
+
 -- | @arcLength a r@ computes the 'Length' of the arc that subtends the angle @a@ for radius @r@.
 arcLength :: Angle -> Length -> Length
 arcLength a r = metres (toMetres r * toRadians a)
 
 -- | @central l r@ computes the central 'Angle' from the arc length @l@ and radius @r@.
 central :: Length -> Length -> Angle
-central s r = fromRadians (toMetres s / toMetres r)
+central s r = radians (toMetres s / toMetres r)
 
 -- | Returns the given 'Angle' negated.
 negate' :: Angle -> Angle
@@ -161,11 +168,11 @@ isWithin (Angle millis) (Angle low) (Angle high) = millis >= low && millis <= hi
 
 -- | @atan2' y x@ computes the 'Angle' (from the positive x-axis) of the vector from the origin to the point (x,y).
 atan2' :: Double -> Double -> Angle
-atan2' y x = fromRadians (atan2 y x)
+atan2' y x = radians (atan2 y x)
 
 -- | @asin' a@ computes arc sine of @a@.
 asin' :: Double -> Angle
-asin' a = fromRadians (asin a)
+asin' a = radians (asin a)
 
 -- | @cos' a@ returns the cosinus of @a@.
 cos' :: Angle -> Double
@@ -174,10 +181,6 @@ cos' a = cos (toRadians a)
 -- | @sin' a@ returns the sinus of @a@.
 sin' :: Angle -> Double
 sin' a = sin (toRadians a)
-
--- | radians to degrees.
-fromRadians :: Double -> Angle
-fromRadians r = decimalDegrees (r / pi * 180.0)
 
 -- | degrees to radians.
 toRadians :: Angle -> Double

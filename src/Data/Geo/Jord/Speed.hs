@@ -32,7 +32,7 @@ module Data.Geo.Jord.Speed
 
 import Control.Applicative
 import Control.Monad.Fail
-import Data.Geo.Jord.Parse
+import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP

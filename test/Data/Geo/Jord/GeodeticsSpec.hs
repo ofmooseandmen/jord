@@ -9,6 +9,19 @@ import Test.Hspec
 
 spec :: Spec
 spec = do
+    describe "alongTrackDistance" $ do
+        it "returns a positive length when position is ahead start of great arc" $ do
+            let p = decimalLatLong 53.2611 (-0.7972)
+            let ga = greatArc (decimalLatLong 53.3206 (-1.7297), decimalLatLong 53.1887 0.1334)
+            alongTrackDistance p ga r84 `shouldBe` kilometres 62.3315757
+        it "returns a negative length when position is ahead start of great arc" $ do
+            let p = decimalLatLong 53.3206 (-1.7297)
+            let ga = greatArc (decimalLatLong 53.2611 (-0.7972), decimalLatLong 53.1887 0.1334)
+            alongTrackDistance p ga r84 `shouldBe` kilometres (-62.3293209)
+        it "returns a 0 when position is start of great arc" $ do
+            let p = decimalLatLong 53.2611 (-0.7972)
+            let ga = greatArc (p, decimalLatLong 53.1887 0.1334)
+            alongTrackDistance p ga r84 `shouldBe` zero
     describe "antipode" $ do
         it "returns the antipodal point" $ do
             let p = latLongHeight (readLatLong "484137N0061105E") (metres 15000)
@@ -131,28 +144,67 @@ spec = do
             let p4 = latLongHeight (readLatLong "55°36'21''N 13°02'09''E") (metres 20000)
             interpolate p3 p4 0.5 `shouldBe`
                 decimalLatLongHeight 54.7835574 5.1949856 (metres 15000)
-    describe "insideSurface" $ do
+    describe "intersection" $ do
+        it "returns nothing if both great arc are equals" $ do
+            let ga = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            (intersection ga ga :: Maybe LatLong) `shouldBe` Nothing
+        it "returns nothing if both great arc are equals (opposite orientation)" $ do
+            let ga1 = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            let ga2 = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe` Nothing
+        it "returns nothing if great circle intersection is outside either great arc" $ do
+            let ga1 = greatArc (decimalLatLong 0 0, decimalLatLong 0 10)
+            let ga2 = greatArc (decimalLatLong (-5) 5, decimalLatLong (-1) 5)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe` Nothing
+        it "returns nothing if great circle intersection is outside both great arcs" $ do
+            let ga1 = greatArc (decimalLatLong 0 (-10), decimalLatLong 0 (-1))
+            let ga2 = greatArc (decimalLatLong (-5) 5, decimalLatLong (-1) 5)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe` Nothing
+        it "returns the point where the two great arcs intersect" $ do
+            let spd = kilometresPerHour 1000
+            let t1 = Track (decimalLatLong 51.885 0.235) (decimalDegrees 108.63) spd
+            let t2 = Track (decimalLatLong 49.008 2.549) (decimalDegrees 32.72) spd
+            let oneHour = hours 1
+            let ga1 = greatArc (t1, oneHour)
+            let ga2 = greatArc (t2, oneHour)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe`
+                Just (decimalLatLong 50.9017225 4.494278333333333)
+    describe "intersections" $ do
+        it "returns nothing if both great circle are equals" $ do
+            let gc = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
+            (intersections gc gc :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
+        it "returns nothing if both great circle are equals (opposite orientation)" $ do
+            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
+            let gc2 = greatCircle (decimalLatLong 52.885 1.235, decimalLatLong 51.885 0.235)
+            (intersections gc1 gc2 :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
+        it "returns the two points where the two great circles intersect" $ do
+            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
+            let gc2 = greatCircle (decimalLatLong 49.008 2.549, decimalDegrees 32.72)
+            let (i1, i2) = fromJust (intersections gc1 gc2)
+            i1 `shouldBe` decimalLatLong 50.9017226 4.4942782
+            i2 `shouldBe` antipode i1
+    describe "isInsideSurface" $ do
         let p1 = decimalLatLong 45 1
         let p2 = decimalLatLong 45 2
         let p3 = decimalLatLong 46 1
         let p4 = decimalLatLong 46 2
         let p5 = decimalLatLong 45.1 1.1
-        it "return False if polygon is empty" $ insideSurface p1 [] `shouldBe` False
+        it "return False if polygon is empty" $ isInsideSurface p1 [] `shouldBe` False
         it "return False if polygon does not define at least a triangle" $
-            insideSurface p1 [p1, p2] `shouldBe` False
+            isInsideSurface p1 [p1, p2] `shouldBe` False
         it "returns True if point is inside polygon" $ do
             let polygon = [p1, p2, p4, p3]
-            insideSurface p5 polygon `shouldBe` True
+            isInsideSurface p5 polygon `shouldBe` True
         it "returns False if point is inside polygon" $ do
             let polygon = [p1, p2, p4, p3]
             let p = antipode p5
-            insideSurface p polygon `shouldBe` False
+            isInsideSurface p polygon `shouldBe` False
         it "returns False if point is a vertex of the polygon" $ do
             let polygon = [p1, p2, p4, p3]
-            insideSurface p1 polygon `shouldBe` False
+            isInsideSurface p1 polygon `shouldBe` False
         it "handles closed polygons" $ do
             let polygon = [p1, p2, p4, p3, p1]
-            insideSurface p5 polygon `shouldBe` True
+            isInsideSurface p5 polygon `shouldBe` True
         it "handles concave polygons" $ do
             let malmo = decimalLatLong 55.6050 13.0038
             let ystad = decimalLatLong 55.4295 13.82
@@ -162,22 +214,8 @@ spec = do
             let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
             let hoor = decimalLatLong 55.9295 13.5297
             let hassleholm = decimalLatLong 56.1589 13.7668
-            insideSurface hoor polygon `shouldBe` True
-            insideSurface hassleholm polygon `shouldBe` False
-    describe "intersections" $ do
-        it "returns nothing if both great circle are equals" $ do
-            let gc = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
-            (intersections gc gc :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
-        it "returns nothing if both great circle are equals (opposite orientation)" $ do
-            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
-            let gc2 = greatCircle (decimalLatLong 52.885 1.235, decimalLatLong 51.885 0.235)
-            (intersections gc1 gc2 :: Maybe (LatLong, LatLong)) `shouldBe` Nothing
-        it "returns the two points where the two great circles intersects" $ do
-            let gc1 = greatCircle (decimalLatLong 51.885 0.235, decimalDegrees 108.63)
-            let gc2 = greatCircle (decimalLatLong 49.008 2.549, decimalDegrees 32.72)
-            let (i1, i2) = fromJust (intersections gc1 gc2)
-            i1 `shouldBe` decimalLatLong 50.9017226 4.4942782
-            i2 `shouldBe` antipode i1
+            isInsideSurface hoor polygon `shouldBe` True
+            isInsideSurface hassleholm polygon `shouldBe` False
     describe "mean" $ do
         it "returns Nothing if no point is given" $ (mean [] :: Maybe NVector) `shouldBe` Nothing
         it "returns the unique given point" $ do

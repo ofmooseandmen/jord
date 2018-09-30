@@ -30,8 +30,8 @@ spec = do
             toKilometresPerHour (feetPerSecond 1) `shouldBe` 1.09728
     describe "Resolution" $ do
         it "handles 1 km/h" $ toKilometresPerHour (kilometresPerHour 1) `shouldBe` 1
-        it "handles 1 1m/s" $ toMetresPerSecond (metresPerSecond 1) `shouldBe` 1
-        it "handles 1 1mph" $ toMilesPerHour (milesPerHour 1) `shouldBe` 1
+        it "handles 1 m/s" $ toMetresPerSecond (metresPerSecond 1) `shouldBe` 1
+        it "handles 1 mph" $ toMilesPerHour (milesPerHour 1) `shouldBe` 1
         it "handles 1 knot" $ toKnots (knots 1) `shouldBe` 1
         it "handles 1 fp/s" $ toFeetPerSecond (feetPerSecond 1) `shouldBe` 1
     describe "Adding/Subtracting speeds" $ do

@@ -1,3 +1,13 @@
+### 0.5.0.0
+
+- Added Benchmarks
+- Added GreatArc
+- Added GreatArc from tuple of positions
+- Added GreatArc from GreatCircle
+- Added GreatArc from Track and Duration
+- Added alongTrackDistance
+- Added GreatArcs intersection
+
 ### 0.4.2.0
 
 - Fixed intercept

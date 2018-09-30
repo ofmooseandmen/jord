@@ -49,6 +49,7 @@ data Value
            Angle -- ^ yaw, pitch and roll of Body frame
     | FrmL Angle -- ^ wander azimuth of Local frame
     | FrmN -- ^ North, east, down frame
+    | Ga GreatArc -- ^ great arc
     | Gc GreatCircle -- ^ great circle
     | Gp (AngularPosition LatLong) -- ^ latitude, longitude and height
     | Intp (Intercept (AngularPosition NVector)) -- ^ Intercept

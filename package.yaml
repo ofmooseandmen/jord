@@ -1,5 +1,5 @@
 name:                jord
-version:             0.4.2.0
+version:             0.5.0.0
 github:              ofmooseandmen/jord
 license:             BSD3
 author:              Cedric Liegeois
@@ -41,7 +41,8 @@ library:
     - Data.Geo.Jord.Transformation
     - Data.Geo.Jord.Vector3d
   other-modules:
-    - Data.Geo.Jord.Parse
+    - Data.Geo.Jord.Internal
+    - Data.Geo.Jord.Parser
 
 executables:
   jord-repl:
@@ -54,6 +55,16 @@ executables:
     dependencies:
     - jord
     - haskeline >= 0.7 && < 0.8
+  jord-benchmarks:
+    main:                Main.hs
+    other-modules:
+      - GeodeticsBG
+      - KinematicsBG
+      - TransformationBG
+    source-dirs:         benchmarks
+    dependencies:
+    - jord
+    - criterion
 
 tests:
   jord-test:

@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.Parse
+-- Module:      Data.Geo.Jord.Parser
 -- Copyright:   (c) 2018 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -8,7 +8,7 @@
 --
 -- internal 'ReadP' parsers used by "Jord".
 --
-module Data.Geo.Jord.Parse
+module Data.Geo.Jord.Parser
     ( digits
     , double
     , integer

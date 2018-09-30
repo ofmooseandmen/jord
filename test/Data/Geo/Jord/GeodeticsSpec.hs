@@ -152,6 +152,14 @@ spec = do
             let ga1 = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
             let ga2 = greatArc (decimalLatLong 51.885 0.235, decimalLatLong 52.885 1.235)
             (intersection ga1 ga2 :: Maybe LatLong) `shouldBe` Nothing
+        it "returns nothing if great circle intersection is outside either great arc" $ do
+            let ga1 = greatArc (decimalLatLong 0 0, decimalLatLong 0 10)
+            let ga2 = greatArc (decimalLatLong (-5) 5, decimalLatLong (-1) 5)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe` Nothing
+        it "returns nothing if great circle intersection is outside both great arcs" $ do
+            let ga1 = greatArc (decimalLatLong 0 (-10), decimalLatLong 0 (-1))
+            let ga2 = greatArc (decimalLatLong (-5) 5, decimalLatLong (-1) 5)
+            (intersection ga1 ga2 :: Maybe LatLong) `shouldBe` Nothing
         it "returns the point where the two great arcs intersect" $ do
             let spd = kilometresPerHour 1000
             let t1 = Track (decimalLatLong 51.885 0.235) (decimalDegrees 108.63) spd

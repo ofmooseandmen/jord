@@ -133,7 +133,8 @@ help s =
     "     derived from the WGS84 ellipsoid: " ++
     showLength r84 s ++
     "\n" ++
-    "\n     antipode pos                          antipodal point of pos\n" ++
+    "\n     alongTrackDistance pos ga           signed distance of pos to perpendicular of great arc ga\n" ++
+    "     antipode pos                          antipodal point of pos\n" ++
     "     crossTrackDistance pos gc             signed distance from pos to great circle gc\n" ++
     "     destination pos ang len               destination position from pos having travelled len\n" ++
     "                                           on initial bearing ang (either in text form or decimal degrees)\n" ++
@@ -174,8 +175,12 @@ help s =
     "     geo lat long height                   geographic position from decimal latitude, longitude and height\n" ++
     "     geo lat long metres                   geographic position from decimal latitude, longitude and metres\n" ++
     "     toNVector pos                         n-vector corresponding to pos\n" ++
+    "     greatArc pos1 pos2                    great arc passing by pos1 and pos2\n" ++
+    "     greatArc track dur                    great arc from track and duration\n" ++
+    "     greatCircle pos1 pos2                 great circle passing by pos1 and pos2\n" ++
     "     greatCircle pos1 pos2                 great circle passing by pos1 and pos2\n" ++
     "     greatCircle pos ang                   great circle passing by pos and heading on bearing ang\n" ++
+    "     greatCircle ga                        great circle from great arc\n" ++
     "     greatCircle track                     great circle from track\n" ++
     "     track pos ang spd                     track at pos, heading on bearing ang and travelling at speed spd\n" ++
     "\n  Supported lat/long formats:\n\n" ++

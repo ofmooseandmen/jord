@@ -96,7 +96,8 @@ toGeo val = val
 -- | All supported functions.
 functions :: [String]
 functions =
-    [ "antipode"
+    [ "alongTrackDistance"
+    , "antipode"
     , "crossTrackDistance"
     , "cpa"
     , "delta"
@@ -109,10 +110,12 @@ functions =
     , "finalBearing"
     , "fromEcef"
     , "geo"
+    , "greatArc"
     , "greatCircle"
     , "initialBearing"
     , "intercept"
     , "interpolate"
+    , "intersection"
     , "intersections"
     , "isInsideSurface"
     , "mean"
@@ -143,6 +146,10 @@ evalExpr (Param p) state =
         Just (Gp geo) -> Right (Np (toNVector geo))
         Just v -> Right v
         Nothing -> tryRead p
+evalExpr (AlongTrackDistance a b) state =
+    case [evalExpr a state, evalExpr b state] of
+        [Right (Np p), Right (Ga ga)] -> Right (Len (alongTrackDistance84 p ga))
+        r -> Left ("Call error: alongTrackDistance84 " ++ showErr r state)
 evalExpr (Antipode a) state =
     case evalExpr a state of
         (Right (Np p)) -> Right (Np (antipode p))
@@ -221,10 +228,16 @@ evalExpr (Geo as) state =
         r -> Left ("Call error: geo " ++ showErr r state)
   where
     vs = map (`evalExpr` state) as
+evalExpr (GreatArcE as) state =
+    case fmap (`evalExpr` state) as of
+        [Right (Np p1), Right (Np p2)] -> bimap id Ga (greatArcE (p1, p2))
+        [Right (Trk t), Right (Dur d)] -> bimap id Ga (greatArcE (t, d))
+        r -> Left ("Call error: greatArc " ++ showErr r state)
 evalExpr (GreatCircleE as) state =
     case fmap (`evalExpr` state) as of
         [Right (Np p1), Right (Np p2)] -> bimap id Gc (greatCircleE (p1, p2))
         [Right (Np p), Right (Ang a')] -> bimap id Gc (greatCircleE (p, a'))
+        [Right (Ga ga)] -> bimap id Gc (greatCircleE ga)
         [Right (Trk t)] -> bimap id Gc (greatCircleE t)
         r -> Left ("Call error: greatCircle " ++ showErr r state)
 evalExpr (InitialBearing a b) state =
@@ -248,6 +261,14 @@ evalExpr (Interpolate a b c) state =
     case [evalExpr a state, evalExpr b state] of
         [Right (Np p1), Right (Np p2)] -> Right (Np (interpolate p1 p2 c))
         r -> Left ("Call error: interpolate " ++ showErr r state)
+evalExpr (Intersection a b) state =
+    case [evalExpr a state, evalExpr b state] of
+        [Right (Ga ga1), Right (Ga ga2)] ->
+            maybe
+                (Left "no great arcs intersection")
+                (Right . Np)
+                (intersection ga1 ga2 :: Maybe (AngularPosition NVector))
+        r -> Left ("Call error: intersection " ++ showErr r state)
 evalExpr (Intersections a b) state =
     case [evalExpr a state, evalExpr b state] of
         [Right (Gc gc1), Right (Gc gc2)] ->
@@ -440,6 +461,8 @@ walkParams n ts@(h:t) acc
 -------------------------------------
 data Expr
     = Param String
+    | AlongTrackDistance Expr
+                         Expr
     | Antipode Expr
     | ClosestPointOfApproach Expr
                              Expr
@@ -468,6 +491,7 @@ data Expr
     | FromEcef Expr
                String
     | Geo [Expr]
+    | GreatArcE [Expr]
     | GreatCircleE [Expr]
     | InitialBearing Expr
                      Expr
@@ -475,6 +499,8 @@ data Expr
     | Interpolate Expr
                   Expr
                   Double
+    | Intersection Expr
+                   Expr
     | Intersections Expr
                     Expr
     | IsInsideSurface [Expr]
@@ -505,6 +531,10 @@ data Expr
     deriving (Show)
 
 transform :: (MonadFail m) => Ast -> m Expr
+transform (Call "alongTrackDistance" [e1, e2]) = do
+    p <- transform e1
+    ga <- transform e2
+    return (AlongTrackDistance p ga)
 transform (Call "antipode" [e]) = fmap Antipode (transform e)
 transform (Call "cpa" [e1, e2]) = do
     t1 <- transform e1
@@ -559,6 +589,9 @@ transform (Call "finalBearing" [e1, e2]) = do
 transform (Call "geo" e) = do
     ps <- mapM transform e
     return (Geo ps)
+transform (Call "greatArc" e) = do
+    ps <- mapM transform e
+    return (GreatArcE ps)
 transform (Call "greatCircle" e) = do
     ps <- mapM transform e
     return (GreatCircleE ps)
@@ -576,6 +609,10 @@ transform (Call "interpolate" [e1, e2, Lit s]) = do
     if d >= 0.0 && d <= 1.0
         then return (Interpolate p1 p2 d)
         else fail "Semantic error: interpolate expects [0..1] as last argument"
+transform (Call "intersection" [e1, e2]) = do
+    ga1 <- transform e1
+    ga2 <- transform e2
+    return (Intersection ga1 ga2)
 transform (Call "intersections" [e1, e2]) = do
     gc1 <- transform e1
     gc2 <- transform e2

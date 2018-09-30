@@ -323,12 +323,12 @@ interpolate p0 p1 f
 --     intersection ga1 ga2 = Just (decimalLatLong 50.9017225 4.494278333333333)
 -- @
 intersection :: (NTransform a) => GreatArc -> GreatArc -> Maybe a
-intersection ga@(GreatArc n1 _ _) (GreatArc n2 _ _) =
+intersection ga1@(GreatArc n1 _ _) ga2@(GreatArc n2 _ _) =
     case intersections' n1 n2 of
         Nothing -> Nothing
         (Just (i1, i2))
-            | isBetween i1 ga -> Just i1
-            | isBetween i2 ga -> Just i2
+            | isBetween i1 ga1 && isBetween i1 ga2 -> Just i1
+            | isBetween i2 ga1 && isBetween i2 ga2 -> Just i2
             | otherwise -> Nothing
 
 -- | Computes the intersections between the two given 'GreatCircle's.

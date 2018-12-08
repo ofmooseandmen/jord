@@ -89,7 +89,7 @@ class IsGreatCircle a where
         e = greatCircleE a
 
 -- | A closed segment of 'GreatCircle'. It represent the shortest path on the __surface__ of the Earth
---  from between the two positions.
+-- between the two positions.
 --
 -- see 'IsGreatArc'.
 data GreatArc = GreatArc

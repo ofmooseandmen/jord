@@ -24,7 +24,7 @@ import Data.Geo.Jord.Vector3d
 
 -- | An earth position expressed in the Earth Centred, Earth Fixed (ECEF) coordinates system.
 --
--- @ex-ey@ plane is the equatorial plane, @ey@ is on the prime meridian, and @ez@ on the polar axis.
+-- @ex-ey@ plane is the equatorial plane, @ex@ is on the prime meridian, and @ez@ on the polar axis.
 --
 -- Note: on a spherical model earth, an /n/-vector is equivalent to a normalised version of an (ECEF) cartesian coordinate.
 newtype EcefPosition =

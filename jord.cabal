@@ -1,11 +1,13 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.1.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2f1ced38bca95f83cdbb2509dc23645a34c628652e960e7a84e9e1b7b6d4ca8c
+-- hash: a4e2fc2a432aee57ca9f6d714df611ac3368d7470ccda202db3f966a3d6934e4
 
 name:           jord
-version:        0.5.0.0
+version:        0.6.0.0
 synopsis:       Geographical Position Calculations
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 category:       Geography
@@ -18,10 +20,9 @@ copyright:      2018 Cedric Liegeois
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 extra-source-files:
-    ChangeLog.md
     README.md
+    ChangeLog.md
 
 source-repository head
   type: git

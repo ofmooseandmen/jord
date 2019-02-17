@@ -47,7 +47,7 @@ eccentricity :: Earth -> Double
 eccentricity (Ellipsoidal e) = sqrt (1.0 - (b * b) / (a * a))
   where
     a = semiMajorAxis e
-    b = semiMinorAxis a (inverseFlattening e)
+    b = semiMinorAxis a (flattening e)
 eccentricity (Spherical _) = 0
 
 -- | Computes the mean radius of the given 'Earth' model.
@@ -57,7 +57,7 @@ meanRadius :: Earth -> Length
 meanRadius (Ellipsoidal e) = metres ((2.0 * a + b) / 3.0)
   where
     a = semiMajorAxis e
-    b = semiMinorAxis a (inverseFlattening e)
+    b = semiMinorAxis a (flattening e)
 meanRadius (Spherical r) = r
 
 -- | Computes the polar radius or semi-minor axis (b) of the given 'Earth' model.
@@ -65,7 +65,7 @@ polarRadius :: Earth -> Length
 polarRadius (Ellipsoidal e) = metres (semiMinorAxis a f)
   where
     a = semiMajorAxis e
-    f = inverseFlattening e
+    f = flattening e
 polarRadius (Spherical r) = r
 
 -- | Spherical model derived from given model.
@@ -74,15 +74,15 @@ spherical e = Spherical (meanRadius e)
 
 -- | World Geodetic System WGS84 ellipsoid.
 wgs84 :: Earth
-wgs84 = Ellipsoidal (Ellipsoid (metres 6378137.0) (1.0 / 298.257223563))
+wgs84 = Ellipsoidal (Ellipsoid (metres 6378137.0) 298.257223563)
 
 -- | Geodetic Reference System 1980 ellipsoid.
 grs80 :: Earth
-grs80 = Ellipsoidal (Ellipsoid (metres 6378137.0) (1.0 / 298.257222101))
+grs80 = Ellipsoidal (Ellipsoid (metres 6378137.0) 298.257222101)
 
 -- | World Geodetic System WGS72 ellipsoid.
 wgs72 :: Earth
-wgs72 = Ellipsoidal (Ellipsoid (metres 6378135.0) (1.0 / 298.26))
+wgs72 = Ellipsoidal (Ellipsoid (metres 6378135.0) 298.26)
 
 -- | Spherical earth model derived from 'wgs84'.
 s84 :: Earth
@@ -112,6 +112,10 @@ r72 = meanRadius s72
 semiMajorAxis :: Ellipsoid -> Double
 semiMajorAxis = toMetres . equatorialRadius
 
--- | Computes the polar semi-minor axis (b) from @a@ anf @f@.
+-- | Computes the polar semi-minor axis (b) from semi major axis @a@ and flattening @f@.
 semiMinorAxis :: Double -> Double -> Double
 semiMinorAxis a f = a * (1.0 - f)
+
+-- | flattening of ellispoid @e@
+flattening :: Ellipsoid -> Double
+flattening e = 1.0 / inverseFlattening e

@@ -1,3 +1,7 @@
+### 0.6.0.0
+
+- Fixed Ellipsoid: constructor expected inverseFlattening and not flattening
+
 ### 0.5.0.0
 
 - Added Benchmarks

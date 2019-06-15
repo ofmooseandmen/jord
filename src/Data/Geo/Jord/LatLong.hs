@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Geodetic latitude and longitude.
+-- Latitude and longitude.
 --
 module Data.Geo.Jord.LatLong
     (
@@ -39,9 +39,11 @@ import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
--- | Horizontal position defined by its geodetic latitude and longitude.
+-- | Horizontal position defined by its latitude and longitude.
+--
+-- TODO: keep Eq? (or at least explain the relation to earth model)
 data LatLong = LatLong
-    { latitude :: Angle -- ^ geodetic latitude
+    { latitude :: Angle -- ^ latitude
     , longitude :: Angle -- ^ longitude
     } deriving (Eq)
 

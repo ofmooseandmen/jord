@@ -1,3 +1,7 @@
+### 0.7.0.0
+
+- Typos
+
 ### 0.6.0.0
 
 - Fixed Ellipsoid: constructor expected inverseFlattening and not flattening

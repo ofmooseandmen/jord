@@ -195,7 +195,7 @@ spec = do
         it "returns True if point is inside polygon" $ do
             let polygon = [p1, p2, p4, p3]
             isInsideSurface p5 polygon `shouldBe` True
-        it "returns False if point is inside polygon" $ do
+        it "returns False if point is outside polygon" $ do
             let polygon = [p1, p2, p4, p3]
             let p = antipode p5
             isInsideSurface p polygon `shouldBe` False

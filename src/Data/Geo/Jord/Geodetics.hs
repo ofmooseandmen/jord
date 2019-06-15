@@ -366,7 +366,7 @@ isBetween p (GreatArc _ s e) = between && hemisphere
     hemisphere = vdot v0 v1 >= 0 && vdot v0 v2 >= 0
 
 -- | @isInsideSurface p ps@ determines whether the @p@ is inside the polygon defined by the list of positions @ps@.
--- The polygon is closed if needed (i.e. if @head ps /= last ps@).
+-- The polygon can be opened or closed (i.e. if @head ps /= last ps@).
 --
 -- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
 -- will sum to less than 360°, and exterior point angles will be small but non-zero.

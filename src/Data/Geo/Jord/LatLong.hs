@@ -41,7 +41,11 @@ import Text.Read hiding (pfail)
 
 -- | Horizontal position defined by its latitude and longitude.
 --
--- TODO: keep Eq? (or at least explain the relation to earth model)
+-- 'Eq' is provided for convenience, however it only makes sense to compare 'LatLong'
+-- refering to the same earth model.
+--
+-- For 'LatLong' refering to an ellispoidal earth model, both the latitude and
+-- longitude are used as geodetic values (as opposed to geocentric).
 data LatLong = LatLong
     { latitude :: Angle -- ^ latitude
     , longitude :: Angle -- ^ longitude

@@ -21,6 +21,9 @@ import Data.Geo.Jord.Vector3d
 --
 -- Orientation: z-axis points to the North Pole along the Earth's rotation axis,
 -- x-axis points towards the point where latitude = longitude = 0.
+--
+-- 'Eq' is provided for convenience, however it only makes sense to compare 'NVector'
+-- refering to the same earth model.
 newtype NVector =
     NVector Vector3d
     deriving (Eq, Show)

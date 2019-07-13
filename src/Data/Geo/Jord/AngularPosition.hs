@@ -27,7 +27,9 @@ import Data.Geo.Jord.NVector
 -- | An earth position defined by an horizontal position and height.
 --
 -- horizontal position can be either a 'LatLong' or a 'NVector'.
--- TODO: keep Eq? (or at least explain the relation to earth model)
+--
+-- 'Eq' is provided for convenience, however it only makes sense to compare 'AngularPosition'
+-- refering to the same earth model.
 data AngularPosition a = AngularPosition
     { pos :: a
     , height :: Length

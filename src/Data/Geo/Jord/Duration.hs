@@ -24,15 +24,12 @@ module Data.Geo.Jord.Duration
     , toMinutes
     , toSeconds
     -- * Read
+    , durationR
     , readDuration
-    , readDurationE
-    , readDurationF
     ) where
 
-import Control.Monad.Fail
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 import Text.Printf
 import Text.Read hiding (pfail)
@@ -42,9 +39,9 @@ newtype Duration = Duration
     { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
     } deriving (Eq)
 
--- | See 'readDuration'.
+-- | See 'durationR'.
 instance Read Duration where
-    readsPrec _ = readP_to_S duration
+    readsPrec _ = readP_to_S durationR
 
 -- | show Duration as @(-)nHnMn.nS@.
 instance Show Duration where
@@ -94,31 +91,13 @@ toMinutes (Duration ms) = fromIntegral ms / 60000.0 :: Double
 toSeconds :: Duration -> Double
 toSeconds (Duration ms) = fromIntegral ms / 1000.0 :: Double
 
--- | Obtains a 'Duration' from the given string formatted @(-)nHnMn.nS@.
---
--- This simply calls @read s :: Duration@ so 'error' should be handled at the call site.
---
-readDuration :: String -> Duration
-readDuration s = read s :: Duration
+-- | Reads an a 'Duration' from the given string using 'durationR'.
+readDuration :: String -> Maybe Duration
+readDuration s = readMaybe s :: (Maybe Duration)
 
--- | Same as 'readDuration' but returns a 'Either'.
-readDurationE :: String -> Either String Duration
-readDurationE s =
-    case readMaybe s of
-        Nothing -> Left ("couldn't read duration " ++ s)
-        Just l -> Right l
-
--- | Same as 'readDuration' but returns a 'MonadFail'.
-readDurationF :: (MonadFail m) => String -> m Duration
-readDurationF s =
-    let p = readEither s
-     in case p of
-            Left e -> fail e
-            Right l -> return l
-
--- | Parses and returns an 'Duration'.
-duration :: ReadP Duration
-duration = do
+-- | Parses and returns an 'Duration' formatted @(-)nHnMn.nS@.
+durationR :: ReadP Duration
+durationR = do
     h <- option 0 hoursP
     m <- option 0 minutesP
     s <- option 0.0 secondsP

@@ -8,13 +8,12 @@ import Test.Hspec
 spec :: Spec
 spec = do
     describe "Reading valid durations" $ do
-        it "reads 1H45M36.5S" $ readDuration "1H45M36.5S" `shouldBe` hms 1 45 36.5
-        it "reads 45M" $ readDuration "45M" `shouldBe` minutes 45
-        it "reads 36S" $ readDuration "36S" `shouldBe` seconds 36
-        it "reads 36.6S" $ readDuration "36.6S" `shouldBe` milliseconds 36600
-        it "read 1H-30M" $ readDuration "1H-30M" `shouldBe` hours 0.5
-    describe "Reading invalid duration" $
-        it "fails to read 5" $ readDurationE "5" `shouldBe` Left "couldn't read duration 5"
+        it "reads 1H45M36.5S" $ readDuration "1H45M36.5S" `shouldBe` Just (hms 1 45 36.5)
+        it "reads 45M" $ readDuration "45M" `shouldBe` Just (minutes 45)
+        it "reads 36S" $ readDuration "36S" `shouldBe` Just (seconds 36)
+        it "reads 36.6S" $ readDuration "36.6S" `shouldBe` Just (milliseconds 36600)
+        it "read 1H-30M" $ readDuration "1H-30M" `shouldBe` Just (hours 0.5)
+    describe "Reading invalid duration" $ it "fails to read 5" $ readDuration "5" `shouldBe` Nothing
     describe "Showing duration" $
         it "shows duration" $ show (hms 1 45 36.5) `shouldBe` "1H45M36.500S"
     describe "Converting duration" $ do

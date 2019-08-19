@@ -41,8 +41,10 @@ spec = do
             let gc = greatCircle (decimalLatLong 53.3206 (-1.7297), decimalLatLong 53.1887 0.1334)
             crossTrackDistance p gc r84 `shouldBe` metres (-307.5471)
         it "returns a positve length when position is right of great circle (bearing)" $ do
-            let p = readLatLong "531540N0014750W"
-            let gc = greatCircle (readLatLong "531914N0014347W", readAngle "96d01m18s")
+            let p = decimalLatLong 53.26111111 (-1.79722222)
+            let gc =
+                    greatCircle
+                        (decimalLatLong 53.32055556 (-1.72972222), decimalDegrees 96.02166667)
             crossTrackDistance p gc r84 `shouldBe` metres 7042.3242
         it "returns a positive length when position is left of great circle" $ do
             let p = antipode (decimalLatLong 53.2611 (-0.7972))

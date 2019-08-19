@@ -19,9 +19,8 @@ module Data.Geo.Jord.Speed
     , knots
     , feetPerSecond
     -- * Read
+    , speedR
     , readSpeed
-    , readSpeedE
-    , readSpeedF
     -- * Conversions
     , toMetresPerSecond
     , toKilometresPerHour
@@ -31,10 +30,8 @@ module Data.Geo.Jord.Speed
     ) where
 
 import Control.Applicative
-import Control.Monad.Fail
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Prelude hiding (fail)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
@@ -43,9 +40,9 @@ newtype Speed = Speed
     { mmPerHour :: Int
     } deriving (Eq)
 
--- | See 'readSpeed'.
+-- | See 'speedR'.
 instance Read Speed where
-    readsPrec _ = readP_to_S speed
+    readsPrec _ = readP_to_S speedR
 
 -- | Speed is shown in kilometres per hour.
 instance Show Speed where
@@ -77,27 +74,9 @@ knots kt = Speed (round (kt * 1852000.0))
 feetPerSecond :: Double -> Speed
 feetPerSecond fps = Speed (round (fps * 1097280.0))
 
--- | Obtains a 'Speed' from the given string formatted as (-)float[m/s|km/h|mph|kt] - e.g. 300m/s, 250km/h, -154mph, 400kt or 100ft/s.
---
--- This simply calls @read s :: Speed@ so 'error' should be handled at the call site.
---
-readSpeed :: String -> Speed
-readSpeed s = read s :: Speed
-
--- | Same as 'readSpeed' but returns a 'Either'.
-readSpeedE :: String -> Either String Speed
-readSpeedE s =
-    case readMaybe s of
-        Nothing -> Left ("couldn't read speed " ++ s)
-        Just l -> Right l
-
--- | Same as 'readSpeed' but returns a 'MonadFail'.
-readSpeedF :: (MonadFail m) => String -> m Speed
-readSpeedF s =
-    let p = readEither s
-     in case p of
-            Left e -> fail e
-            Right l -> return l
+-- | Reads an a 'Speed' from the given string using 'speedR'.
+readSpeed :: String -> Maybe Speed
+readSpeed s = readMaybe s :: (Maybe Speed)
 
 -- | @toMetresPerSecond s@ converts @s@ to metres per second.
 toMetresPerSecond :: Speed -> Double
@@ -119,9 +98,10 @@ toKnots (Speed s) = fromIntegral s / 1852000.0
 toFeetPerSecond :: Speed -> Double
 toFeetPerSecond (Speed s) = fromIntegral s / 1097280.0
 
--- | Parses and returns a 'Speed'.
-speed :: ReadP Speed
-speed = do
+-- | Parses and returns a 'Speed' formatted as (-)float[m/s|km/h|mph|kt].
+-- e.g. 300m/s, 250km/h, -154mph, 400kt or 100ft/s.
+speedR :: ReadP Speed
+speedR = do
     s <- number
     skipSpaces
     u <- string "m/s" <|> string "km/h" <|> string "mph" <|> string "kt" <|> string "ft/s"

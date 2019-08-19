@@ -15,8 +15,6 @@ module Data.Geo.Jord.Angle
     -- * Smart constructors
     , decimalDegrees
     , dms
-    , dmsE
-    , dmsF
     , radians
     -- * Calculations
     , arcLength
@@ -39,20 +37,15 @@ module Data.Geo.Jord.Angle
     , toDecimalDegrees
     , toRadians
     -- * Read
-    , angle
+    , angleR
     , readAngle
-    , readAngleE
-    , readAngleF
     ) where
 
 import Control.Applicative
-import Control.Monad.Fail
 import Data.Fixed
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Data.Maybe
-import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Printf
 import Text.Read hiding (pfail)
@@ -64,9 +57,9 @@ newtype Angle = Angle
     { milliseconds :: Int
     } deriving (Eq)
 
--- | See 'readAngle'.
+-- | See 'angleR'.
 instance Read Angle where
-    readsPrec _ = readP_to_S angle
+    readsPrec _ = readP_to_S angleR
 
 -- | Angle is shown degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
@@ -95,23 +88,9 @@ decimalDegrees :: Double -> Angle
 decimalDegrees dec = Angle (round (dec * 3600000.0))
 
 -- | 'Angle' from the given degrees, minutes, seconds and milliseconds.
--- 'error's if given minutes, seconds and/or milliseconds are invalid.
--- Degrees are not validated and can be any 'Int': they must be validated by the call site
--- when used to represent a latitude or longitude.
-dms :: Int -> Int -> Int -> Int -> Angle
-dms degs mins secs millis =
-    fromMaybe
-        (error
-             ("Invalid minutes=" ++
-              show mins ++ " or seconds=" ++ show secs ++ " or milliseconds=" ++ show millis))
-        (dmsF degs mins secs millis)
-
--- | 'Angle' from the given degrees, minutes, seconds and milliseconds.
 -- A 'Left' indicates that given minutes, seconds and/or milliseconds are invalid.
--- Degrees are not validated and can be any 'Int': they must be validated by the call site
--- when used to represent a latitude or longitude.
-dmsE :: Int -> Int -> Int -> Int -> Either String Angle
-dmsE degs mins secs millis
+dms :: Int -> Int -> Int -> Int -> Either String Angle
+dms degs mins secs millis
     | mins < 0 || mins > 59 = Left ("Invalid minutes: " ++ show mins)
     | secs < 0 || secs >= 60 = Left ("Invalid seconds: " ++ show secs)
     | millis < 0 || millis >= 1000 = Left ("Invalid milliseconds: " ++ show millis)
@@ -123,18 +102,6 @@ dmsE degs mins secs millis
              (fromIntegral secs / 3600.0 :: Double) +
              (fromIntegral millis / 3600000.0 :: Double))
             (signum degs)
-
--- | 'Angle' from the given degrees, minutes, seconds and milliseconds.
--- 'fail's if given minutes, seconds and/or milliseconds are invalid.
--- Degrees are not validated and can be any 'Int': they must be validated by the call site
--- when used to represent a latitude or longitude.
-dmsF :: (MonadFail m) => Int -> Int -> Int -> Int -> m Angle
-dmsF degs mins secs millis =
-    case e of
-        Left err -> fail err
-        Right a -> return a
-  where
-    e = dmsE degs mins secs millis
 
 -- | 'Angle' from the given radians.
 radians :: Double -> Angle
@@ -216,10 +183,8 @@ signed n s
     | otherwise = n
 
 -- | Parses and returns an 'Angle'.
-angle :: ReadP Angle
-angle = degsMinsSecs <|> decimal
-
--- | Obtains a 'Angle' from the given string formatted as either:
+--
+-- Supported formats:
 --
 --     * d°m′s.ms″ - e.g. 55°36'21.3", where minutes, seconds and milliseconds are optional.
 --
@@ -233,25 +198,12 @@ angle = degsMinsSecs <|> decimal
 --
 --     * second: ", ″, '' or s
 --
--- This simply calls @read s :: Angle@ so 'error' should be handled at the call site.
---
-readAngle :: String -> Angle
-readAngle s = read s :: Angle
+angleR :: ReadP Angle
+angleR = degsMinsSecs <|> decimal
 
--- | Same as 'readAngle' but returns an 'Either'.
-readAngleE :: String -> Either String Angle
-readAngleE s =
-    case readMaybe s of
-        Nothing -> Left ("couldn't read angle " ++ s)
-        Just a -> Right a
-
--- | Same as 'readAngle' but returns a 'MonadFail'.
-readAngleF :: (MonadFail m) => String -> m Angle
-readAngleF s =
-    let p = readAngleE s
-     in case p of
-            Left e -> fail e
-            Right l -> return l
+-- | Reads an a 'Angle' from the given string using 'angleR'.
+readAngle :: String -> Maybe Angle
+readAngle s = readMaybe s :: (Maybe Angle)
 
 -- | Parses DMS.MS and returns an 'Angle'.
 degsMinsSecs :: ReadP Angle
@@ -259,7 +211,9 @@ degsMinsSecs = do
     d' <- fmap fromIntegral integer
     degSymbol
     (m', s', ms') <- option (0, 0, 0) (minsSecs <|> minsOnly)
-    dmsF d' m' s' ms'
+    case dms d' m' s' ms' of
+        Left err -> fail err
+        Right a -> return a
 
 -- | Parses minutes, seconds with optionally milliseconds.
 minsSecs :: ReadP (Int, Int, Int)

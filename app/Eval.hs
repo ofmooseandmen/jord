@@ -352,13 +352,19 @@ tryRead s
     r =
         rights
             (map ($ s)
-                 [ readE readAngleE Ang
-                 , readE readLengthE Len
-                 , readE readSpeedE Spd
-                 , readE readDurationE Dur
+                 [ readM readAngle Ang
+                 , readM readLength Len
+                 , readM readSpeed Spd
+                 , readM readDuration Dur
                  , readE readLatLongE (\ll -> Np (toNVector (AngularPosition ll zero)))
                  , readE readEither Double
                  ])
+
+readM :: (String -> Maybe a) -> (a -> Value) -> String -> Either String Value
+readM p v s =
+    case p s of
+        Just r -> Right (v r)
+        Nothing -> Left "err"
 
 readE :: (String -> Either String a) -> (a -> Value) -> String -> Either String Value
 readE p v s = bimap id v (p s)

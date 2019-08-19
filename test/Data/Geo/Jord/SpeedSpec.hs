@@ -8,14 +8,14 @@ import Test.Hspec
 spec :: Spec
 spec = do
     describe "Reading valid speeds" $ do
-        it "reads -15.2m/s" $ readSpeed "-15.2m/s" `shouldBe` metresPerSecond (-15.2)
-        it "reads 154km/h" $ readSpeed "154km/h" `shouldBe` kilometresPerHour 154
-        it "reads 200mph" $ readSpeed "200mph" `shouldBe` milesPerHour 200
-        it "reads 400kt" $ readSpeed "400kt" `shouldBe` knots 400
-        it "reads 1ft/s" $ readSpeed "1ft/s" `shouldBe` feetPerSecond 1
+        it "reads -15.2m/s" $ readSpeed "-15.2m/s" `shouldBe` Just (metresPerSecond (-15.2))
+        it "reads 154km/h" $ readSpeed "154km/h" `shouldBe` Just (kilometresPerHour 154)
+        it "reads 200mph" $ readSpeed "200mph" `shouldBe` Just (milesPerHour 200)
+        it "reads 400kt" $ readSpeed "400kt" `shouldBe` Just (knots 400)
+        it "reads 1ft/s" $ readSpeed "1ft/s" `shouldBe` Just (feetPerSecond 1)
     describe "Reading invalid speeds" $ do
-        it "fails to read 5" $ readSpeedE "5" `shouldBe` Left "couldn't read speed 5"
-        it "fails to read 5mps" $ readSpeedE "5mps" `shouldBe` Left "couldn't read speed 5mps"
+        it "fails to read 5" $ readSpeed "5" `shouldBe` Nothing
+        it "fails to read 5mps" $ readSpeed "5mps" `shouldBe` Nothing
     describe "Showing speeds" $
         it "shows speed in kilometres per hour" $
         show (kilometresPerHour 154) `shouldBe` "154.0km/h"

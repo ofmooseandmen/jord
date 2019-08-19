@@ -9,16 +9,17 @@ import Test.Hspec
 spec :: Spec
 spec = do
     describe "Reading valid angles" $ do
-        it "reads 55°36'21\"" $ readAngle "55°36'21\"" `shouldBe` decimalDegrees 55.6058333
-        it "reads 55°36'21''" $ readAngle "55°36'21''" `shouldBe` decimalDegrees 55.6058333
-        it "reads 55d36m21.0s" $ readAngle "55d36m21.0s" `shouldBe` decimalDegrees 55.6058333
-        it "reads 55.6058333°" $ readAngle "55.6058333°" `shouldBe` decimalDegrees 55.6058333
-        it "reads -55.6058333°" $ readAngle "-55.6058333°" `shouldBe` decimalDegrees (-55.6058333)
+        it "reads 55°36'21\"" $ readAngle "55°36'21\"" `shouldBe` Just (decimalDegrees 55.6058333)
+        it "reads 55°36'21''" $ readAngle "55°36'21''" `shouldBe` Just (decimalDegrees 55.6058333)
+        it "reads 55d36m21.0s" $ readAngle "55d36m21.0s" `shouldBe` Just (decimalDegrees 55.6058333)
+        it "reads 55.6058333°" $ readAngle "55.6058333°" `shouldBe` Just (decimalDegrees 55.6058333)
+        it "reads -55.6058333°" $
+            readAngle "-55.6058333°" `shouldBe` Just (decimalDegrees (-55.6058333))
         it "reads 96°01′18″" $ do
             hSetEncoding stdin utf8
             hSetEncoding stdout utf8
             hSetEncoding stderr utf8
-            readAngle "96°01′18″" `shouldBe` decimalDegrees 96.02166666
+            readAngle "96°01′18″" `shouldBe` Just (decimalDegrees 96.02166666)
     describe "Adding/Subtracting angles" $ do
         it "adds angles" $
             add (decimalDegrees 55.6058333) (decimalDegrees 5.0) `shouldBe`

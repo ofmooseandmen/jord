@@ -18,9 +18,8 @@ module Data.Geo.Jord.Length
     , metres
     , nauticalMiles
     -- * Read
+    , lengthR
     , readLength
-    , readLengthE
-    , readLengthF
     -- * Conversions
     , toFeet
     , toKilometres
@@ -29,10 +28,8 @@ module Data.Geo.Jord.Length
     ) where
 
 import Control.Applicative
-import Control.Monad.Fail
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Prelude hiding (fail, length)
 import Text.ParserCombinators.ReadP
 import Text.Read hiding (pfail)
 
@@ -41,9 +38,9 @@ newtype Length = Length
     { tenthOfMm :: Int
     } deriving (Eq)
 
--- | See 'readLength'.
+-- | See 'lengthR'.
 instance Read Length where
-    readsPrec _ = readP_to_S length
+    readsPrec _ = readP_to_S lengthR
 
 -- | Length is shown in metres when absolute value is <= 10,000 m and in kilometres otherwise.
 instance Show Length where
@@ -75,27 +72,9 @@ metres m = Length (round (m * 10000.0))
 nauticalMiles :: Double -> Length
 nauticalMiles nm = Length (round (nm * 18520000.0))
 
--- | Obtains a 'Length' from the given string formatted as (-)float[m|km|nm|ft] - e.g. 3000m, 2.5km, -154nm or 10000ft.
---
--- This simply calls @read s :: Length@ so 'error' should be handled at the call site.
---
-readLength :: String -> Length
-readLength s = read s :: Length
-
--- | Same as 'readLength' but returns a 'Either'.
-readLengthE :: String -> Either String Length
-readLengthE s =
-    case readMaybe s of
-        Nothing -> Left ("couldn't read length " ++ s)
-        Just l -> Right l
-
--- | Same as 'readLength' but returns a 'MonadFail'.
-readLengthF :: (MonadFail m) => String -> m Length
-readLengthF s =
-    let p = readEither s
-     in case p of
-            Left e -> fail e
-            Right l -> return l
+-- | Reads an a 'Length' from the given string using 'lengthR'.
+readLength :: String -> Maybe Length
+readLength s = readMaybe s :: (Maybe Length)
 
 -- | @toFeet l@ converts @l@ to feet.
 toFeet :: Length -> Double
@@ -113,9 +92,11 @@ toMetres (Length l) = fromIntegral l / 10000.0
 toNauticalMiles :: Length -> Double
 toNauticalMiles (Length l) = fromIntegral l / 18520000.0
 
--- | Parses and returns a 'Length'.
-length :: ReadP Length
-length = do
+-- | Parses and returns a 'Length' formatted as (-)float[m|km|nm|ft].
+-- e.g. 3000m, 2.5km, -154nm or 10000ft.
+--
+lengthR :: ReadP Length
+lengthR = do
     v <- number
     skipSpaces
     u <- string "m" <|> string "km" <|> string "nm" <|> string "ft"

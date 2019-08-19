@@ -169,6 +169,14 @@ blon = do
         then dmsF d' m' s' 0
         else dmsF (-d') m' s' 0
 
+dmsF :: (MonadFail m) => Int -> Int -> Int -> Int -> m Angle
+dmsF degs mins secs millis =
+    case e of
+        Left err -> fail err
+        Right a -> return a
+  where
+    e = dms degs mins secs millis
+
 -- | Parses N or S char.
 hemisphere :: ReadP Char
 hemisphere = char 'N' <|> char 'S'
@@ -201,7 +209,7 @@ human = do
 -- | Parses and returns a latitude, 'Angle'N|S expected.
 hlat :: ReadP Angle
 hlat = do
-    lat <- angle
+    lat <- angleR
     h <- hemisphere
     if h == 'N'
         then return lat
@@ -210,7 +218,7 @@ hlat = do
 -- | Parses and returns a longitude, 'Angle'E|W expected.
 hlon :: ReadP Angle
 hlon = do
-    lon <- angle
+    lon <- angleR
     m' <- meridian
     if m' == 'E'
         then return lon

@@ -2,68 +2,70 @@ module Data.Geo.Jord.FramesSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
 import Test.Hspec
+
+import Data.Geo.Jord
 
 spec :: Spec
 spec = do
     describe "Ellipsoidal earth model" $ do
         describe "target" $ do
-            it "return the given point if NED norm = 0" $ do
-                let p0 = readLatLong "531914N0014347W"
+            it "return the given position if NED norm = 0" $ do
+                let p0 = decimalLatLongPos 53.320556 (-1.729722) WGS84
                 let d = ned zero zero zero
-                targetN p0 d wgs84 `shouldBe` p0
-            it "computes the target point from p0 and NED" $ do
-                let p0 = decimalLatLong 49.66618 3.45063
+                targetN p0 d `shouldBe` p0
+            it "computes the target position from p0 and NED" $ do
+                let p0 = decimalLatLongPos 49.66618 3.45063 WGS84
                 let d = nedMetres (-86126) (-78900) 1069
-                targetN p0 d wgs84 `shouldBe` decimalLatLong 48.8866688 2.374721388
-            it "computes the target point from p0 and vector in Frame B" $ do
-                let p0 = decimalLatLongHeight 49.66618 3.45063 zero
+                targetN p0 d `shouldBe`
+                    decimalLatLongHeightPos 48.8866688 2.374721388 (metres 0.1989) WGS84
+            it "computes the target position from p0 and vector in Frame B" $ do
+                let p0 = decimalLatLongPos 49.66618 3.45063 WGS84
                 let y = decimalDegrees 10 -- yaw
                 let r = decimalDegrees 20 -- roll
                 let p = decimalDegrees 30 -- pitch
                 let d = deltaMetres 3000 2000 100
-                target p0 (frameB y r p) d wgs84 `shouldBe`
-                    decimalLatLongHeight 49.6918016 3.4812669 (metres 6.0077)
+                target p0 (frameB y r p) d `shouldBe`
+                    decimalLatLongHeightPos 49.6918016 3.4812669 (metres 6.0077) WGS84
         describe "nedBetween" $ do
-            it "computes NED between LatLong positions" $ do
-                let p1 = decimalLatLong 49.66618 3.45063
-                let p2 = decimalLatLong 48.88667 2.37472
-                let d = nedBetween p1 p2 wgs84
+            it "computes NED between surface positions" $ do
+                let p1 = decimalLatLongPos 49.66618 3.45063 WGS84
+                let p2 = decimalLatLongPos 48.88667 2.37472 WGS84
+                let d = nedBetween p1 p2
                 d `shouldBe` nedMetres (-86125.8805) (-78900.0878) 1069.1984
-            it "computes NED between angular positions" $ do
-                let p1 = decimalLatLongHeight 49.66618 3.45063 zero
-                let p2 = decimalLatLongHeight 48.88667 2.37472 zero
-                let d = nedBetween p1 p2 wgs84
+            it "computes NED between positions" $ do
+                let p1 = decimalLatLongHeightPos 49.66618 3.45063 zero WGS84
+                let p2 = decimalLatLongHeightPos 48.88667 2.37472 zero WGS84
+                let d = nedBetween p1 p2
                 d `shouldBe` nedMetres (-86125.8805) (-78900.0878) 1069.1984
         describe "deltaBetween" $
-            it "computes delta between angular positions in frame L" $ do
-                let p1 = decimalLatLongHeight 1 2 (metres (-3))
-                let p2 = decimalLatLongHeight 4 5 (metres (-6))
+            it "computes delta between positions in frame L" $ do
+                let p1 = decimalLatLongHeightPos 1 2 (metres (-3)) WGS84
+                let p2 = decimalLatLongHeightPos 4 5 (metres (-6)) WGS84
                 let w = decimalDegrees 5 -- wander azimuth
-                let d = deltaBetween p1 p2 (frameL w) wgs84
-                d `shouldBe` deltaMetres 359490.5782 302818.5226 17404.2713
+                let d = deltaBetween p1 p2 (frameL w)
+                d `shouldBe` deltaMetres 359490.5782 302818.5225 17404.2714
         describe "deltaBetween and target consistency" $
             it "computes targetN p1 (nedBetween p1 p2) = p2" $ do
-                let p1 = decimalLatLongHeight 49.66618 3.45063 zero
-                let p2 = decimalLatLongHeight 48.88667 2.37472 zero
-                targetN p1 (nedBetween p1 p2 wgs84) wgs84 `shouldBe` p2
-        describe "rotation matrix to go from/to earth-fixed frame to/from frame" $ do
-            it "computes the rotation matrix to go from Frame N to earth-fixed frame" $ do
-                let p = decimalLatLong 49.66618 3.45063
-                let f = frameN p wgs84
+                let p1 = decimalLatLongHeightPos 49.66618 3.45063 zero WGS84
+                let p2 = decimalLatLongHeightPos 48.88667 2.37472 zero WGS84
+                targetN p1 (nedBetween p1 p2) `shouldBe` p2
+        describe "rotation matrix to/from earth-fixed frame" $ do
+            it "computes rEN (frame N to earth-fixed frame)" $ do
+                let p = decimalLatLongPos 49.66618 3.45063 WGS84
+                let f = frameN p
                 rEF f `shouldBe`
-                    [ Vector3d (-0.7609044147650337) (-6.0188455103478165e-2) (-0.6460664218664659)
-                    , Vector3d (-4.588084172652564e-2) 0.9981870315087531 (-3.8956366491356864e-2)
-                    , Vector3d 0.6472398473159291 0.0 (-0.7622864160185809)
+                    [ Vector3d (-0.7609044147683025) (-6.018845511258954e-2) (-0.646066421861767)
+                    , Vector3d (-4.5880841733693466e-2) 0.9981870315082038 (-3.895636649699221e-2)
+                    , Vector3d 0.6472398473115779 0.0 (-0.7622864160222752)
                     ]
-            it "computes the rotation matrix to go from Frame B to earth-fixed frame" $ do
-                let p = decimalLatLong 49.66618 3.45063
-                let f = frameB (decimalDegrees 10) (decimalDegrees 20) (decimalDegrees 30) p wgs84
+            it "computes rEB (frame B to earth-fixed frame)" $ do
+                let p = decimalLatLongPos 49.66618 3.45063 WGS84
+                let f = frameB (decimalDegrees 10) (decimalDegrees 20) (decimalDegrees 30) p
                 rEF f `shouldBe`
-                    [ Vector3d (-0.4930071357985816) (-0.3703899170611777) (-0.787245370511058)
-                    , Vector3d 0.13374504886728417 0.8618333991629544 (-0.4892396692733688)
-                    , Vector3d 0.8596837941680457 (-0.3464888186170537) (-0.37535219809958753)
+                    [ Vector3d (-0.49300713580470057) (-0.37038991706707025) (-0.7872453705044535)
+                    , Vector3d 0.1337450488624887 0.8618333991596926 (-0.4892396692804258)
+                    , Vector3d 0.8596837941652826 (-0.3464888186188679) (-0.375352198104241)
                     ]
     describe "North, East, Down delta" $ do
         describe "slantRange" $

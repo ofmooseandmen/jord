@@ -2,8 +2,9 @@ module Data.Geo.Jord.DurationSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
 import Test.Hspec
+
+import Data.Geo.Jord
 
 spec :: Spec
 spec = do

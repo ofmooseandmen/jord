@@ -4,7 +4,7 @@ github:              ofmooseandmen/jord
 license:             BSD3
 author:              Cedric Liegeois
 maintainer:          Cedric Liegeois <ofmooseandmen@yahoo.com>
-copyright:           2018 Cedric Liegeois
+copyright:           2019 Cedric Liegeois
 category:            Geography
 stability:           experimental
 homepage:            https://github.com/ofmooseandmen/jord
@@ -25,20 +25,18 @@ library:
   exposed-modules:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
-    - Data.Geo.Jord.AngularPosition
+    - Data.Geo.Jord.Bodies
     - Data.Geo.Jord.Duration
-    - Data.Geo.Jord.Earth
-    - Data.Geo.Jord.EcefPosition
     - Data.Geo.Jord.Frames
-    - Data.Geo.Jord.Geodetics
+    - Data.Geo.Jord.Geodesic
+    - Data.Geo.Jord.GreatCircle
     - Data.Geo.Jord.Kinematics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
-    - Data.Geo.Jord.NVector
+    - Data.Geo.Jord.Position
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Rotation
     - Data.Geo.Jord.Speed
-    - Data.Geo.Jord.Transformation
     - Data.Geo.Jord.Vector3d
   other-modules:
     - Data.Geo.Jord.Internal

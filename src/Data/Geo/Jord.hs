@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -18,39 +18,35 @@
 --
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
-    , module Data.Geo.Jord.AngularPosition
+    , module Data.Geo.Jord.Bodies
     , module Data.Geo.Jord.Duration
-    , module Data.Geo.Jord.Earth
-    , module Data.Geo.Jord.EcefPosition
     , module Data.Geo.Jord.Frames
-    , module Data.Geo.Jord.Geodetics
+    , module Data.Geo.Jord.Geodesic
+    , module Data.Geo.Jord.GreatCircle
     , module Data.Geo.Jord.Kinematics
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
-    , module Data.Geo.Jord.NVector
+    , module Data.Geo.Jord.Position
     , module Data.Geo.Jord.Quantity
     , module Data.Geo.Jord.Rotation
     , module Data.Geo.Jord.Speed
-    , module Data.Geo.Jord.Transformation
     , module Data.Geo.Jord.Vector3d
     , jordVersion
     ) where
 
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Duration
-import Data.Geo.Jord.Earth
-import Data.Geo.Jord.EcefPosition
 import Data.Geo.Jord.Frames
-import Data.Geo.Jord.Geodetics
+import Data.Geo.Jord.Geodesic
+import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Kinematics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Position hiding (evec, nvec, nvh)
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Rotation
 import Data.Geo.Jord.Speed
-import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
 
 -- | version.

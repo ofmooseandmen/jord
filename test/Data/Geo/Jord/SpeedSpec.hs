@@ -2,8 +2,9 @@ module Data.Geo.Jord.SpeedSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
 import Test.Hspec
+
+import Data.Geo.Jord
 
 spec :: Spec
 spec = do
@@ -37,5 +38,5 @@ spec = do
     describe "Adding/Subtracting speeds" $ do
         it "adds speeds" $
             add (kilometresPerHour 1000) (metresPerSecond 1000) `shouldBe` kilometresPerHour 4600
-        it "subtracts lengths" $
+        it "subtracts speeds" $
             sub (metresPerSecond 1000) (knots 10.5) `shouldBe` kilometresPerHour 3580.554

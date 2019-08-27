@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 817eafa8844e578c7fdab878934522ee74be43d0dd34922d730c912dd2b706da
+-- hash: d4977c947890f8de84804a25b351f8f805419074c5df790c5cd4e8df86d49503
 
 name:           jord
 version:        0.7.0.0
@@ -16,7 +16,7 @@ homepage:       https://github.com/ofmooseandmen/jord
 bug-reports:    https://github.com/ofmooseandmen/jord/issues
 author:         Cedric Liegeois
 maintainer:     Cedric Liegeois <ofmooseandmen@yahoo.com>
-copyright:      2018 Cedric Liegeois
+copyright:      2019 Cedric Liegeois
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -32,20 +32,18 @@ library
   exposed-modules:
       Data.Geo.Jord
       Data.Geo.Jord.Angle
-      Data.Geo.Jord.AngularPosition
+      Data.Geo.Jord.Bodies
       Data.Geo.Jord.Duration
-      Data.Geo.Jord.Earth
-      Data.Geo.Jord.EcefPosition
       Data.Geo.Jord.Frames
-      Data.Geo.Jord.Geodetics
+      Data.Geo.Jord.Geodesic
+      Data.Geo.Jord.GreatCircle
       Data.Geo.Jord.Kinematics
       Data.Geo.Jord.LatLong
       Data.Geo.Jord.Length
-      Data.Geo.Jord.NVector
+      Data.Geo.Jord.Position
       Data.Geo.Jord.Quantity
       Data.Geo.Jord.Rotation
       Data.Geo.Jord.Speed
-      Data.Geo.Jord.Transformation
       Data.Geo.Jord.Vector3d
   other-modules:
       Data.Geo.Jord.Internal
@@ -92,16 +90,19 @@ test-suite jord-test
   main-is: Spec.hs
   other-modules:
       Data.Geo.Jord.AngleSpec
+      Data.Geo.Jord.BodiesSpec
       Data.Geo.Jord.DurationSpec
-      Data.Geo.Jord.EarthSpec
       Data.Geo.Jord.FramesSpec
-      Data.Geo.Jord.GeodeticsSpec
+      Data.Geo.Jord.GeodesicEllipsoidalSpec
+      Data.Geo.Jord.GeodesicSphericalSpec
+      Data.Geo.Jord.GreatCircleSpec
       Data.Geo.Jord.KinematicsSpec
-      Data.Geo.Jord.LatLongSpec
       Data.Geo.Jord.LengthSpec
+      Data.Geo.Jord.PositionSpec
+      Data.Geo.Jord.ReadPositionSpec
       Data.Geo.Jord.RotationSpec
+      Data.Geo.Jord.ShowPositionSpec
       Data.Geo.Jord.SpeedSpec
-      Data.Geo.Jord.TransformationSpec
       Paths_jord
   hs-source-dirs:
       test

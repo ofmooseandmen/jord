@@ -2,9 +2,11 @@ module Data.Geo.Jord.AngleSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
-import System.IO
+import System.IO (hSetEncoding, stderr, stdin, stdout, utf8)
+
 import Test.Hspec
+
+import Data.Geo.Jord
 
 spec :: Spec
 spec = do
@@ -85,9 +87,9 @@ spec = do
             getMilliseconds actual `shouldBe` 0
     describe "Arc length" $ do
         it "computes the length of an arc with a central angle of 1 milliseconds" $
-            arcLength (decimalDegrees (1.0 / 3600000.0)) (meanRadius wgs84) `shouldBe` metres 0.0309
+            arcLength (decimalDegrees (1.0 / 3600000.0)) (modelRadius S84) `shouldBe` metres 0.0309
         it
             "arc length with central angle of 0.6 milliseconds == arc length with central angle of 1 milliseconds" $
-            arcLength (decimalDegrees (0.6 / 3600000.0)) (meanRadius wgs84) `shouldBe` metres 0.0309
+            arcLength (decimalDegrees (0.6 / 3600000.0)) (modelRadius S84) `shouldBe` metres 0.0309
         it "arc length with central angle of 0.5 milliseconds == 0" $
-            arcLength (decimalDegrees (0.4 / 3600000.0)) (meanRadius wgs84) `shouldBe` metres 0
+            arcLength (decimalDegrees (0.4 / 3600000.0)) (modelRadius S84) `shouldBe` metres 0

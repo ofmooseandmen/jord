@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Angle
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -37,29 +37,32 @@ module Data.Geo.Jord.Angle
     , toDecimalDegrees
     , toRadians
     -- * Read
-    , angleR
+    , angleP
     , readAngle
     ) where
 
-import Control.Applicative
-import Data.Fixed
+import Control.Applicative ((<|>))
+import Data.Fixed (mod')
+import Text.ParserCombinators.ReadP (ReadP, char, option, readP_to_S, string)
+import Text.Printf (printf)
+import Text.Read (readMaybe)
+
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Text.ParserCombinators.ReadP
-import Text.Printf
-import Text.Read hiding (pfail)
 
 -- | An angle with a resolution of a milliseconds of a degree.
 -- When used as a latitude/longitude this roughly translate to a precision
 -- of 30 millimetres at the equator.
-newtype Angle = Angle
-    { milliseconds :: Int
-    } deriving (Eq)
+newtype Angle =
+    Angle
+        { milliseconds :: Int
+        }
+    deriving (Eq)
 
--- | See 'angleR'.
+-- | See 'angleP'.
 instance Read Angle where
-    readsPrec _ = readP_to_S angleR
+    readsPrec _ = readP_to_S angleP
 
 -- | Angle is shown degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
@@ -198,10 +201,10 @@ signed n s
 --
 --     * second: ", ″, '' or s
 --
-angleR :: ReadP Angle
-angleR = degsMinsSecs <|> decimal
+angleP :: ReadP Angle
+angleP = degsMinsSecs <|> decimal
 
--- | Reads an a 'Angle' from the given string using 'angleR'.
+-- | Reads an a 'Angle' from the given string using 'angleP'.
 readAngle :: String -> Maybe Angle
 readAngle s = readMaybe s :: (Maybe Angle)
 

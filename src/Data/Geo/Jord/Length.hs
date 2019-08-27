@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Length
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -18,29 +18,33 @@ module Data.Geo.Jord.Length
     , metres
     , nauticalMiles
     -- * Read
-    , lengthR
+    , lengthP
     , readLength
     -- * Conversions
     , toFeet
     , toKilometres
     , toMetres
+    , toMillimetres
     , toNauticalMiles
     ) where
 
-import Control.Applicative
+import Control.Applicative ((<|>))
+import Text.ParserCombinators.ReadP (ReadP, pfail, readP_to_S, skipSpaces, string)
+import Text.Read (readMaybe)
+
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Text.ParserCombinators.ReadP
-import Text.Read hiding (pfail)
 
 -- | A length with a resolution of 0.1 millimetre.
-newtype Length = Length
-    { tenthOfMm :: Int
-    } deriving (Eq)
+newtype Length =
+    Length
+        { tenthOfMm :: Int
+        }
+    deriving (Eq)
 
--- | See 'lengthR'.
+-- | See 'lengthP'.
 instance Read Length where
-    readsPrec _ = readP_to_S lengthR
+    readsPrec _ = readP_to_S lengthP
 
 -- | Length is shown in metres when absolute value is <= 10,000 m and in kilometres otherwise.
 instance Show Length where
@@ -72,7 +76,7 @@ metres m = Length (round (m * 10000.0))
 nauticalMiles :: Double -> Length
 nauticalMiles nm = Length (round (nm * 18520000.0))
 
--- | Reads an a 'Length' from the given string using 'lengthR'.
+-- | Reads an a 'Length' from the given string using 'lengthP'.
 readLength :: String -> Maybe Length
 readLength s = readMaybe s :: (Maybe Length)
 
@@ -88,6 +92,10 @@ toKilometres (Length l) = fromIntegral l / 10000000.0
 toMetres :: Length -> Double
 toMetres (Length l) = fromIntegral l / 10000.0
 
+-- | @toMillimetres l@ converts @l@ to millimetres.
+toMillimetres :: Length -> Double
+toMillimetres (Length l) = fromIntegral l / 10.0
+
 -- | @toNauticalMiles l@ converts @l@ to nautical miles.
 toNauticalMiles :: Length -> Double
 toNauticalMiles (Length l) = fromIntegral l / 18520000.0
@@ -95,8 +103,8 @@ toNauticalMiles (Length l) = fromIntegral l / 18520000.0
 -- | Parses and returns a 'Length' formatted as (-)float[m|km|nm|ft].
 -- e.g. 3000m, 2.5km, -154nm or 10000ft.
 --
-lengthR :: ReadP Length
-lengthR = do
+lengthP :: ReadP Length
+lengthP = do
     v <- number
     skipSpaces
     u <- string "m" <|> string "km" <|> string "nm" <|> string "ft"

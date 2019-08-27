@@ -1,8 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 -- |
 -- Module:      Data.Geo.Jord.Kinematics
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -17,7 +15,7 @@
 module Data.Geo.Jord.Kinematics
     (
     -- * The 'Track' type.
-    Track(..)
+      Track(..)
     -- * The 'Course' type.
     , Course
     -- * The 'Cpa' type.
@@ -35,106 +33,93 @@ module Data.Geo.Jord.Kinematics
     , interceptorSpeed
     -- * Calculations
     , course
-    , position
-    , position84
+    , positionAfter
+    , trackPositionAfter
     , cpa
-    , cpa84
     , intercept
-    , intercept84
     , interceptBySpeed
-    , interceptBySpeed84
     , interceptByTime
-    , interceptByTime84
     ) where
 
-import Control.Applicative
+import Control.Applicative ((<|>))
+import Data.Maybe (fromJust, isNothing)
+
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.AngularPosition
+import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Duration
-import Data.Geo.Jord.Earth
-import Data.Geo.Jord.Geodetics
-import Data.Geo.Jord.Internal(ad, nvec)
-import Data.Geo.Jord.LatLong
+import Data.Geo.Jord.Geodesic
+import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.NVector
+import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Speed
-import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
-import Data.Maybe (isNothing)
 
 -- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
-data Track a = Track
-    { trackPos :: a -- ^ position of the track.
-    , trackBearing :: Angle -- ^ bearing of the track.
-    , trackSpeed :: Speed -- ^ speed of the track.
-    } deriving (Eq, Show)
-
--- | 'GreatCircle' from track.
-instance NTransform a => IsGreatCircle (Track a) where
-    greatCircleE t = greatCircleE (trackPos t, trackBearing t)
-
--- | 'GreatArc' from track and duration using the mean radius of the WGS84 reference ellipsoid.
-instance NTransform a => IsGreatArc (Track a, Duration) where
-    greatArcE (t, d) = greatArcE (t, d, r84)
-
--- | 'GreatArc' from track, duration and earth mean radius.
-instance NTransform a => IsGreatArc (Track a, Duration, Length) where
-    greatArcE (t, d, r) = greatArcE (trackPos t, position t d r)
+data Track a =
+    Track
+        { trackPosition :: Position a -- ^ position of the track.
+        , trackBearing :: Angle -- ^ bearing of the track.
+        , trackSpeed :: Speed -- ^ speed of the track.
+        }
+    deriving (Eq, Show)
 
 -- | 'Course' represents the cardinal direction in which the vehicle is to be steered.
 newtype Course =
     Course Vector3d
     deriving (Eq, Show)
 
-instance IsVector3d Course where
-    vec (Course v) = v
-
 -- | Time to, and distance at, closest point of approach (CPA) as well as position of both tracks at CPA.
-data Cpa a = Cpa
-    { cpaTime :: Duration -- ^ time to CPA.
-    , cpaDistance :: Length -- ^ distance at CPA.
-    , cpaPosition1 :: a -- ^ position of track 1 at CPA.
-    , cpaPosition2 :: a -- ^ position of track 2 at CPA.
-    } deriving (Eq, Show)
+data Cpa a =
+    Cpa
+        { cpaTime :: Duration -- ^ time to CPA.
+        , cpaDistance :: Length -- ^ distance at CPA.
+        , cpaPosition1 :: Position a -- ^ position of track 1 at CPA.
+        , cpaPosition2 :: Position a -- ^ position of track 2 at CPA.
+        }
+    deriving (Eq, Show)
 
 -- | Time, distance and position of intercept as well as speed and initial bearing of interceptor.
-data Intercept a = Intercept
-    { interceptTime :: Duration -- ^ time to intercept.
-    , interceptDistance :: Length -- ^ distance at intercept.
-    , interceptPosition :: a -- ^ position of intercept.
-    , interceptorBearing :: Angle -- ^ initial bearing of interceptor.
-    , interceptorSpeed :: Speed -- ^ speed of interceptor.
-    } deriving (Eq, Show)
+data Intercept a =
+    Intercept
+        { interceptTime :: Duration -- ^ time to intercept.
+        , interceptDistance :: Length -- ^ distance at intercept.
+        , interceptPosition :: Position a -- ^ position of intercept.
+        , interceptorBearing :: Angle -- ^ initial bearing of interceptor.
+        , interceptorSpeed :: Speed -- ^ speed of interceptor.
+        }
+    deriving (Eq, Show)
 
 -- | @course p b@ computes the course of a vehicle currently at position @p@ and following bearing @b@.
-course :: (NTransform a) => a -> Angle -> Course
+course :: (Spherical a) => Position a -> Angle -> Course
 course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
   where
-    ll = nvectorToLatLong . pos . toNVector $ p
-    lat = latitude ll
-    lon = longitude ll
+    lat = latitude p
+    lon = longitude p
     r = mdot (mdot (rz (negate' lon)) (ry lat)) (rx b)
 
--- | @position t d r@ computes the position of a track @t@ after duration @d@ has elapsed and using the earth radius @r@.
+-- | @positionAfter p s c d@ computes the position of a vehicle currently at position @p@
+-- travelling at speed @s@ and on course @c@ after duration @d@ has elapsed.
+positionAfter :: (Spherical a) => Position a -> Speed -> Course -> Duration -> Position a
+positionAfter p s c d = position' p s c (toSeconds d)
+
+-- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed.
 --
 -- @
+--     TODO new API
 --     let p0 = latLongHeight (readLatLong "531914N0014347W") (metres 15000)
 --     let b = decimalDegrees 96.0217
 --     let s = kilometresPerHour 124.8
 --     let p1 = decimalLatLongHeight 53.1882691 0.1332741 (metres 15000)
 --     position (Track p0 b s) (hours 1) r84 = p1
 -- @
-position :: (NTransform a) => Track a -> Duration -> Length -> a
-position (Track p0 b s) d = position' p0 s (course p0 b) (toSeconds d)
+trackPositionAfter :: (Spherical a) => Track a -> Duration -> Position a
+trackPositionAfter (Track p b s) = positionAfter p s (course p b)
 
--- | 'position' using the mean radius of the WGS84 reference ellipsoid.
-position84 :: (NTransform a) => Track a -> Duration -> a
-position84 t d = position t d r84
-
--- | @cpa t1 t2 r@ computes the closest point of approach between tracks @t1@ and @t2@ and using the earth radius @r@.
+-- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@.
 --
 -- @
+--     TODO new API
 --     let p1 = decimalLatLong 20 (-60)
 --     let b1 = decimalDegrees 10
 --     let s1 = knots 15
@@ -147,73 +132,61 @@ position84 t d = position t d r84
 --     fmap cpaTime c = Just (milliseconds 11396155)
 --     fmap cpaDistance c = Just (kilometres 124.2317453)
 -- @
-cpa :: (Eq a, NTransform a) => Track a -> Track a -> Length -> Maybe (Cpa a)
-cpa (Track p1 b1 s1) (Track p2 b2 s2) r
+cpa :: (Spherical a) => Track a -> Track a -> Maybe (Cpa a)
+cpa (Track p1 b1 s1) (Track p2 b2 s2)
     | p1 == p2 = Just (Cpa zero zero p1 p2)
     | t < 0 = Nothing
-    | otherwise = Just (Cpa (seconds t) d cp1 cp2)
+    | otherwise = fmap (\l -> Cpa (seconds t) l cp1 cp2) d
   where
     c1 = course p1 b1
     c2 = course p2 b2
-    t = timeToCpa p1 c1 s1 p2 c2 s2 r
-    cp1 = position' p1 s1 c1 t r
-    cp2 = position' p2 s2 c2 t r
-    d = surfaceDistance cp1 cp2 r
+    t = timeToCpa p1 c1 s1 p2 c2 s2
+    cp1 = position' p1 s1 c1 t
+    cp2 = position' p2 s2 c2 t
+    d = surfaceDistance cp1 cp2
 
--- | 'cpa' using the mean radius of the WGS84 reference ellipsoid.
-cpa84 :: (Eq a, NTransform a) => Track a -> Track a -> Maybe (Cpa a)
-cpa84 t1 t2 = cpa t1 t2 r84
-
--- | @intercept t p r@ computes the __minimum__ speed of interceptor at
--- position @p@ needed for an intercept with target track @t@ to take place
--- using the earth radius @r@. Intercept time, position, distance and interceptor
--- bearing are derived from this minimum speed. Returns 'Nothing' if intercept
--- cannot be achieved e.g.:
+-- | @intercept t p@ computes the __minimum__ speed of interceptor at
+-- position @p@ needed for an intercept with target track @t@ to take place.
+-- Intercept time, position, distance and interceptor bearing are derived from
+-- this minimum speed. Returns 'Nothing' if intercept cannot be achieved e.g.:
 --
 --     * interceptor and target are at the same position
 --
 --     * interceptor is "behind" the target
 --
 -- @
+--     TODO new API
 --     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
 --     let ip = (decimalLatLong 20 (-60))
 --     let i = intercept t ip r84
 --     fmap interceptorSpeed i = Just (knots 52.633367756059)
 --     fmap interceptTime i = Just (seconds 5993.831)
 -- @
-intercept :: (Eq a, NTransform a) => Track a -> a -> Length -> Maybe (Intercept a)
-intercept t p r = interceptByTime t p (seconds (timeToIntercept t p r)) r
+intercept :: (Spherical a) => Track a -> Position a -> Maybe (Intercept a)
+intercept t p = interceptByTime t p (seconds (timeToIntercept t p))
 
--- | 'intercept' using the mean radius of the WGS84 reference ellipsoid.
-intercept84 :: (Eq a, NTransform a) => Track a -> a -> Maybe (Intercept a)
-intercept84 t p = intercept t p r84
-
--- | @interceptBySpeed t p s r@ computes the time needed by interceptor at
--- position @p@ and travelling at speed @s@ to intercept target track @t@
--- using the earth radius @r@. Returns 'Nothing' if intercept
--- cannot be achieved e.g.:
+-- | @interceptBySpeed t p s@ computes the time needed by interceptor at
+-- position @p@ and travelling at speed @s@ to intercept target track @t@.
+-- Returns 'Nothing' if intercept cannot be achieved e.g.:
 --
 --     * interceptor and target are at the same position
 --
 --     * interceptor speed is below minimum speed returned by 'intercept'
-interceptBySpeed :: (Eq a, NTransform a) => Track a -> a -> Speed -> Length -> Maybe (Intercept a)
-interceptBySpeed t p s r
+interceptBySpeed :: (Spherical a) => Track a -> Position a -> Speed -> Maybe (Intercept a)
+interceptBySpeed t p s
     | isNothing minInt = Nothing
     | fmap interceptorSpeed minInt == Just s = minInt
-    | otherwise = interceptByTime t p (seconds (timeToInterceptSpeed t p s r)) r
+    | otherwise = interceptByTime t p (seconds (timeToInterceptSpeed t p s))
   where
-    minInt = intercept t p r
+    minInt = intercept t p
 
--- | 'interceptBySpeed' using the mean radius of the WGS84 reference ellipsoid.
-interceptBySpeed84 :: (Eq a, NTransform a) => Track a -> a -> Speed -> Maybe (Intercept a)
-interceptBySpeed84 t p s = interceptBySpeed t p s r84
-
--- | @interceptByTime t p d r@ computes the speed of interceptor at
+-- | @interceptByTime t p d@ computes the speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place
--- after duration @d@ and using the earth radius @r@. Returns 'Nothing' if
--- given duration is <= 0 or interceptor and target are at the same position.
+-- after duration @d@. Returns 'Nothing' if given duration is <= 0 or
+-- interceptor and target are at the same position.
 --
 -- @
+--     TODO new API
 --     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
 --     let ip = (decimalLatLong 20 (-60))
 --     let d = seconds 2700
@@ -227,75 +200,71 @@ interceptBySpeed84 t p s = interceptBySpeed t p s r84
 --
 -- Note: contrary to 'intercept' and 'interceptBySpeed' this function handles
 -- cases where the interceptor has to catch up the target.
-interceptByTime :: (Eq a, NTransform a) => Track a -> a -> Duration -> Length -> Maybe (Intercept a)
-interceptByTime t p d r
+interceptByTime :: (Spherical a) => Track a -> Position a -> Duration -> Maybe (Intercept a)
+interceptByTime t p d
     | toMilliseconds d <= 0 = Nothing
-    | trackPos t == p = Nothing
-    | otherwise = fmap (\b -> Intercept d idist ipos b is) ib
+    | trackPosition t == p = Nothing
+    | isNothing idist = Nothing -- should never occur
+    | isNothing ib = Nothing
+    | otherwise =
+        let is = averageSpeed (fromJust idist) d
+         in Just (Intercept d (fromJust idist) ipos (fromJust ib) is)
   where
-    ipos = position t d r
-    idist = surfaceDistance p ipos r
-    ib = initialBearing p ipos <|> initialBearing p (trackPos t)
-    is = metresPerSecond (toMetres idist / toSeconds d)
-
--- | 'interceptByTime' using the mean radius of the WGS84 reference ellipsoid.
-interceptByTime84 :: (Eq a, NTransform a) => Track a -> a -> Duration -> Maybe (Intercept a)
-interceptByTime84 t p d = interceptByTime t p d r84
-
--- | position from speed course and seconds.
-position' :: (NTransform a) => a -> Speed -> Course -> Double -> Length -> a
-position' p0 s c sec r = fromNVector (nvectorHeight (nvector (vx v1) (vy v1) (vz v1)) h0)
-  where
-    nv0 = toNVector p0
-    v0 = vec . pos $nv0
-    h0 = height nv0
-    v1 = position'' v0 s (vec c) sec r
+    ipos = trackPositionAfter t d
+    idist = surfaceDistance p ipos
+    ib = initialBearing p ipos <|> initialBearing p (trackPosition t)
 
 -- | position from speed course and seconds.
-position'' :: Vector3d -> Speed -> Vector3d -> Double -> Length -> Vector3d
-position'' v0 s c sec r = v1
+position' :: (Spherical a) => Position a -> Speed -> Course -> Double -> Position a
+position' p0 s (Course c) sec = nvh v1 h0 (model p0)
   where
-    a = toMetresPerSecond s / toMetres r * sec
+    nv0 = nvec p0
+    h0 = height p0
+    v1 = position'' nv0 s c sec (radiusM p0)
+
+-- | position from speed course and seconds.
+position'' :: Vector3d -> Speed -> Vector3d -> Double -> Double -> Vector3d
+position'' v0 s c sec rm = v1
+  where
+    a = toMetresPerSecond s / rm * sec
     v1 = vadd (vscale v0 (cos a)) (vscale c (sin a))
 
 -- | time to CPA.
-timeToCpa :: (NTransform a) => a -> Course -> Speed -> a -> Course -> Speed -> Length -> Double
-timeToCpa p1 c1 s1 p2 c2 s2 r = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
+timeToCpa :: (Spherical a) => Position a -> Course -> Speed -> Position a -> Course -> Speed -> Double
+timeToCpa p1 (Course c10) s1 p2 (Course c20) s2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
   where
     v10 = nvec p1
-    c10 = vec c1
-    rm = toMetres r
+    rm = radiusM p1
     w1 = toMetresPerSecond s1 / rm
     v20 = nvec p2
-    c20 = vec c2
     w2 = toMetresPerSecond s2 / rm
 
 -- | time to intercept with minimum speed
-timeToIntercept :: (NTransform a) => Track a -> a -> Length -> Double
-timeToIntercept (Track p2 b2 s2) p1 r = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 r) t0 0
+timeToIntercept :: (Spherical a) => Track a -> Position a -> Double
+timeToIntercept (Track p2 b2 s2) p1 = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 rm) t0 0
   where
     v10 = nvec p1
     v20 = nvec p2
-    c2 = vec (course p2 b2)
+    (Course c2) = course p2 b2
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
     s2mps = toMetresPerSecond s2
-    rm = toMetres r
+    rm = radiusM p1
     w2 = s2mps / rm
-    s0 = ad v10 v20 -- initial angular distance between target and interceptor
+    s0 = angleRadians v10 v20 -- initial angular distance between target and interceptor
     t0 = rm * s0 / s2mps -- assume target is travelling towards interceptor
 
 -- | time to intercept with speed.
-timeToInterceptSpeed :: (NTransform a) => Track a -> a -> Speed -> Length -> Double
-timeToInterceptSpeed (Track p2 b2 s2) p1 s1 r =
-    intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 r) t0 0
+timeToInterceptSpeed :: (Spherical a) => Track a -> Position a -> Speed -> Double
+timeToInterceptSpeed (Track p2 b2 s2) p1 s1 =
+    intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 rm) t0 0
   where
     v10 = nvec p1
     v20 = nvec p2
-    c2 = vec (course p2 b2)
+    (Course c2) = course p2 b2
     v10v20 = vdot v10 v20
     v10c2 = vdot v10 c2
-    rm = toMetres r
+    rm = radiusM p1
     w1 = toMetresPerSecond s1 / rm
     w2 = toMetresPerSecond s2 / rm
     t0 = 0.1
@@ -414,5 +383,9 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
 
 -- | angular separation in radians at ti between v10 and track with initial position v20,
 -- course c2 and speed s2.
-sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Length -> Double -> Double
-sep v10 v20 c2 s2 r ti = ad v10 (position'' v20 s2 c2 ti r)
+sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Double -> Double -> Double
+sep v10 v20 c2 s2 r ti = angleRadians v10 (position'' v20 s2 c2 ti r)
+
+-- | reference sphere radius in metres.
+radiusM :: (Spherical a) => Position a -> Double
+radiusM = toMetres . modelRadius . model

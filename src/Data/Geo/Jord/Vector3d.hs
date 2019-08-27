@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Vector3d
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -8,9 +8,9 @@
 --
 -- 3-element vectors.
 --
+-- TODO: rename Vec3
 module Data.Geo.Jord.Vector3d
     ( Vector3d(..)
-    , IsVector3d(..)
     , vadd
     , vsub
     , vdot
@@ -25,15 +25,13 @@ module Data.Geo.Jord.Vector3d
     ) where
 
 -- | 3-element vector.
-data Vector3d = Vector3d
-    { vx :: Double
-    , vy :: Double
-    , vz :: Double
-    } deriving (Eq, Show)
-
--- | class for data types assimilated to 'Vector3d'.
-class IsVector3d a where
-    vec :: a -> Vector3d
+data Vector3d =
+    Vector3d
+        { vx :: Double
+        , vy :: Double
+        , vz :: Double
+        }
+    deriving (Eq, Show)
 
 -- | Adds 2 vectors.
 vadd :: Vector3d -> Vector3d -> Vector3d

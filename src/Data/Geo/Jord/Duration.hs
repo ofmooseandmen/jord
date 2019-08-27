@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Duration
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -24,24 +24,25 @@ module Data.Geo.Jord.Duration
     , toMinutes
     , toSeconds
     -- * Read
-    , durationR
+    , durationP
     , readDuration
     ) where
 
+import Text.ParserCombinators.ReadP (ReadP, char, option, readP_to_S)
+import Text.Printf (printf)
+import Text.Read (readMaybe)
+
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Text.ParserCombinators.ReadP
-import Text.Printf
-import Text.Read hiding (pfail)
 
 -- | A durartion with a resolution of 1 millisecond.
 newtype Duration = Duration
     { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
     } deriving (Eq)
 
--- | See 'durationR'.
+-- | See 'durationP'.
 instance Read Duration where
-    readsPrec _ = readP_to_S durationR
+    readsPrec _ = readP_to_S durationP
 
 -- | show Duration as @(-)nHnMn.nS@.
 instance Show Duration where
@@ -91,13 +92,13 @@ toMinutes (Duration ms) = fromIntegral ms / 60000.0 :: Double
 toSeconds :: Duration -> Double
 toSeconds (Duration ms) = fromIntegral ms / 1000.0 :: Double
 
--- | Reads an a 'Duration' from the given string using 'durationR'.
+-- | Reads an a 'Duration' from the given string using 'durationP'.
 readDuration :: String -> Maybe Duration
 readDuration s = readMaybe s :: (Maybe Duration)
 
 -- | Parses and returns an 'Duration' formatted @(-)nHnMn.nS@.
-durationR :: ReadP Duration
-durationR = do
+durationP :: ReadP Duration
+durationP = do
     h <- option 0 hoursP
     m <- option 0 minutesP
     s <- option 0.0 secondsP

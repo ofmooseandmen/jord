@@ -2,8 +2,9 @@ module Data.Geo.Jord.LengthSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
 import Test.Hspec
+
+import Data.Geo.Jord
 
 spec :: Spec
 spec = do

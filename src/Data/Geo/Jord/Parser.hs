@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Parser
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -16,9 +16,9 @@ module Data.Geo.Jord.Parser
     , number
     ) where
 
-import Control.Applicative
-import Data.Char
-import Text.ParserCombinators.ReadP
+import Control.Applicative ((<|>))
+import Data.Char (isDigit)
+import Text.ParserCombinators.ReadP (ReadP, char, count, munch1, option, satisfy)
 
 -- | Parses the given number of digits and returns the read 'Int'.
 digits :: Int -> ReadP Int

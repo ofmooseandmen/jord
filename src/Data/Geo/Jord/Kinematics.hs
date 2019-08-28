@@ -98,10 +98,15 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
     lon = longitude p
     r = mdot (mdot (rz (negate' lon)) (ry lat)) (rx b)
 
+-- | @positionAfter p s b d@ computes the position of a vehicle currently at position @p@
+-- travelling at speed @s@ and following bearing @b@ after duration @d@ has elapsed.
+positionAfter :: (Spherical a) => Position a -> Speed -> Angle -> Duration -> Position a
+positionAfter p s b d = position' p s (course p b) (toSeconds d)
+
 -- | @positionAfter p s c d@ computes the position of a vehicle currently at position @p@
 -- travelling at speed @s@ and on course @c@ after duration @d@ has elapsed.
-positionAfter :: (Spherical a) => Position a -> Speed -> Course -> Duration -> Position a
-positionAfter p s c d = position' p s c (toSeconds d)
+positionAfter' :: (Spherical a) => Position a -> Speed -> Course -> Duration -> Position a
+positionAfter' p s c d = position' p s c (toSeconds d)
 
 -- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed.
 --
@@ -114,7 +119,7 @@ positionAfter p s c d = position' p s c (toSeconds d)
 --     position (Track p0 b s) (hours 1) r84 = p1
 -- @
 trackPositionAfter :: (Spherical a) => Track a -> Duration -> Position a
-trackPositionAfter (Track p b s) = positionAfter p s (course p b)
+trackPositionAfter (Track p b s) = positionAfter' p s (course p b)
 
 -- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@.
 --

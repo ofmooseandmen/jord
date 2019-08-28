@@ -20,8 +20,10 @@ module Data.Geo.Jord.GreatCircle
     , greatCircleHeadingOn
     -- * Calculations
     , alongTrackDistance
+    , alongTrackDistance'
     , angularDistance
     , crossTrackDistance
+    , crossTrackDistance'
     , interpolate
     , intersection
     , intersections
@@ -67,7 +69,7 @@ greatCircle :: (Spherical a) => Geodesic a -> GreatCircle a
 greatCircle g = GreatCircle (normal g) (model . geodesicStart $ g) ""
 
 -- | 'GreatCircle' passing by both given positions.
--- A 'Left' indicates that given positions are equal or antipodal.
+-- A 'Left' indicates that given positions are equal.
 --
 -- @
 --     TODO new API, great circle description
@@ -78,8 +80,6 @@ greatCircle g = GreatCircle (normal g) (model . geodesicStart $ g) ""
 greatCircleThrough :: (Spherical a) => Position a -> Position a -> Either String (GreatCircle a)
 greatCircleThrough p1 p2
     | p1 == p2 = Left "Invalid Great Circle: positions are equal"
-    | (realToFrac (vnorm (vadd (nvec p1) (nvec p2))) :: Nano) == 0 =
-        Left "Invalid Great Circle: positions are antipodal"
     | otherwise = Right (GreatCircle (normal' p1 p2) (model p1) "")
 
 -- | 'GreatCircle' passing by the given position and heading on given bearing.
@@ -98,7 +98,7 @@ greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) ""
     n' = vscale n (sin' b / vnorm n)
 
 -- | @alongTrackDistance p ga@ how far Position @p@ is along a path described
--- by great arc @ga@: if a perpendicular is drawn from @p@  to the great arc, the
+-- by geodesic arc @g@: if a perpendicular is drawn from @p@  to the great arc, the
 -- along-track distance is the signed distance from the start point to where the
 -- perpendicular crosses the path.
 --
@@ -107,12 +107,18 @@ greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) ""
 --     let ga = greatArcBetween (decimalLatLong 53.3206 (-1.7297)) (decimalLatLong 53.1887 0.1334)
 --     alongTrackDistance p ga -- 62.3315757 kilometres
 -- @
-alongTrackDistance :: (Spherical a) => Position s -> Geodesic a -> Length
-alongTrackDistance p g = arcLength a (radius st)
+alongTrackDistance :: (Spherical a) => Position a -> Geodesic a -> Length
+alongTrackDistance p g = alongTrackDistance'' p (geodesicStart g) (normal g)
+
+alongTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
+alongTrackDistance' p s b = alongTrackDistance'' p s n
   where
-    st = geodesicStart g
-    no = normal g
-    a = signedAngle (nvec st) (vcross (vcross no (nvec p)) no) (Just no)
+    (GreatCircle n _ _) = greatCircleHeadingOn s b
+
+alongTrackDistance'' :: (Spherical a) => Position a -> Position a -> Vector3d -> Length
+alongTrackDistance'' p s n = arcLength a (radius s)
+  where
+    a = signedAngle (nvec s) (vcross (vcross n (nvec p)) n) (Just n)
 
 -- | @angularDistance p1 p2 n@ computes the angle between the horizontal Points @p1@ and @p2@.
 -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
@@ -142,6 +148,11 @@ crossTrackDistance :: (Spherical a) => Position a -> GreatCircle a -> Length
 crossTrackDistance p (GreatCircle n _ _) = arcLength (sub a (decimalDegrees 90)) (radius p)
   where
     a = radians (angleRadians n (nvec p))
+
+crossTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
+crossTrackDistance' p s b = crossTrackDistance p gc
+  where
+    gc = greatCircleHeadingOn s b
 
 -- | @interpolate p0 p1 f# computes the horizontal Position at fraction @f@ between the @p0@ and @p1@.
 --

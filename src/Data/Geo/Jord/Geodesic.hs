@@ -32,10 +32,14 @@ data Geodesic a =
     deriving (Eq, Show)
 
 direct :: (Model a) => Position a -> Angle -> Length -> Maybe (Geodesic a)
-direct _ _ _ = Nothing
+direct p b d = fmap (Geodesic p e d b) fb
+  where
+    e = destination p b d
+    fb = finalBearing p e
 
 inverse :: (Model a) => Position a -> Position a -> Maybe (Geodesic a)
-inverse _ _ = Nothing
+inverse p1 p2 =
+    pure (Geodesic p1 p2) <*> surfaceDistance p1 p2 <*> initialBearing p1 p2 <*> finalBearing p1 p2
 
 -- | @antipode p@ computes the antipodal position of @p@: the position which is
 -- diametrically opposite to @p@.

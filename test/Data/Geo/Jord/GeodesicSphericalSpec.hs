@@ -14,9 +14,9 @@ spec = do
             let e = decimalLatLongHeightPos (-45) (-26) (metres 15000) S84
             antipode p `shouldBe` e
         it "returns the south pole when called with the north pole" $
-            antipode (northPole S84) `shouldBe` southPole S84
+            antipode (northPole S84) `shouldBe` decimalLatLongPos (-90) (-180) S84
         it "returns the north pole when called with the south pole" $
-            antipode (southPole S84) `shouldBe` northPole S84
+            antipode (southPole S84) `shouldBe` decimalLatLongPos (90) (-180) S84
     describe "destination" $ do
         it "return the given position if distance is 0 meter" $ do
             let p0 = decimalLatLongPos 53.320556 (-1.729722) S84

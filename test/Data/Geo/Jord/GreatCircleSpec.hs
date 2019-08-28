@@ -12,6 +12,25 @@ import Data.Geo.Jord
 
 spec :: Spec
 spec = do
+    describe "alongTrackDistance" $ do
+        it "returns a positive length when position is ahead start of great arc" $ do
+            let p = decimalLatLongPos 53.2611 (-0.7972) S84
+            let g =
+                    inverse
+                        (decimalLatLongPos 53.3206 (-1.7297) S84)
+                        (decimalLatLongPos 53.1887 0.1334 S84)
+            fmap (alongTrackDistance p) g `shouldBe` Just (kilometres 62.3315757)
+        it "returns a negative length when position is ahead start of great arc" $ do
+            let p = decimalLatLongPos 53.3206 (-1.7297) S84
+            let g =
+                    inverse
+                        (decimalLatLongPos 53.2611 (-0.7972) S84)
+                        (decimalLatLongPos 53.1887 0.1334 S84)
+            fmap (alongTrackDistance p) g `shouldBe` Just (kilometres (-62.3293209))
+        it "returns 0 when position is start of great arc" $ do
+            let p = decimalLatLongPos 53.2611 (-0.7972) S84
+            let g = inverse p (decimalLatLongPos 53.1887 0.1334 S84)
+            fmap (alongTrackDistance p) g `shouldBe` Just zero
     describe "crossTrackDistance" $ do
         it "returns a negative length when position is left of great circle (bearing)" $ do
             let p = decimalLatLongPos 53.2611 (-0.7972) S84
@@ -41,13 +60,10 @@ spec = do
                         (decimalLatLongPos 53.3206 (-1.7297) S84)
                         (decimalLatLongPos 53.1887 0.1334 S84)
             fmap (crossTrackDistance p) gc `shouldBe` Right (metres 307.5471)
-    describe "greatCircle through position" $ do
+    describe "greatCircle through position" $
         it "fails if both positions are equal" $
             greatCircleThrough (decimalLatLongPos 3 154 S84) (decimalLatLongPos 3 154 S84) `shouldBe`
             Left "Invalid Great Circle: positions are equal"
-        it "fails if both positions are antipodal" $
-            greatCircleThrough (decimalLatLongPos 3 154 S84) (antipode (decimalLatLongPos 3 154 S84)) `shouldBe`
-            Left "Invalid Great Circle: positions are antipodal"
     describe "interpolate" $ do
         let p1 = decimalLatLongPos 44 44 S84
         let p2 = decimalLatLongPos 46 46 S84
@@ -97,9 +113,55 @@ spec = do
             let hassleholm = decimalLatLongPos 56.1589 13.7668 S84
             isInsideSurface hoor polygon `shouldBe` True
             isInsideSurface hassleholm polygon `shouldBe` False
+    describe "intersection" $ do
+        it "returns nothing if both great arc are equals" $
+            case inverse (decimalLatLongPos 51.885 0.235 S84) (decimalLatLongPos 52.885 1.235 S84) of
+                Nothing -> error "fail"
+                (Just g) -> intersection g g `shouldBe` Nothing
+        it "returns nothing if both great arc are equals (opposite orientation)" $
+            case inverse (decimalLatLongPos 51.885 0.235 S84) (decimalLatLongPos 52.885 1.235 S84) of
+                Nothing -> error "fail"
+                (Just g1) ->
+                    case inverse
+                             (decimalLatLongPos 52.885 1.235 S84)
+                             (decimalLatLongPos 51.885 0.235 S84) of
+                        Nothing -> error "fail"
+                        (Just g2) -> intersection g1 g2 `shouldBe` Nothing
+        it "returns nothing if great circle intersection is outside either great arc" $
+            case inverse (decimalLatLongPos 0 0 S84) (decimalLatLongPos 0 10 S84) of
+                Nothing -> error "fail"
+                (Just g1) ->
+                    case inverse (decimalLatLongPos (-5) 5 S84) (decimalLatLongPos (-1) 5 S84) of
+                        Nothing -> error "fail"
+                        (Just g2) -> intersection g1 g2 `shouldBe` Nothing
+        it "returns nothing if great circle intersection is outside both great arcs" $
+            case inverse (decimalLatLongPos 0 (-10) S84) (decimalLatLongPos 0 (-1) S84) of
+                Nothing -> error "fail"
+                (Just g1) ->
+                    case inverse (decimalLatLongPos (-5) 5 S84) (decimalLatLongPos (-1) 5 S84) of
+                        Nothing -> error "fail"
+                        (Just g2) -> intersection g1 g2 `shouldBe` Nothing
+        it "returns the point where the two great arcs intersect" $ do
+            let spd = kilometresPerHour 1000
+            let oneHour = hours 1
+            let p11 = decimalLatLongPos 51.885 0.235 S84
+            let p12 = positionAfter p11 spd (decimalDegrees 108.63) oneHour
+            let p21 = decimalLatLongPos 49.008 2.549 S84
+            let p22 = positionAfter p21 spd (decimalDegrees 32.72) oneHour
+            case inverse p11 p12 of
+                Nothing -> error "fail"
+                (Just g1) ->
+                    case inverse p21 p22 of
+                        Nothing -> error "fail"
+                        (Just g2) ->
+                            intersection g1 g2 `shouldBe`
+                            Just (decimalLatLongPos 50.9017225 4.494278333333333 S84)
     describe "intersections" $ do
         it "returns nothing if both great circle are equals" $ do
-            let gc = greatCircleHeadingOn (decimalLatLongPos 51.885 0.235 S84) (decimalDegrees 108.63)
+            let gc =
+                    greatCircleHeadingOn
+                        (decimalLatLongPos 51.885 0.235 S84)
+                        (decimalDegrees 108.63)
             intersections gc gc `shouldBe` Nothing
         it "returns nothing if both great circle are equals (opposite orientation)" $ do
             let gc1 =
@@ -116,8 +178,12 @@ spec = do
                              (decimalLatLongPos 51.885 0.235 S84))
             intersections gc1 gc2 `shouldBe` Nothing
         it "returns the two positions where the two great circles intersects" $ do
-            let gc1 = greatCircleHeadingOn (decimalLatLongPos 51.885 0.235 S84) (decimalDegrees 108.63)
-            let gc2 = greatCircleHeadingOn (decimalLatLongPos 49.008 2.549 S84) (decimalDegrees 32.72)
+            let gc1 =
+                    greatCircleHeadingOn
+                        (decimalLatLongPos 51.885 0.235 S84)
+                        (decimalDegrees 108.63)
+            let gc2 =
+                    greatCircleHeadingOn (decimalLatLongPos 49.008 2.549 S84) (decimalDegrees 32.72)
             let (i1, i2) = fromJust (intersections gc1 gc2)
             i1 `shouldBe` decimalLatLongPos 50.9017226 4.4942782 S84
             i2 `shouldBe` antipode i1

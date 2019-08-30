@@ -33,10 +33,10 @@ module Data.Geo.Jord.Position
     , ey
     , ez
     -- * smart constructors
-    , decimalLatLongPos
-    , decimalLatLongHeightPos
     , latLongPos
     , latLongHeightPos
+    , latLongPos'
+    , latLongHeightPos'
     , nvectorPos
     , nvectorHeightPos
     , ecefPos
@@ -53,7 +53,8 @@ module Data.Geo.Jord.Position
     -- * Misc.
     , nvector
     , ecef
-    , toDecimalLatLong
+    , latLong
+    , latLong'
     , northPole
     , southPole
     ) where
@@ -159,19 +160,20 @@ positionP m = do
     (lat, lon) <- latLongDmsP m
     skipSpaces
     h <- option zero lengthP
-    return (latLongHeightPos lat lon h m)
+    return (latLongHeightPos' lat lon h m)
 
-decimalLatLongPos :: (Model a) => Double -> Double -> a -> Position a
-decimalLatLongPos lat lon = decimalLatLongHeightPos lat lon zero
-
-decimalLatLongHeightPos :: (Model a) => Double -> Double -> Length -> a -> Position a
-decimalLatLongHeightPos lat lon = latLongHeightPos (decimalDegrees lat) (decimalDegrees lon)
-
-latLongPos :: (Model a) => Angle -> Angle -> a -> Position a
+latLongPos :: (Model a) => Double -> Double -> a -> Position a
 latLongPos lat lon = latLongHeightPos lat lon zero
 
-latLongHeightPos :: (Model a) => Angle -> Angle -> Length -> a -> Position a
-latLongHeightPos lat lon h m = Position lat lon h nv e m
+latLongHeightPos :: (Model a) => Double -> Double -> Length -> a -> Position a
+latLongHeightPos lat lon = latLongHeightPos' (decimalDegrees lat) (decimalDegrees lon)
+
+latLongPos' :: (Model a) => Angle -> Angle -> a -> Position a
+latLongPos' lat lon = latLongHeightPos' lat lon zero
+
+-- FIXME: handle latitude and/or longitude outside range
+latLongHeightPos' :: (Model a) => Angle -> Angle -> Length -> a -> Position a
+latLongHeightPos' lat lon h m = Position lat lon h nv e m
   where
     nv = nvectorFromLatLong' (lat, lon)
     e = nvectorToEcef' (nv, h) (shape m)
@@ -212,8 +214,11 @@ nvectorFromEcef ev s = (NVector x y z, h)
     v = Vector3d (toMetres . ex $ ev) (toMetres . ey $ ev) (toMetres . ez $ ev)
     (Vector3d x y z, h) = nvectorFromEcef' v s
 
-toDecimalLatLong :: (Model a) => Position a -> (Double, Double)
-toDecimalLatLong p = (toDecimalDegrees . latitude $ p, toDecimalDegrees . longitude $ p)
+latLong :: (Model a) => Position a -> (Double, Double)
+latLong p = (toDecimalDegrees . latitude $ p, toDecimalDegrees . longitude $ p)
+
+latLong' :: (Model a) => Position a -> (Angle, Angle)
+latLong' p = (latitude p, longitude p)
 
 nvh :: (Model a) => Vector3d -> Length -> a -> Position a
 nvh nv h m = Position lat lon h nv e m

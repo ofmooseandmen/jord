@@ -15,11 +15,11 @@ spec = do
             p `shouldBe` e
         it "latitude, longitude and height <=> ECEF" $ do
             let refLlh =
-                    [ decimalLatLongHeightPos 0 0 zero WGS84
-                    , decimalLatLongHeightPos 90 0 zero WGS84
-                    , decimalLatLongHeightPos (-90) 0 zero WGS84
-                    , decimalLatLongHeightPos 45.0 45.0 (metres 500) WGS84
-                    , decimalLatLongHeightPos (-45) (-45) (metres 500) WGS84
+                    [ latLongHeightPos 0 0 zero WGS84
+                    , latLongHeightPos 90 0 zero WGS84
+                    , latLongHeightPos (-90) 0 zero WGS84
+                    , latLongHeightPos 45.0 45.0 (metres 500) WGS84
+                    , latLongHeightPos (-45) (-45) (metres 500) WGS84
                     ]
             let refEcefs =
                     [ ecefMetresPos 6378137 0 0 WGS84
@@ -36,11 +36,11 @@ spec = do
             p `shouldBe` e
         it "latitude, longitude and height <=> ECEF" $ do
             let refLlh =
-                    [ decimalLatLongHeightPos 0 0 zero S84
-                    , decimalLatLongHeightPos 90 0 zero S84
-                    , decimalLatLongHeightPos (-90) 0 zero S84
-                    , decimalLatLongHeightPos 45.0 45.0 (metres 500) S84
-                    , decimalLatLongHeightPos (-45) (-45) (metres 500) S84                    ]
+                    [ latLongHeightPos 0 0 zero S84
+                    , latLongHeightPos 90 0 zero S84
+                    , latLongHeightPos (-90) 0 zero S84
+                    , latLongHeightPos 45.0 45.0 (metres 500) S84
+                    , latLongHeightPos (-45) (-45) (metres 500) S84                    ]
             let refEcefs =
                     [ ecefMetresPos 6371008.7714 0 0 S84
                     , ecefMetresPos 0 0 6371008.7714 S84

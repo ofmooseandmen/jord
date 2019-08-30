@@ -11,48 +11,48 @@ spec = do
     describe "Ellipsoidal earth model" $ do
         describe "target" $ do
             it "return the given position if NED norm = 0" $ do
-                let p0 = decimalLatLongPos 53.320556 (-1.729722) WGS84
+                let p0 = latLongPos 53.320556 (-1.729722) WGS84
                 let d = ned zero zero zero
                 targetN p0 d `shouldBe` p0
             it "computes the target position from p0 and NED" $ do
-                let p0 = decimalLatLongPos 49.66618 3.45063 WGS84
+                let p0 = latLongPos 49.66618 3.45063 WGS84
                 let d = nedMetres (-86126) (-78900) 1069
                 targetN p0 d `shouldBe`
-                    decimalLatLongHeightPos 48.8866688 2.374721388 (metres 0.1989) WGS84
+                    latLongHeightPos 48.8866688 2.374721388 (metres 0.1989) WGS84
             it "computes the target position from p0 and vector in Frame B" $ do
-                let p0 = decimalLatLongPos 49.66618 3.45063 WGS84
+                let p0 = latLongPos 49.66618 3.45063 WGS84
                 let y = decimalDegrees 10 -- yaw
                 let r = decimalDegrees 20 -- roll
                 let p = decimalDegrees 30 -- pitch
                 let d = deltaMetres 3000 2000 100
                 target p0 (frameB y r p) d `shouldBe`
-                    decimalLatLongHeightPos 49.6918016 3.4812669 (metres 6.0077) WGS84
+                    latLongHeightPos 49.6918016 3.4812669 (metres 6.0077) WGS84
         describe "nedBetween" $ do
             it "computes NED between surface positions" $ do
-                let p1 = decimalLatLongPos 49.66618 3.45063 WGS84
-                let p2 = decimalLatLongPos 48.88667 2.37472 WGS84
+                let p1 = latLongPos 49.66618 3.45063 WGS84
+                let p2 = latLongPos 48.88667 2.37472 WGS84
                 let d = nedBetween p1 p2
                 d `shouldBe` nedMetres (-86125.8805) (-78900.0878) 1069.1984
             it "computes NED between positions" $ do
-                let p1 = decimalLatLongHeightPos 49.66618 3.45063 zero WGS84
-                let p2 = decimalLatLongHeightPos 48.88667 2.37472 zero WGS84
+                let p1 = latLongHeightPos 49.66618 3.45063 zero WGS84
+                let p2 = latLongHeightPos 48.88667 2.37472 zero WGS84
                 let d = nedBetween p1 p2
                 d `shouldBe` nedMetres (-86125.8805) (-78900.0878) 1069.1984
         describe "deltaBetween" $
             it "computes delta between positions in frame L" $ do
-                let p1 = decimalLatLongHeightPos 1 2 (metres (-3)) WGS84
-                let p2 = decimalLatLongHeightPos 4 5 (metres (-6)) WGS84
+                let p1 = latLongHeightPos 1 2 (metres (-3)) WGS84
+                let p2 = latLongHeightPos 4 5 (metres (-6)) WGS84
                 let w = decimalDegrees 5 -- wander azimuth
                 let d = deltaBetween p1 p2 (frameL w)
                 d `shouldBe` deltaMetres 359490.5782 302818.5225 17404.2714
         describe "deltaBetween and target consistency" $
             it "computes targetN p1 (nedBetween p1 p2) = p2" $ do
-                let p1 = decimalLatLongHeightPos 49.66618 3.45063 zero WGS84
-                let p2 = decimalLatLongHeightPos 48.88667 2.37472 zero WGS84
+                let p1 = latLongHeightPos 49.66618 3.45063 zero WGS84
+                let p2 = latLongHeightPos 48.88667 2.37472 zero WGS84
                 targetN p1 (nedBetween p1 p2) `shouldBe` p2
         describe "rotation matrix to/from earth-fixed frame" $ do
             it "computes rEN (frame N to earth-fixed frame)" $ do
-                let p = decimalLatLongPos 49.66618 3.45063 WGS84
+                let p = latLongPos 49.66618 3.45063 WGS84
                 let f = frameN p
                 rEF f `shouldBe`
                     [ Vector3d (-0.7609044147683025) (-6.018845511258954e-2) (-0.646066421861767)
@@ -60,7 +60,7 @@ spec = do
                     , Vector3d 0.6472398473115779 0.0 (-0.7622864160222752)
                     ]
             it "computes rEB (frame B to earth-fixed frame)" $ do
-                let p = decimalLatLongPos 49.66618 3.45063 WGS84
+                let p = latLongPos 49.66618 3.45063 WGS84
                 let f = frameB (decimalDegrees 10) (decimalDegrees 20) (decimalDegrees 30) p
                 rEF f `shouldBe`
                     [ Vector3d (-0.49300713580470057) (-0.37038991706707025) (-0.7872453705044535)

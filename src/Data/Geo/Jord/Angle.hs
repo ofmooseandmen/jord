@@ -64,7 +64,7 @@ newtype Angle =
 instance Read Angle where
     readsPrec _ = readP_to_S angleP
 
--- | Angle is shown degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
+-- | Angle is shown as degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
     show a =
         s ++

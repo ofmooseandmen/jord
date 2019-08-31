@@ -106,7 +106,7 @@ instance (Model a) => Eq (Position a) where
         latitude p1 == latitude p2 &&
         longitude p1 == longitude p2 && height p1 == height p2 && model p1 == model p2
 
--- | normal vector to the celestial body model.
+-- | normal vector to the celestial body shape.
 --
 -- Orientation: z-axis points to the North Pole along the body's rotation axis,
 -- x-axis points towards the point where latitude = longitude = 0.

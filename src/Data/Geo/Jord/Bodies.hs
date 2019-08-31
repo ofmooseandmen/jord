@@ -54,6 +54,9 @@ data LongitudeRange
     | L360 -- ^  [0°, 360°]: range for other celestial bodies (e.g. Mars)
 
 -- | Model representing a celestial body (e.g. the Earth).
+--
+-- A model provides the shape of the celestial body (an ellispoid or a sphere) and
+-- the longitude range (defaults to [-180°, 180°]).
 class (Eq a, Show a) =>
       Model a
     where
@@ -61,7 +64,9 @@ class (Eq a, Show a) =>
     longitudeRange :: a -> LongitudeRange -- ^ longitude range (defaults to [-180°, 180°]).
     longitudeRange _ = L180
 
--- | Spherical model.
+-- | Spherical model, use this when approximating the shape of a celestial body is acceptable
+-- for the calculations to be performed; it gives access to more functions (such as kinematics
+-- and path intersections).
 class (Model a) =>
       Spherical a
 

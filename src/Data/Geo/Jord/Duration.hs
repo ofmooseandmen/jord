@@ -44,7 +44,7 @@ newtype Duration = Duration
 instance Read Duration where
     readsPrec _ = readP_to_S durationP
 
--- | show Duration as @(-)nHnMn.nS@.
+-- | Show 'Duration' as @(-)nHnMn.nS@.
 instance Show Duration where
     show d@(Duration millis) =
         show h ++ "H" ++ show m ++ "M" ++ show s ++ "." ++ printf "%03d" ms ++ "S"

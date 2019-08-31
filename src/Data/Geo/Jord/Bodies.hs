@@ -38,27 +38,27 @@ import Data.Geo.Jord.Length
 
 -- | A shape representing a celestial body (e.g. the Earth).
 data Shape
-    = Ellipsoid Ellipse
-    | Sphere Length
+    = Ellipsoid Ellipse -- ^ ellipsoid.
+    | Sphere Length -- ^ sphere.
     deriving (Eq, Show)
 
 -- | Primary ellipsoid parameters.
-data Ellipse =
-    Ellipse
-        { equatorialRadius :: Length -- ^ equatorial radius or semi-major axis (a).
-        , inverseFlattening :: Double -- ^ inverse flattening.
-        }
-    deriving (Eq, Show)
+data Ellipse = Ellipse
+    { equatorialRadius :: Length -- ^ equatorial radius or semi-major axis (a).
+    , inverseFlattening :: Double -- ^ inverse flattening.
+    } deriving (Eq, Show)
 
--- | longitude range: [-180, 180] for the Earth, Moon and Sun, [0, 360] for other bodies.
-data LongitudeRange = L180 | L360
+-- | longitude range.
+data LongitudeRange
+    = L180 -- ^  [-180°, 180°]: range for Earth, Moon and Sun
+    | L360 -- ^  [0°, 360°]: range for other celestial bodies (e.g. Mars)
 
 -- | Model representing a celestial body (e.g. the Earth).
 class (Eq a, Show a) =>
       Model a
     where
     shape :: a -> Shape -- ^ the shape representing the celestial body.
-    longitudeRange :: a -> LongitudeRange
+    longitudeRange :: a -> LongitudeRange -- ^ longitude range (defaults to [-180°, 180°]).
     longitudeRange _ = L180
 
 -- | Spherical model.

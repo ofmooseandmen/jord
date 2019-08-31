@@ -9,7 +9,7 @@
 -- Type and functions for working with delta vectors in different reference frames.
 --
 -- Note: though the API accept spherical models, doing so defeats the purpose of this module
--- which is to find exact solutions.
+-- which is to find exact solutions. Prefer using ellipsoidal models.
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -251,12 +251,11 @@ slantRange (Ned v) = metres (vnorm v)
 -- positions @p1@ and @p2@ in frame @f@.
 --
 -- @
---     TODO new API
---     let p1 = decimalLatLongHeight 1 2 (metres (-3))
---     let p2 = decimalLatLongHeight 4 5 (metres (-6))
+--     let p1 = latLongHeight 1 2 (metres (-3)) WGS84
+--     let p2 = latLongHeight 4 5 (metres (-6)) WGS84
 --     let w = decimalDegrees 5 -- wander azimuth
---     let d = deltaBetween p1 p2 (frameL w) wgs84
---     d = deltaMetres 359490.579 302818.523 17404.272
+--     deltaBetween p1 p2 (frameL w)
+--     -- Delta (Vector3d {vx = 359490.5782, vy = 302818.5225, vz = 17404.2714})
 -- @
 deltaBetween :: (Frame a, Model b) => Position b -> Position b -> (Position b -> a) -> Delta
 deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
@@ -271,37 +270,37 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
 -- | @nedBetween p1 p2@ computes the exact 'Ned' vector between the two
 -- positions @p1@ and @p2@, in north, east, and down.
 --
--- Produced 'Ned' delta is relative to @p1@: Due to the curvature of Earth and
+-- Resulting 'Ned' delta is relative to @p1@: Due to the curvature of Earth and
 -- different directions to the North Pole, the north, east, and down directions
 -- will change (relative to Earth) for different places.
 --
 -- Position @p1@ must be outside the poles for the north and east directions to be defined.
 --
 -- @
---     TODO new API
---     let p1 = decimalLatLongHeight 1 2 (metres (-3))
---     let p2 = decimalLatLongHeight 4 5 (metres (-6))
---     let d1 = nedBetween p1 p2 wgs84
---     let d2 = deltaBetween p1 p2 frameN wgs84
---     north d1 = dx d2
---     east d1 = dy d2
---     down d1 = dz d2
+--     let p1 = latLongHeightPos 1 2 (metres (-3)) WGS84
+--     let p2 = latLongHeightPos 4 5 (metres (-6)) WGS84
+--     nedBetween p1 p2
+--     -- Ned (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
+--     -- equivalent to:
+--     deltaBetween p1 p2 frameN
+--     -- Delta (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
 -- @
 nedBetween :: (Model a) => Position a -> Position a -> Ned
 nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
   where
     (Delta d) = deltaBetween p1 p2 frameN
 
--- | @target p0 f d@ computes the target position from position @p0@ and delta @d@ using in frame @f@.
+-- | @target p0 f d@ computes the target position from position @p0@ and delta @d@ in frame @f@.
 --
 -- @
---     TODO new API
---     let p0 = decimalLatLongHeight 49.66618 3.45063 zero
+--     let p0 = latLongHeightPos 49.66618 3.45063 zero WGS84
 --     let y = decimalDegrees 10 -- yaw
 --     let r = decimalDegrees 20 -- roll
 --     let p = decimalDegrees 30 -- pitch
 --     let d = deltaMetres 3000 2000 100
---     target p0 (frameB y r p) d wgs84 = decimalLatLongHeight 49.6918016 3.4812669 (metres 6.007)
+--     target p0 (frameB y r p) d
+--     -- 49°41'30.486"N,3°28'52.561"E 6.0077m (WGS84)
+--
 -- @
 target :: (Frame a, Model b) => Position b -> (Position b -> a) -> Delta -> Position b
 target p0 f (Delta d) = ecefMetresPos x y z (model p0)
@@ -314,9 +313,12 @@ target p0 f (Delta d) = ecefMetresPos x y z (model p0)
 -- | @targetN p0 d@ computes the target position from position @p0@ and north, east, down @d@.
 --
 -- @
---     TODO new API
---     let p0 = decimalLatLongHeight 49.66618 3.45063 zero
---     targetN p0 (nedMeters 100 200 300) wgs84 = target p0 frameN (deltaMetres 100 200 300) wgs84
+--     let p0 = latLongHeightPos 49.66618 3.45063 zero WGS84
+--     targetN p0 (nedMeters 100 200 300)
+--     -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
+--     -- equivalent to:
+--     target p0 frameN (deltaMetres 100 200 300) wgs84
+--     -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
 -- @
 targetN :: (Model a) => Position a -> Ned -> Position a
 targetN p0 (Ned d) = target p0 frameN (Delta d)

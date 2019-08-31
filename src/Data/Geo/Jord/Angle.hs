@@ -64,7 +64,7 @@ newtype Angle =
 instance Read Angle where
     readsPrec _ = readP_to_S angleP
 
--- | Angle is shown as degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
+-- | Show 'Angle' as degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
     show a =
         s ++
@@ -204,7 +204,7 @@ signed n s
 angleP :: ReadP Angle
 angleP = degsMinsSecs <|> decimal
 
--- | Reads an a 'Angle' from the given string using 'angleP'.
+-- | Reads an 'Angle' from the given string using 'angleP'.
 readAngle :: String -> Maybe Angle
 readAngle s = readMaybe s :: (Maybe Angle)
 

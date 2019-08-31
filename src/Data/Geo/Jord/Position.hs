@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- TODO
+-- Position of points with respect to a celestial body model (e.g. Earth WGS84).
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>

@@ -6,9 +6,8 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- 3-element vectors.
+-- 3-element vector.
 --
--- TODO: rename Vec3
 module Data.Geo.Jord.Vector3d
     ( Vector3d(..)
     , vadd

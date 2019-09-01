@@ -62,6 +62,8 @@ module Data.Geo.Jord.Position
     , latLong
     , latLong'
     , northPole
+    , nvNorthPole
+    , nvSouthPole
     , southPole
     ) where
 
@@ -69,7 +71,6 @@ import Text.ParserCombinators.ReadP (ReadP, option, readP_to_S, skipSpaces)
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bodies
-import Data.Geo.Jord.Internal
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Quantity
@@ -88,14 +89,15 @@ import Data.Geo.Jord.Vector3d
 --
 -- The "eq" instance returns True if and only if, both positions have the same
 -- horizontal position, height and model.
-data Position a = Position
-    { latitude :: Angle -- ^ geodetic latitude
-    , longitude :: Angle -- ^ geodetic longitude
-    , height :: Length -- ^ height above the surface of the celestial body
-    , nvec :: !Vector3d -- ^ /n/-vector representing the horizontal coordinates of the position
-    , evec :: Vector3d -- ^ ECEF vector representing the ECEF coordinates of the position
-    , model :: !a -- ^ model (e.g. WGS84)
-    }
+data Position a =
+    Position
+        { latitude :: Angle -- ^ geodetic latitude
+        , longitude :: Angle -- ^ geodetic longitude
+        , height :: Length -- ^ height above the surface of the celestial body
+        , nvec :: !Vector3d -- ^ /n/-vector representing the horizontal coordinates of the position
+        , evec :: Vector3d -- ^ ECEF vector representing the ECEF coordinates of the position
+        , model :: !a -- ^ model (e.g. WGS84)
+        }
 
 instance (Model a) => Show (Position a) where
     show p =
@@ -112,9 +114,7 @@ instance (Model a) => Eq (Position a) where
 -- Orientation: z-axis points to the North Pole along the body's rotation axis,
 -- x-axis points towards the point where latitude = longitude = 0.
 data NVector =
-    NVector Double
-            Double
-            Double
+    NVector Double Double Double
 
 instance Show NVector where
     show (NVector x y z) = "n-vector {" ++ show x ++ ", " ++ show y ++ ", " ++ show z ++ "}"
@@ -135,11 +135,10 @@ nz (NVector _ _ z) = z
 --
 -- @ex-ey@ plane is the equatorial plane, @ex@ is on the prime meridian, and @ez@ on the polar axis.
 --
--- Note: on a spherical model earth, an /n/-vector is equivalent to a normalised version of an (ECEF) cartesian coordinate.
+-- Note: on a spherical model earth, an /n/-vector is equivalent to a normalised version of an
+-- (ECEF) cartesian coordinate.
 data EcefVector =
-    EcefVector Length
-               Length
-               Length
+    EcefVector Length Length Length
 
 instance Show EcefVector where
     show (EcefVector x y z) = "ecef {" ++ show x ++ ", " ++ show y ++ ", " ++ show z ++ "}"
@@ -156,8 +155,8 @@ ey (EcefVector _ y _) = y
 ez :: EcefVector -> Length
 ez (EcefVector _ _ z) = z
 
--- | @antipode p@ computes the antipodal position of @p@: the position which is
--- diametrically opposite to @p@.
+-- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically
+-- opposite to @p@.
 antipode :: (Model a) => Position a -> Position a
 antipode p = nvh nv h (model p)
   where
@@ -171,6 +170,13 @@ nvector p = NVector x y z
     (Vector3d x y z) = nvec p
 
 -- | @ecef p@ returns the ECEF coordinates of position @p@.
+--
+-- ==== __Examples__
+--
+-- >>> let p = wgs84Pos 54 154 (metres 1000)
+-- >>> ecef p
+-- ecef {-3377.4908375km, 1647.312349km, 5137.5528484km}
+--
 ecef :: (Model a) => Position a -> EcefVector
 ecef p = EcefVector (metres x) (metres y) (metres z)
   where
@@ -183,6 +189,14 @@ northPole = nvh nvNorthPole zero
 -- | surface position of the South Pole for the specified model.
 southPole :: (Model a) => a -> Position a
 southPole = nvh nvSouthPole zero
+
+-- | Horizontal position of the North Pole (/n/-vector).
+nvNorthPole :: Vector3d
+nvNorthPole = Vector3d 0.0 0.0 1.0
+
+-- | Horizontal position of the South Pole (/n/-vector).
+nvSouthPole :: Vector3d
+nvSouthPole = Vector3d 0.0 0.0 (-1.0)
 
 -- | Reads a 'Position' from the given string using 'positionP'.
 readPosition :: (Model a) => String -> a -> Maybe (Position a)
@@ -201,12 +215,13 @@ readPosition s m =
 --
 -- Additionally the string may end by a valid 'Length'.
 --
--- @
---     readPosition "55°36'21''N 013°00'02''E" WGS84
---     -- Just 55°36'21.000"N,13°0'2.000"E 0.0m (WGS84)
---     readPosition "55°36'21''N 013°00'02''E 1500m" WGS84
---     -- Just 55°36'21.000"N,13°0'2.000"E 1500.0m (WGS84)
--- @
+-- ==== __Examples__
+--
+-- >>> readPosition "55°36'21''N 013°00'02''E" WGS84
+-- Just 55°36'21.000"N,13°0'2.000"E 0.0m (WGS84)
+-- >>> readPosition "55°36'21''N 013°00'02''E 1500m" WGS84
+-- Just 55°36'21.000"N,13°0'2.000"E 1500.0m (WGS84)
+--
 positionP :: (Model a) => a -> ReadP (Position a)
 positionP m = do
     (lat, lon) <- latLongDmsP m
@@ -214,73 +229,78 @@ positionP m = do
     h <- option zero lengthP
     return (latLongHeightPos' lat lon h m)
 
--- | 'Position' from given geodetic latitude & longitude in __decimal degrees__
--- at the surface of the given model.
+-- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ at the surface of
+-- the given model. Latitude & longitude values are converted to 'Angle' (ensuring thus consistent
+-- resolution with the rest of the API) and wrapped to their respective range.
 --
--- latitude & longitude values are wrapped to their respective range.
+-- @latLongPos lat lon m@ is a shortcut for @'latLongHeightPos' lat lon zero m@.
+--
 latLongPos :: (Model a) => Double -> Double -> a -> Position a
 latLongPos lat lon = latLongHeightPos lat lon zero
 
--- | 'Position' from given geodetic latitude & longitude in __decimal degrees__
--- and height around the surface of the given model.
---
--- latitude & longitude values are wrapped to their respective range.
+-- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height around
+-- the surface of the given model. Latitude & longitude values are converted to 'Angle' (ensuring
+-- thus consistent resolution with the rest of the API) and wrapped to their respective range.
 latLongHeightPos :: (Model a) => Double -> Double -> Length -> a -> Position a
 latLongHeightPos lat lon = latLongHeightPos' (decimalDegrees lat) (decimalDegrees lon)
 
--- | 'Position' from given geodetic latitude & longitude at the surface of the
--- given model.
+-- | 'Position' from given geodetic latitude & longitude at the surface of the given model.
+-- Latitude & longitude values are wrapped to their respective range.
 --
--- latitude & longitude values are wrapped to their respective range.
+-- @latLongPos' lat lon m@ is a shortcut for @'latLongHeightPos'' lat lon zero m@.
+--
 latLongPos' :: (Model a) => Angle -> Angle -> a -> Position a
 latLongPos' lat lon = latLongHeightPos' lat lon zero
 
--- | 'Position' from given geodetic latitude & longitude and height around
--- the surface of the given model.
---
--- latitude & longitude values are wrapped to their respective range.
--- FIXME: handle latitude and/or longitude outside range
+-- | 'Position' from given geodetic latitude & longitude and height around the surface of the given
+-- model. Latitude & longitude values are wrapped to their respective range.
 latLongHeightPos' :: (Model a) => Angle -> Angle -> Length -> a -> Position a
-latLongHeightPos' lat lon h m = Position lat lon h nv e m
+latLongHeightPos' lat lon h m = Position lat' lon' h nv e m
   where
     nv = nvectorFromLatLong' (lat, lon)
     e = nvectorToEcef' (nv, h) (shape m)
+    (lat', lon') = wrap lat lon nv m
 
--- | 'Position' from given geodetic latitude & longitude in __decimal degrees__
--- and height around the surface of the WGS84 ellispoid.
+-- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height around
+-- the surface of the WGS84 ellispoid. Latitude & longitude values are converted to 'Angle' (ensuring
+-- thus consistent resolution with the rest of the API) and wrapped to their respective range.
 --
--- latitude & longitude values are wrapped to their respective range.
+-- @wgs84Pos lat lon h@ is a shortcut for @'latLongHeightPos' lat lon h WGS84@.
+--
 wgs84Pos :: Double -> Double -> Length -> Position WGS84
 wgs84Pos lat lon h = latLongHeightPos lat lon h WGS84
 
--- | 'Position' from given geodetic latitude & longitude and height around
--- the surface of the WGS84 ellispoid.
+-- | 'Position' from given geodetic latitude & longitude and height around the surface of the
+-- WGS84 ellispoid. Latitude & longitude values are wrapped to their respective range.
 --
--- latitude & longitude values are wrapped to their respective range.
+-- @wgs84Pos' lat lon h@ is a shortcut for @latLongHeightPos'' lat lon h WGS84@.
+--
 wgs84Pos' :: Angle -> Angle -> Length -> Position WGS84
 wgs84Pos' lat lon h = latLongHeightPos' lat lon h WGS84
 
--- | 'Position' from given latitude & longitude in __decimal degrees__
--- and height around the surface of the sphere derived from WGS84 ellispoid.
+-- | 'Position' from given latitude & longitude in __decimal degrees__ and height around the surface
+-- of the sphere derived from WGS84 ellispoid. Latitude & longitude values are converted to 'Angle'
+-- (ensuring thus consistent resolution with the rest of the API) and wrapped to their respective
+-- range.
 --
--- latitude & longitude values are wrapped to their respective range.
+-- @s84Pos lat lon h@ is a shortcut for @latLongHeightPos' lat lon h S84@.
+--
 s84Pos :: Double -> Double -> Length -> Position S84
 s84Pos lat lon h = latLongHeightPos lat lon h S84
 
--- | 'Position' from given latitude & longitude and height around the surface
--- of the sphere derived from WGS84 ellispoid.
+-- | 'Position' from given latitude & longitude and height around the surface of the sphere derived
+-- from WGS84 ellispoid. Latitude & longitude values are wrapped to their respective range.
 --
--- latitude & longitude values are wrapped to their respective range.
+-- @s84Pos' lat lon h@ is a shortcut for @latLongHeightPos'' lat lon h S84@.
+--
 s84Pos' :: Angle -> Angle -> Length -> Position S84
 s84Pos' lat lon h = latLongHeightPos' lat lon h S84
 
--- | 'Position' from given x, y and z ECEF coordinates with respect to
--- the given model.
+-- | 'Position' from given x, y and z ECEF coordinates with respect to the given model.
 ecefPos :: (Model a) => Length -> Length -> Length -> a -> Position a
 ecefPos x y z = ecefMetresPos (toMetres x) (toMetres y) (toMetres z)
 
--- | 'Position' from given x, y and z ECEF coordinates in __metres__ with
--- respect to the given model.
+-- | 'Position' from given x, y and z ECEF coordinates in __metres__ with respect to the given model.
 ecefMetresPos :: (Model a) => Double -> Double -> Double -> a -> Position a
 ecefMetresPos x y z m = Position lat lon h nv ev m
   where
@@ -288,40 +308,38 @@ ecefMetresPos x y z m = Position lat lon h nv ev m
     (nv, h) = nvectorFromEcef' ev (shape m)
     (lat, lon) = nvectorToLatLong' nv
 
--- | 'Position' from given /n/-vector x, y, z coordinates at the surface
--- of the given model. Vector (x, y, z) will be normalised to a unit vector
--- to get a valid /n/-vector.
+-- | 'Position' from given /n/-vector x, y, z coordinates at the surface of the given model.
+-- Vector (x, y, z) will be normalised to a unit vector to get a valid /n/-vector.
 nvectorPos :: (Model a) => Double -> Double -> Double -> a -> Position a
 nvectorPos x y z = nvectorHeightPos x y z zero
 
--- | 'Position' from given /n/-vector x, y, z coordinates and height with
--- around the given model. Vector (x, y, z) will be normalised to a unit vector
--- to get a valid /n/-vector.
+-- | 'Position' from given /n/-vector x, y, z coordinates and height with around the given model.
+-- Vector (x, y, z) will be normalised to a unit vector to get a valid /n/-vector.
 nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Position a
 nvectorHeightPos x y z = nvh (vunit (Vector3d x y z))
 
--- | @nvectorToLatLong nv@ returns (latitude, longitude) pair equivalent to the
--- given /n/-vector @nv@.
+-- | @nvectorToLatLong nv@ returns (latitude, longitude) pair equivalent to the given /n/-vector @nv@.
+--
+-- Latitude is always in [-90°, 90°] and longitude in [-180°, 180°].
 nvectorToLatLong :: NVector -> (Angle, Angle)
 nvectorToLatLong nv = nvectorToLatLong' (Vector3d (nx nv) (ny nv) (nz nv))
 
--- | @nvectorToLatLong ll@ returns /n/-vector equivalent to the
--- given (latitude, longitude) pair @ll@.
+-- | @nvectorToLatLong ll@ returns /n/-vector equivalent to the given (latitude, longitude) pair @ll@.
 nvectorFromLatLong :: (Angle, Angle) -> NVector
 nvectorFromLatLong ll = NVector x y z
   where
     (Vector3d x y z) = nvectorFromLatLong' ll
 
--- | @nvectorToEcef (nv, h) s@ returns the ECEF vector equivalent to the
--- given /n/-vector @nv@ and height @h@ using the celestial body shape @s@.
+-- | @nvectorToEcef (nv, h) s@ returns the ECEF vector equivalent to the given /n/-vector @nv@ and
+-- height @h@ using the celestial body shape @s@.
 nvectorToEcef :: (NVector, Length) -> Shape -> EcefVector
 nvectorToEcef (nv, h) s = EcefVector (metres x) (metres y) (metres z)
   where
     v = Vector3d (nx nv) (ny nv) (nz nv)
     (Vector3d x y z) = nvectorToEcef' (v, h) s
 
--- | @nvectorFromEcef ev s@ returns the /n/-vector equivalent to the
--- given ECEF vector @ev@ using the celestial body shape @s@.
+-- | @nvectorFromEcef ev s@ returns the /n/-vector equivalent to the given ECEF vector @ev@ using
+-- the celestial body shape @s@.
 nvectorFromEcef :: EcefVector -> Shape -> (NVector, Length)
 nvectorFromEcef ev s = (NVector x y z, h)
   where
@@ -335,6 +353,8 @@ latLong p = (toDecimalDegrees . latitude $ p, toDecimalDegrees . longitude $ p)
 -- | (latitude, longitude) pair from given position.
 latLong' :: (Model a) => Position a -> (Angle, Angle)
 latLong' p = (latitude p, longitude p)
+
+-- private
 
 nvh :: (Model a) => Vector3d -> Length -> a -> Position a
 nvh nv h m = Position lat lon h nv e m
@@ -409,3 +429,18 @@ nvecEllipsoidal d e2 k px py pz = Vector3d nx' ny' nz'
     nx' = s * a * px
     ny' = s * a * py
     nz' = s * pz
+
+wrap :: (Model a) => Angle -> Angle -> Vector3d -> a -> (Angle, Angle)
+wrap lat lon nv m =
+    if isValidLatLong lat lon m
+        then (lat, lon)
+        else llWrapped nv (longitudeRange m)
+
+llWrapped :: Vector3d -> LongitudeRange -> (Angle, Angle)
+llWrapped nv lr = (lat, lon')
+  where
+    (lat, lon) = nvectorToLatLong' nv
+    lon' =
+        case lr of
+            L180 -> lon
+            L360 -> add lon (decimalDegrees 180)

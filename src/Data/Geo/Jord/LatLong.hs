@@ -144,7 +144,7 @@ dmsF degs mins secs millis =
     e = dms degs mins secs millis
 
 isValidLat :: Angle -> Bool
-isValidLat a = isWithin a (decimalDegrees (-90)) (decimalDegrees 180)
+isValidLat a = isWithin a (decimalDegrees (-90)) (decimalDegrees 90)
 
 isValidLong :: (Model a) => Angle -> a -> Bool
 isValidLong a m =

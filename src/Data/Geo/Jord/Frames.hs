@@ -16,7 +16,7 @@
 --
 module Data.Geo.Jord.Frames
     (
-    -- * Reference Frames
+    -- * Reference frame
       Frame(..)
     -- * Body frame
     , FrameB
@@ -60,7 +60,6 @@ module Data.Geo.Jord.Frames
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bodies
-import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Rotation
@@ -94,7 +93,8 @@ data FrameB a =
         , pitch :: Angle -- ^ body pitch angle (transverse axis).
         , roll :: Angle -- ^ body roll angle (longitudinal axis).
         , bOrigin :: Position a -- ^ frame origin.
-        } deriving (Eq, Show)
+        }
+    deriving (Eq, Show)
 
 -- | 'FrameB' from given yaw, pitch, roll, position (origin).
 frameB :: (Model a) => Angle -> Angle -> Angle -> Position a -> FrameB a
@@ -130,7 +130,8 @@ data FrameL a =
     FrameL
         { wanderAzimuth :: Angle -- ^ wander azimuth: angle between x-axis of the frame L and the north direction.
         , lOrigin :: Position a -- ^ frame origin.
-        } deriving (Eq, Show)
+        }
+    deriving (Eq, Show)
 
 -- | R_EL: frame L to Earth
 instance Frame (FrameL m) where
@@ -163,7 +164,8 @@ frameL = FrameL
 newtype FrameN a =
     FrameN
         { nOrigin :: Position a -- ^ frame origin.
-        } deriving (Eq, Show)
+        }
+    deriving (Eq, Show)
 
 -- | R_EN: frame N to Earth
 instance Frame (FrameN a) where
@@ -250,13 +252,14 @@ slantRange (Ned v) = metres (vnorm v)
 -- | @deltaBetween p1 p2 f@ computes the exact 'Delta' between the two
 -- positions @p1@ and @p2@ in frame @f@.
 --
--- @
---     let p1 = latLongHeight 1 2 (metres (-3)) WGS84
---     let p2 = latLongHeight 4 5 (metres (-6)) WGS84
---     let w = decimalDegrees 5 -- wander azimuth
---     deltaBetween p1 p2 (frameL w)
---     -- Delta (Vector3d {vx = 359490.5782, vy = 302818.5225, vz = 17404.2714})
--- @
+-- ==== __Examples__
+--
+-- >>> let p1 = wgs84Pos 1 2 (metres (-3))
+-- >>> let p2 = wgs84Pos 4 5 (metres (-6))
+-- >>> let w = decimalDegrees 5 -- wander azimuth
+-- >>> deltaBetween p1 p2 (frameL w)
+-- Delta (Vector3d {vx = 359490.5782, vy = 302818.5225, vz = 17404.2714})
+--
 deltaBetween :: (Frame a, Model b) => Position b -> Position b -> (Position b -> a) -> Delta
 deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
   where
@@ -276,15 +279,15 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
 --
 -- Position @p1@ must be outside the poles for the north and east directions to be defined.
 --
--- @
---     let p1 = latLongHeightPos 1 2 (metres (-3)) WGS84
---     let p2 = latLongHeightPos 4 5 (metres (-6)) WGS84
---     nedBetween p1 p2
---     -- Ned (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
---     -- equivalent to:
---     deltaBetween p1 p2 frameN
---     -- Delta (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
--- @
+-- @nedBetween p1 p2@ is a shortcut for @'deltaBetween' p1 p2 'frameN'@.
+--
+-- ==== __Examples__
+--
+-- >>> let p1 = wgs84Pos 1 2 (metres (-3))
+-- >>> let p2 = wgs84Pos 4 5 (metres (-6))
+-- >>> nedBetween p1 p2
+-- Ned (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
+--
 nedBetween :: (Model a) => Position a -> Position a -> Ned
 nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
   where
@@ -292,16 +295,16 @@ nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
 
 -- | @target p0 f d@ computes the target position from position @p0@ and delta @d@ in frame @f@.
 --
--- @
---     let p0 = latLongHeightPos 49.66618 3.45063 zero WGS84
---     let y = decimalDegrees 10 -- yaw
---     let r = decimalDegrees 20 -- roll
---     let p = decimalDegrees 30 -- pitch
---     let d = deltaMetres 3000 2000 100
---     target p0 (frameB y r p) d
---     -- 49°41'30.486"N,3°28'52.561"E 6.0077m (WGS84)
+-- ==== __Examples__
 --
--- @
+-- >>> let p0 = wgs84Pos 49.66618 3.45063 zero
+-- >>> let y = decimalDegrees 10 -- yaw
+-- >>> let r = decimalDegrees 20 -- roll
+-- >>> let p = decimalDegrees 30 -- pitch
+-- >>> let d = deltaMetres 3000 2000 100
+-- >>> target p0 (frameB y r p) d
+-- 49°41'30.486"N,3°28'52.561"E 6.0077m (WGS84)
+--
 target :: (Frame a, Model b) => Position b -> (Position b -> a) -> Delta -> Position b
 target p0 f (Delta d) = ecefMetresPos x y z (model p0)
   where
@@ -312,10 +315,13 @@ target p0 f (Delta d) = ecefMetresPos x y z (model p0)
 
 -- | @targetN p0 d@ computes the target position from position @p0@ and north, east, down @d@.
 --
--- @
---     let p0 = latLongHeightPos 49.66618 3.45063 zero WGS84
---     targetN p0 (nedMeters 100 200 300)
---     -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
+-- @targetN p0 d@ is a shortcut for @'target' p0 'frameN' ('Delta' d)@.
+--
+-- ==== __Examples__
+--
+-- >>> let p0 = wgs84Pos 49.66618 3.45063 zero
+-- >>> targetN p0 (nedMeters 100 200 300)
+-- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
 --     -- equivalent to:
 --     target p0 frameN (deltaMetres 100 200 300) wgs84
 --     -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)

@@ -21,9 +21,10 @@ spec = do
             let p1 = ecefMetresPos 3826406.471 8900.5364 5112694.2331 S84
             destination p0 (decimalDegrees 96.0217) (metres 124800) `shouldBe` p1
     describe "finalBearing" $ do
-        it "returns the Nothing if both positions are the same" $ do
+        it "returns the Nothing if both positions are the same (ignoring height)" $ do
             let p = s84Pos 50.066389 (-5.714722) zero
             finalBearing p p `shouldBe` Nothing
+            finalBearing p (s84Pos 50.066389 (-5.714722) (metres 10)) `shouldBe` Nothing
         it "returns 0° if both positions have the same longitude (going north)" $ do
             let p1 = s84Pos 50.066389 (-5.714722) (metres 12000)
             let p2 = s84Pos 58.643889 (-5.714722) (metres 5000)
@@ -53,9 +54,10 @@ spec = do
             let p2 = s84Pos 54 154 zero
             finalBearing p1 p2 `shouldBe` Just (decimalDegrees 125.6853725)
     describe "initialBearing" $ do
-        it "returns Nothing if both positions are the same" $ do
+        it "returns Nothing if both positions are the same (ignoring height)" $ do
             let p = s84Pos 50.066389 (-179.999722) zero
             initialBearing p p `shouldBe` Nothing
+            initialBearing p (s84Pos 50.066389 (-179.999722) (metres 100)) `shouldBe` Nothing
         it "returns 0° if both positions have the same longitude (going north)" $ do
             let p1 = s84Pos 50.066389 (-5.714722) (metres 12000)
             let p2 = s84Pos 58.643889 (-5.714722) (metres 12000)
@@ -111,15 +113,14 @@ spec = do
     describe "surfaceDistance" $ do
         it "returns 0 if both points are equal" $ do
             let p = s84Pos 50.066389 (-5.714722) (metres 15000.0)
-            surfaceDistance p p `shouldBe` Just zero
+            surfaceDistance p p `shouldBe` zero
         it "returns the distance between 2 points" $ do
             let p1 = s84Pos 50.066389 (-5.714722) zero
             let p2 = s84Pos 58.643889 (-3.07) zero
-            surfaceDistance p1 p2 `shouldBe` Just (metres 968854.8685)
+            surfaceDistance p1 p2 `shouldBe` metres 968854.8685
         it "handles singularity at the pole" $
-            surfaceDistance (northPole S84) (southPole S84) `shouldBe`
-            Just (kilometres 20015.114352200002)
+            surfaceDistance (northPole S84) (southPole S84) `shouldBe` kilometres 20015.114352200002
         it "handles the discontinuity at the Date Line" $ do
             let p1 = s84Pos 50.066389 (-179.999722) zero
             let p2 = s84Pos 50.066389 179.999722 zero
-            surfaceDistance p1 p2 `shouldBe` Just (metres 39.6905)
+            surfaceDistance p1 p2 `shouldBe` metres 39.6905

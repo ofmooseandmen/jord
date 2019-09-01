@@ -8,16 +8,21 @@ import Data.Geo.Jord
 
 spec :: Spec
 spec = do
-  describe "antipode" $ do
-      it "returns the antipodal position" $ do
-          antipode (wgs84Pos 45 154 (metres 15000)) `shouldBe` (wgs84Pos (-45) (-26) (metres 15000))
-          antipode (s84Pos 45 154 (metres 15000)) `shouldBe` s84Pos (-45) (-26) (metres 15000)
-      it "returns the south pole when called with the north pole" $ do
-          antipode (northPole WGS84) `shouldBe` southPole WGS84
-          antipode (northPole S84) `shouldBe` southPole S84
-      it "returns the north pole when called with the south pole" $ do
-          antipode (southPole WGS84) `shouldBe` northPole WGS84
-          antipode (southPole S84) `shouldBe` northPole S84
+    describe "antipode" $ do
+        it "returns the antipodal position" $ do
+            antipode (wgs84Pos 45 154 (metres 15000)) `shouldBe` wgs84Pos (-45) (-26) (metres 15000)
+            antipode (s84Pos 45 154 (metres 15000)) `shouldBe` s84Pos (-45) (-26) (metres 15000)
+        it "returns the south pole when called with the north pole" $ do
+            antipode (northPole WGS84) `shouldBe` southPole WGS84
+            antipode (northPole S84) `shouldBe` southPole S84
+        it "returns the north pole when called with the south pole" $ do
+            antipode (southPole WGS84) `shouldBe` northPole WGS84
+            antipode (southPole S84) `shouldBe` northPole S84
+    describe "wrapping latitude/longitude" $ do
+        it "wraps a Earth position to [-90°, 90°] and [-180°, 180°]" $
+            latLong (s84Pos 91 54 zero) `shouldBe` (89, -126)
+        it "wraps a Mars position to [-90°, 90°] and [0°, 360°]" $
+            latLong (latLongPos 91 (-150) Mars) `shouldBe` (89, 210)
     describe "Geodetic <=> Geocentric (Ellipsoidal)" $ do
         it "n-vector <=> ECEF" $ do
             let p = nvectorPos 0.5 0.5 0.7071 WGS84
@@ -50,7 +55,8 @@ spec = do
                     , latLongHeightPos 90 0 zero S84
                     , latLongHeightPos (-90) 0 zero S84
                     , latLongHeightPos 45.0 45.0 (metres 500) S84
-                    , latLongHeightPos (-45) (-45) (metres 500) S84                    ]
+                    , latLongHeightPos (-45) (-45) (metres 500) S84
+                    ]
             let refEcefs =
                     [ ecefMetresPos 6371008.7714 0 0 S84
                     , ecefMetresPos 0 0 6371008.7714 S84

@@ -7,7 +7,7 @@
 -- Portability: portable
 --
 -- Geographical Position calculations on great circles, i.e. using a __sphere__ to represent
--- the celestial body that positions refer to..
+-- the celestial body that positions refer to.
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -16,9 +16,11 @@ module Data.Geo.Jord.GreatCircle
     (
     -- * The 'GreatCircle' type
       GreatCircle
-    , greatCircle
     , greatCircleThrough
     , greatCircleHeadingOn
+    -- * The 'MinorArc' type
+    , MinorArc
+    , minorArcBetween
     -- * Calculations
     , alongTrackDistance
     , alongTrackDistance'
@@ -44,15 +46,15 @@ import Data.List (subsequences)
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bodies
-import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Spherical
 import Data.Geo.Jord.Vector3d
 
 -- | A circle on the __surface__ of a __sphere__ which lies in a plane
 -- passing through the sphere centre. Every two distinct and non-antipodal points
--- define a Great Circle.
+-- define a unique Great Circle.
 --
 -- It is internally represented as its normal vector - i.e. the normal vector
 -- to the plane containing the great circle.
@@ -64,70 +66,89 @@ data GreatCircle a =
 instance (Model a) => Show (GreatCircle a) where
     show (GreatCircle _ _ s) = s
 
--- | 'GreatCircle' from 'MinorArc'. -- TODO great circle description
-greatCircle :: (Spherical a) => MinorArc a -> GreatCircle a
-greatCircle (MinorArc n s _) = GreatCircle n (model s) ""
-
--- | 'GreatCircle' passing by both given positions.
+-- | @greatCircleThrough p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@.
+-- If positions are antipodal, any great circle passing through those positions will be returned.
 -- A 'Left' indicates that given positions are equal.
 --
--- @
---     let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
---     let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
---     greatCircleThrough p1 p2 -- heights are ignored, great circle is always at surface.
--- @
+-- ==== __Examples__
+--
+-- >>> let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
+-- >>> let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
+-- >>> greatCircleThrough p1 p2 -- heights are ignored, great circle is always at surface.
+--
 greatCircleThrough :: (Spherical a) => Position a -> Position a -> Either String (GreatCircle a)
 greatCircleThrough p1 p2
     | p1 == p2 = Left "Invalid Great Circle: positions are equal"
-    | otherwise = Right (GreatCircle (normal' p1 p2) (model p1) "")
+    | otherwise = Right (GreatCircle (normal' p1 p2) (model p1) dscr)
+  where
+    dscr = "Great Circle { through " ++ show p1 ++ " & " ++ show p2 ++ " }"
 
--- | 'GreatCircle' passing by the given position and heading on given bearing.
+-- | @greatCircleHeadingOn p b@ returns the 'GreatCircle' passing by position @p@ and
+-- heading on bearing @b@.
 --
--- @
---     let p = latLongPos 45.0 (-143.5) S84
---     let b = decimalDegrees 33.0
---     greatCircleHeadingOn p b
--- @
+-- ==== __Examples__
+--
+-- >>> let p = latLongPos 45.0 (-143.5) S84
+-- >>> let b = decimalDegrees 33.0
+-- >>> greatCircleHeadingOn p b
+--
 greatCircleHeadingOn :: (Spherical a) => Position a -> Angle -> GreatCircle a
-greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) ""
+greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) dscr
   where
     v = nvec p
     e = vcross nvNorthPole v -- easting
     n = vcross v e -- northing
     e' = vscale e (cos' b / vnorm e)
     n' = vscale n (sin' b / vnorm n)
+    dscr = "Great Circle { by " ++ show p ++ " & heading on " ++ show b ++ " }"
 
--- | Minor arc of a great circle between two positions.
-data MinorArc a = MinorArc !Vector3d (Position a) (Position a)
+-- | Oriented minor arc of a great circle between two positions: shortest path between
+-- positions on a great circle.
+data MinorArc a =
+    MinorArc !Vector3d (Position a) (Position a)
     deriving (Eq)
 
 instance (Model a) => Show (MinorArc a) where
-  show (MinorArc _ s e) = "Minor Arc { from: " ++ (show s) ++ ", to: " ++ (show e) ++ "}"
+    show (MinorArc _ s e) = "Minor Arc { from: " ++ show s ++ ", to: " ++ show e ++ "}"
 
+-- | @minorArcBetween p1 p2@ return the 'MinorArc' from @p1@ to @p2@.
+minorArcBetween :: (Spherical a) => Position a -> Position a -> Either String (MinorArc a)
+minorArcBetween p1 p2
+    | p1 == p2 = Left "Invalid Minor Arc: positions are equal"
+    | otherwise = Right (MinorArc (normal' p1 p2) p1 p2)
 
 -- | @alongTrackDistance p a@ computes how far Position @p@ is along a path described
 -- by the minor arc @a@: if a perpendicular is drawn from @p@  to the path, the
 -- along-track distance is the signed distance from the start point to where the
 -- perpendicular crosses the path.
 --
--- @ TODO review
---     let p = s84Pos 53.2611 (-0.7972) zero
---     let g = inverse (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
---     alongTrackDistance p g
---     -- 62.3315757 kilometres
--- @
+-- ==== __Examples__
+--
+-- >>> let p = s84Pos 53.2611 (-0.7972) zero
+-- >>> let g = minorArcBetween (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
+-- >>> fmap (alongTrackDistance p) a
+-- Right 62.3315757km
+--
 alongTrackDistance :: (Spherical a) => Position a -> MinorArc a -> Length
 alongTrackDistance p (MinorArc n s _) = alongTrackDistance'' p s n
 
+-- | @alongTrackDistance' p s b@ computes how far Position @p@ is along a path starting
+-- at @s@ and heading on bearing @b@: if a perpendicular is drawn from @p@  to the path, the
+-- along-track distance is the signed distance from the start point to where the
+-- perpendicular crosses the path.
+--
+-- ==== __Examples__
+--
+-- >>> let p = s84Pos 53.2611 (-0.7972) zero
+-- >>> let s = s84Pos 53.3206 (-1.7297) zero
+-- >>> let b = decimalDegrees 96.0017325
+-- >>> alongTrackDistance' p s b
+-- 62.3315757km
+--
 alongTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
 alongTrackDistance' p s b = alongTrackDistance'' p s n
   where
     (GreatCircle n _ _) = greatCircleHeadingOn s b
-
-alongTrackDistance'' :: (Spherical a) => Position a -> Position a -> Vector3d -> Length
-alongTrackDistance'' p s n = arcLength a (radius s)
-  where
-    a = signedAngle (nvec s) (vcross (vcross n (nvec p)) n) (Just n)
 
 -- | @angularDistance p1 p2 n@ computes the angle between the horizontal Points @p1@ and @p2@.
 -- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
@@ -144,26 +165,35 @@ angularDistance p1 p2 n = signedAngle v1 v2 vn
 -- positive 'Length' if Position if right of great circle; the orientation of the
 -- great circle is therefore important:
 --
--- @
---     let gc1 = greatCircle (decimalLatLong 51 0) (decimalLatLong 52 1)
---     let gc2 = greatCircle (decimalLatLong 52 1) (decimalLatLong 51 0)
---     crossTrackDistance p gc1 r84 = (- crossTrackDistance p gc2 r84)
+-- ==== __Examples__
 --
---     let p = decimalLatLong 53.2611 (-0.7972)
---     let gc = greatCircleBearing (decimalLatLong 53.3206 (-1.7297)) (decimalDegrees 96.0)
---     crossTrackDistance p gc r84 -- -305.663 metres
--- @
+-- >>> let gc1 = greatCircleThrough (s84Pos 51 0 zero) (s84Pos 52 1 zero)
+-- >>> fmap (crossTrackDistance p) gc1
+-- Right -176.7568725km
+--
+-- >>> let gc2 = greatCircleThrough (s84Pos 52 1 zero) (s84Pos 51 0 zero)
+-- >>> fmap (crossTrackDistance p) gc2
+-- Right 176.7568725km
+--
+-- >>> let p = s84Pos 53.2611 (-0.7972) zero
+-- >>> let gc = greatCircleHeadingOn (s84Pos 53.3206 (-1.7297) zero) (decimalDegrees 96.0)
+-- >>> crossTrackDistance p gc
+-- -305.6629 metres
+--
 crossTrackDistance :: (Spherical a) => Position a -> GreatCircle a -> Length
 crossTrackDistance p (GreatCircle n _ _) = arcLength (sub a (decimalDegrees 90)) (radius p)
   where
     a = radians (angleRadians n (nvec p))
 
+-- | @crossTrackDistance' p s b@ computes the signed distance from horizontal Position @p@ to the
+-- great circle passing by @s@ and heading on bearing @b@.
+--
+-- @crossTrackDistance' p s b@ is a shortcut for @'crossTrackDistance' p (greatCircleHeadingOn s b)@.
+--
 crossTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
-crossTrackDistance' p s b = crossTrackDistance p gc
-  where
-    gc = greatCircleHeadingOn s b
+crossTrackDistance' p s b = crossTrackDistance p (greatCircleHeadingOn s b)
 
--- | @interpolate p0 p1 f# computes the horizontal Position at fraction @f@ between the @p0@ and @p1@.
+-- | @interpolate p0 p1 f# computes the position at fraction @f@ between the @p0@ and @p1@.
 --
 -- Special conditions:
 --
@@ -174,11 +204,13 @@ crossTrackDistance' p s b = crossTrackDistance p gc
 --
 -- 'error's if @f < 0 || f > 1@
 --
--- @
---     let p1 = latLongHeight (readLatLong "53°28'46''N 2°14'43''W") (metres 10000)
---     let p2 = latLongHeight (readLatLong "55°36'21''N 13°02'09''E") (metres 20000)
---     interpolate p1 p2 0.5 = decimalLatLongHeight 54.7835574 5.1949856 (metres 15000)
--- @
+-- ==== __Examples__
+--
+-- >>> let p1 = s84Pos 53.479444 (-2.245278) (metres 10000)
+-- >>> let p2 = s84Pos 55.605833 13.035833 (metres 20000)
+-- >>> interpolate p1 p2 0.5
+-- 54°47'0.805"N,5°11'41.947"E 15.0km (S84)
+--
 interpolate :: (Spherical a) => Position a -> Position a -> Double -> Position a
 interpolate p0 p1 f
     | f < 0 || f > 1 = error ("fraction must be in range [0..1], was " ++ show f)
@@ -197,15 +229,12 @@ interpolate p0 p1 f
 --
 -- see also 'intersections'
 --
--- @
---     let spd = kilometresPerHour 1000
---     let t1 = Track (decimalLatLong 51.885 0.235) (decimalDegrees 108.63) spd
---     let t2 = Track (decimalLatLong 49.008 2.549) (decimalDegrees 32.72) spd
---     let oneHour = hours 1
---     let ga1 = greatArc (t1, oneHour)
---     let ga2 = greatArc (t2, oneHour)
---     intersection ga1 ga2 = Just (decimalLatLong 50.9017225 4.494278333333333)
--- @
+-- ==== __Examples__
+--
+-- >>> let a1 = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
+-- >>> let a2 = minorArcBetween (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
+-- Right (Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84))
+--
 intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Position a)
 intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
     case intersections' n1 n2 (model s1) of
@@ -216,16 +245,19 @@ intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
             | otherwise -> Nothing
 
 -- | Computes the intersections between the two given 'GreatCircle's.
--- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
+-- Two great circles intersect exactly twice unless there are equal (regardless of orientation),
 -- in which case 'Nothing' is returned.
 --
--- @
---     let gc1 = greatCircleBearing (decimalLatLong 51.885 0.235) (decimalDegrees 108.63)
---     let gc2 = greatCircleBearing (decimalLatLong 49.008 2.549) (decimalDegrees 32.72)
---     let (i1, i2) = fromJust (intersections gc1 gc2)
---     i1 = decimalLatLong 50.9017226 4.4942782
---     i2 = antipode i1
--- @
+-- ==== __Examples__
+--
+-- >>> let gc1 = greatCircleHeadingOn (s84Pos 51.885 0.235 zero) (decimalDegrees 108.63)
+-- >>> let gc2 = greatCircleHeadingOn (s84Pos 49.008 2.549 zero) (decimalDegrees 32.72)
+-- >>> intersections gc1 gc2
+-- Just (50°54'6.201"N,4°29'39.402"E 0.0m (S84),50°54'6.201"S,175°30'20.598"W 0.0m (S84))
+-- >>> let i = intersections gc1 gc2
+-- fmap fst i == fmap (antipode . snd) i
+-- >>> True
+--
 intersections :: (Spherical a) => GreatCircle a -> GreatCircle a -> Maybe (Position a, Position a)
 intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 
@@ -250,7 +282,8 @@ isBetween p (MinorArc _ s e) = between && hemisphere
     between = e1 >= 0 && e2 >= 0
     hemisphere = vdot v0 v1 >= 0 && vdot v0 v2 >= 0
 
--- | @isInsideSurface p ps@ determines whether the @p@ is inside the polygon defined by the list of Points @ps@.
+-- | @isInsideSurface p ps@ determines whether position @p@ is inside the polygon defined by
+-- positions @ps@.
 -- The polygon can be opened or closed (i.e. if @head ps /= last ps@).
 --
 -- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
@@ -258,18 +291,21 @@ isBetween p (MinorArc _ s e) = between && hemisphere
 --
 -- Always returns 'False' if @ps@ does not at least defines a triangle.
 --
--- @
---     let malmo = decimalLatLong 55.6050 13.0038
---     let ystad = decimalLatLong 55.4295 13.82
---     let lund = decimalLatLong 55.7047 13.1910
---     let helsingborg = decimalLatLong 56.0465 12.6945
---     let kristianstad = decimalLatLong 56.0294 14.1567
---     let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
---     let hoor = decimalLatLong 55.9295 13.5297
---     let hassleholm = decimalLatLong 56.1589 13.7668
---     isInsideSurface hoor polygon = True
---     isInsideSurface hassleholm polygon = False
--- @
+-- ==== __Examples__
+--
+-- >>> let malmo = s84Pos 55.6050 13.0038 zero
+-- >>> let ystad = s84Pos 55.4295 13.82 zero
+-- >>> let lund = s84Pos 55.7047 13.1910 zero
+-- >>> let helsingborg = s84Pos 56.0465 12.6945 zero
+-- >>> let kristianstad = s84Pos 56.0294 14.1567 zero
+-- >>> let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
+-- >>> let hoor = s84Pos 55.9295 13.5297 zero
+-- >>> let hassleholm = s84Pos 56.1589 13.7668 zero
+-- >>> isInsideSurface hoor polygon
+-- True
+-- >>> isInsideSurface hassleholm polygon
+-- False
+--
 isInsideSurface :: (Spherical a) => Position a -> [Position a] -> Bool
 isInsideSurface p ps
     | null ps = False
@@ -286,9 +322,9 @@ isInsideSurface p ps
     v = nvec p
     vs = fmap nvec ps
 
--- | @mean ps@ computes the mean geographic horitzontal Position of @ps@, if it is defined.
+-- | @mean ps@ computes the geographic mean surface position of @ps@, if it is defined.
 --
--- The geographic mean is not defined for antipodals Position (since they
+-- The geographic mean is not defined for antipodals positions (since they
 -- cancel each other).
 --
 -- Special conditions:
@@ -312,6 +348,13 @@ mean ps =
     antipodals =
         filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
     nv = vunit $ foldl vadd vzero vs
+
+-- private
+
+alongTrackDistance'' :: (Spherical a) => Position a -> Position a -> Vector3d -> Length
+alongTrackDistance'' p s n = arcLength a (radius s)
+  where
+    a = signedAngle (nvec s) (vcross (vcross n (nvec p)) n) (Just n)
 
 -- | [p1, p2, p3, p4] to [(p1, p2), (p2, p3), (p3, p4), (p4, p1)]
 egdes :: [Vector3d] -> [(Vector3d, Vector3d)]

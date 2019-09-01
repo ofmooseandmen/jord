@@ -6,13 +6,12 @@ import Test.Hspec
 
 import Data.Geo.Jord
 
--- TODO add height
 spec :: Spec
-spec = do
+spec =
     describe "Showing positions" $ do
         it "shows the N/E position formatted in DMS with symbols" $
-            show (latLongPos 55.60583333 13.00055556 WGS84) `shouldBe`
-            "55°36'21.000\"N,13°0'2.000\"E 0.0m (WGS84)"
+            show (wgs84Pos 55.60583333 13.00055556 (metres 5)) `shouldBe`
+            "55°36'21.000\"N,13°0'2.000\"E 5.0m (WGS84)"
         it "shows the S/E position formatted in DMS with symbols" $
             show (latLongPos (-1.28305556) 36.81666 GRS80) `shouldBe`
             "1°16'59.000\"S,36°48'59.976\"E 0.0m (GRS80)"

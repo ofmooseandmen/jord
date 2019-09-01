@@ -43,7 +43,7 @@ import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Kinematics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.Position hiding (evec, nvec, nvh)
+import Data.Geo.Jord.Position hiding (evec, nvec, nvh, nvNorthPole, nvSouthPole)
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Rotation
 import Data.Geo.Jord.Speed

@@ -39,8 +39,8 @@ library:
     - Data.Geo.Jord.Speed
     - Data.Geo.Jord.Vector3d
   other-modules:
-    - Data.Geo.Jord.Internal
     - Data.Geo.Jord.Parser
+    - Data.Geo.Jord.Spherical
 
 executables:
   jord-repl:

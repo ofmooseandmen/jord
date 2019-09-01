@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Types and functions for working with kinematics calculations assuming a __spherical__ earth model.
+-- Types and functions for working with kinematics calculations assuming a __spherical__ celestial body.
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -47,11 +47,10 @@ import Data.Maybe (fromJust, isNothing)
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Duration
-import Data.Geo.Jord.Geodesic
-import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Spherical
 import Data.Geo.Jord.Speed
 import Data.Geo.Jord.Vector3d
 
@@ -98,57 +97,72 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
     lon = longitude p
     r = mdot (mdot (rz (negate' lon)) (ry lat)) (rx b)
 
--- | @positionAfter p s b d@ computes the position of a vehicle currently at position @p@
--- travelling at speed @s@ and following bearing @b@ after duration @d@ has elapsed.
-positionAfter :: (Spherical a) => Position a -> Speed -> Angle -> Duration -> Position a
-positionAfter p s b d = position' p s (course p b) (toSeconds d)
+-- | @positionAfter p b s d@ computes the position of a vehicle currently at position @p@
+-- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed.
+--
+-- @positionAfter p b s d@ is a shortcut for @positionAfter' ('course' p b) s d@.
+--
+-- ==== __Examples__
+--
+-- >>> let p = s84Pos 53.321 (-1.729) (metres 15000)
+-- >>> let b = decimalDegrees 96.0217
+-- >>> let s = kilometresPerHour 124.8
+-- >>> positionAfter p b s (hours 1)
+-- 53°11'19.368"N,0°8'2.457"E 15.0km (S84)
+-- @
+positionAfter :: (Spherical a) => Position a -> Angle -> Speed -> Duration -> Position a
+positionAfter p b s d = position' p (course p b) s (toSeconds d)
 
--- | @positionAfter p s c d@ computes the position of a vehicle currently at position @p@
--- travelling at speed @s@ and on course @c@ after duration @d@ has elapsed.
-positionAfter' :: (Spherical a) => Position a -> Speed -> Course -> Duration -> Position a
-positionAfter' p s c d = position' p s c (toSeconds d)
+-- | @positionAfter p c s d@ computes the position of a vehicle currently at position @p@
+-- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed.
+positionAfter' :: (Spherical a) => Position a -> Course -> Speed -> Duration -> Position a
+positionAfter' p c s d = position' p c s (toSeconds d)
 
 -- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed.
 --
--- @
---     TODO new API
---     let p0 = latLongHeight (readLatLong "531914N0014347W") (metres 15000)
---     let b = decimalDegrees 96.0217
---     let s = kilometresPerHour 124.8
---     let p1 = decimalLatLongHeight 53.1882691 0.1332741 (metres 15000)
---     position (Track p0 b s) (hours 1) r84 = p1
--- @
+-- @trackPositionAfter ('Track' p b s) d@ is a equivalent to @positionAfter' p ('course' p b) s d@.
+--
+-- ==== __Examples__
+--
+-- >>> let p = s84Pos 53.321 (-1.729) (metres 15000)
+-- >>> let b = decimalDegrees 96.0217
+-- >>> let s = kilometresPerHour 124.8
+-- >>> trackPositionAfter (Track p b s) (hours 1)
+-- 53°11'19.368"N,0°8'2.457"E 15.0km (S84)
+--
 trackPositionAfter :: (Spherical a) => Track a -> Duration -> Position a
-trackPositionAfter (Track p b s) = positionAfter' p s (course p b)
+trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 
 -- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@.
 --
--- @
---     TODO new API
---     let p1 = decimalLatLong 20 (-60)
---     let b1 = decimalDegrees 10
---     let s1 = knots 15
---     let p2 = decimalLatLong 34 (-50)
---     let b2 = decimalDegrees 220
---     let s2 = knots 300
---     let t1 = Track p1 b1 s1
---     let t2 = Track p2 b2 s2
---     let c = cpa t1 t2 r84
---     fmap cpaTime c = Just (milliseconds 11396155)
---     fmap cpaDistance c = Just (kilometres 124.2317453)
--- @
+-- ==== __Examples__
+--
+-- >>> let p1 = s84Pos 20 (-60) zero
+-- >>> let b1 = decimalDegrees 10
+-- >>> let s1 = knots 15
+-- >>> let p2 = s84Pos 34 (-50) zero
+-- >>> let b2 = decimalDegrees 220
+-- >>> let s2 = knots 300
+-- >>> let t1 = Track p1 b1 s1
+-- >>> let t2 = Track p2 b2 s2
+-- >>> let c = cpa t1 t2
+-- >>> fmap cpaTime c
+-- Just 3H9M56.155S
+-- >>> fmap cpaDistance c
+-- Just 124.2317453km
+--
 cpa :: (Spherical a) => Track a -> Track a -> Maybe (Cpa a)
 cpa (Track p1 b1 s1) (Track p2 b2 s2)
     | p1 == p2 = Just (Cpa zero zero p1 p2)
     | t < 0 = Nothing
-    | otherwise = fmap (\l -> Cpa (seconds t) l cp1 cp2) d
+    | otherwise = Just (Cpa (seconds t) d cp1 cp2)
   where
     c1 = course p1 b1
     c2 = course p2 b2
     t = timeToCpa p1 c1 s1 p2 c2 s2
-    cp1 = position' p1 s1 c1 t
-    cp2 = position' p2 s2 c2 t
-    d = surfaceDistance cp1 cp2
+    cp1 = position' p1 c1 s1 t
+    cp2 = position' p2 c2 s2 t
+    d = surfaceDistance cp1 cp2 (radius p1)
 
 -- | @intercept t p@ computes the __minimum__ speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place.
@@ -159,14 +173,16 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 --
 --     * interceptor is "behind" the target
 --
--- @
---     TODO new API
---     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
---     let ip = (decimalLatLong 20 (-60))
---     let i = intercept t ip r84
---     fmap interceptorSpeed i = Just (knots 52.633367756059)
---     fmap interceptTime i = Just (seconds 5993.831)
--- @
+-- ==== __Examples__
+--
+-- >>> let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
+-- >>> let ip = s84Pos 20 (-60) zero
+-- >>> let i = intercept t ip
+-- >>> fmap (toKnots . interceptorSpeed) i
+-- Just 52.633367756059
+-- >>> fmap (toSeconds . interceptTime) i
+-- Just 5993.831
+--
 intercept :: (Spherical a) => Track a -> Position a -> Maybe (Intercept a)
 intercept t p = interceptByTime t p (seconds (timeToIntercept t p))
 
@@ -190,52 +206,59 @@ interceptBySpeed t p s
 -- after duration @d@. Returns 'Nothing' if given duration is <= 0 or
 -- interceptor and target are at the same position.
 --
--- @
---     TODO new API
---     let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
---     let ip = (decimalLatLong 20 (-60))
---     let d = seconds 2700
---     let i = interceptByTime t ip d r84
---     fmap interceptorSpeed i = Just (knots 730.959238)
---     fmap interceptorBearing i = Just (decimalDegrees 26.1199030)
---     fmap interceptPosition i = Just (decimalLatLong 28.1366797 (-55.4559475))
---     fmap interceptDistance i = Just (metres 1015302.3815)
---     fmap interceptTime i = Just (seconds 2700)
--- @
---
 -- Note: contrary to 'intercept' and 'interceptBySpeed' this function handles
 -- cases where the interceptor has to catch up the target.
+--
+-- ==== __Examples__
+--
+-- >>> let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
+-- >>> let ip = s84Pos 20 (-60) zero
+-- >>> let d = seconds 2700
+-- >>> let i = interceptByTime t ip d
+-- >>> fmap (toKnots . interceptorSpeed) i
+-- Just 730.959238
+-- >>> fmap interceptorBearing i
+-- >>> Just 26°7'11.649"
+-- >>> fmap interceptPosition i
+-- Just 28°8'12.047"N,55°27'21.411"W 0.0m (S84)
+-- >>> fmap interceptDistance i
+-- Just 1015.3023506km
+-- >>> fmap (toSeconds . interceptTime) i
+-- Just 2700
+--
 interceptByTime :: (Spherical a) => Track a -> Position a -> Duration -> Maybe (Intercept a)
 interceptByTime t p d
     | toMilliseconds d <= 0 = Nothing
     | trackPosition t == p = Nothing
-    | isNothing idist = Nothing -- should never occur
     | isNothing ib = Nothing
     | otherwise =
-        let is = averageSpeed (fromJust idist) d
-         in Just (Intercept d (fromJust idist) ipos (fromJust ib) is)
+        let is = averageSpeed idist d
+         in Just (Intercept d idist ipos (fromJust ib) is)
   where
     ipos = trackPositionAfter t d
-    idist = surfaceDistance p ipos
+    idist = surfaceDistance p ipos (radius p)
     ib = initialBearing p ipos <|> initialBearing p (trackPosition t)
 
+-- private
+
 -- | position from speed course and seconds.
-position' :: (Spherical a) => Position a -> Speed -> Course -> Double -> Position a
-position' p0 s (Course c) sec = nvh v1 h0 (model p0)
+position' :: (Spherical a) => Position a -> Course -> Speed -> Double -> Position a
+position' p0 (Course c) s sec = nvh v1 h0 (model p0)
   where
     nv0 = nvec p0
     h0 = height p0
-    v1 = position'' nv0 s c sec (radiusM p0)
+    v1 = position'' nv0 c s sec (radiusM p0)
 
--- | position from speed course and seconds.
-position'' :: Vector3d -> Speed -> Vector3d -> Double -> Double -> Vector3d
-position'' v0 s c sec rm = v1
+-- | position from course, speed and seconds.
+position'' :: Vector3d -> Vector3d -> Speed -> Double -> Double -> Vector3d
+position'' v0 c s sec rm = v1
   where
     a = toMetresPerSecond s / rm * sec
     v1 = vadd (vscale v0 (cos a)) (vscale c (sin a))
 
 -- | time to CPA.
-timeToCpa :: (Spherical a) => Position a -> Course -> Speed -> Position a -> Course -> Speed -> Double
+timeToCpa ::
+       (Spherical a) => Position a -> Course -> Speed -> Position a -> Course -> Speed -> Double
 timeToCpa p1 (Course c10) s1 p2 (Course c20) s2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
   where
     v10 = nvec p1
@@ -389,8 +412,13 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
 -- | angular separation in radians at ti between v10 and track with initial position v20,
 -- course c2 and speed s2.
 sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Double -> Double -> Double
-sep v10 v20 c2 s2 r ti = angleRadians v10 (position'' v20 s2 c2 ti r)
+sep v10 v20 c2 s2 r ti = angleRadians v10 (position'' v20 c2 s2 ti r)
+
+
+-- | reference sphere radius.
+radius :: (Spherical a) => Position a -> Length
+radius = modelRadius . model
 
 -- | reference sphere radius in metres.
 radiusM :: (Spherical a) => Position a -> Double
-radiusM = toMetres . modelRadius . model
+radiusM = toMetres . radius

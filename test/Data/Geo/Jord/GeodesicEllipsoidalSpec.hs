@@ -4,8 +4,6 @@ module Data.Geo.Jord.GeodesicEllipsoidalSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord
-
 spec :: Spec
 spec =
     describe "TODO" $ do

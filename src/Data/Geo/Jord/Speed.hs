@@ -40,7 +40,6 @@ import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 
 -- | A speed with a resolution of 1 millimetre per hour.
--- TODO: max speed same elsewhere
 newtype Speed =
     Speed
         { mmPerHour :: Int

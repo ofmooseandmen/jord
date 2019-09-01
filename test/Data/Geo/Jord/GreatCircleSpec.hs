@@ -15,16 +15,16 @@ spec = do
     describe "alongTrackDistance" $ do
         it "returns a positive length when position is ahead start of great arc" $ do
             let p = s84Pos 53.2611 (-0.7972) zero
-            let g = inverse (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
-            fmap (alongTrackDistance p) g `shouldBe` Just (kilometres 62.3315757)
+            let g = minorArcBetween (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
+            fmap (alongTrackDistance p) g `shouldBe` Right (kilometres 62.3315757)
         it "returns a negative length when position is ahead start of great arc" $ do
             let p = s84Pos 53.3206 (-1.7297) zero
-            let g = inverse (s84Pos 53.2611 (-0.7972) zero) (s84Pos 53.1887 0.1334 zero)
-            fmap (alongTrackDistance p) g `shouldBe` Just (kilometres (-62.3293209))
+            let g = minorArcBetween (s84Pos 53.2611 (-0.7972) zero) (s84Pos 53.1887 0.1334 zero)
+            fmap (alongTrackDistance p) g `shouldBe` Right (kilometres (-62.3293209))
         it "returns 0 when position is start of great arc" $ do
             let p = s84Pos 53.2611 (-0.7972) zero
-            let g = inverse p (s84Pos 53.1887 0.1334 zero)
-            fmap (alongTrackDistance p) g `shouldBe` Just zero
+            let g = minorArcBetween p (s84Pos 53.1887 0.1334 zero)
+            fmap (alongTrackDistance p) g `shouldBe` Right zero
     describe "crossTrackDistance" $ do
         it "returns a negative length when position is left of great circle (bearing)" $ do
             let p = s84Pos 53.2611 (-0.7972) zero
@@ -99,44 +99,44 @@ spec = do
             isInsideSurface hassleholm polygon `shouldBe` False
     describe "intersection" $ do
         it "returns nothing if both great arc are equals" $
-            case inverse (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero) of
-                Nothing -> error "fail"
-                (Just g) -> intersection g g `shouldBe` Nothing
+            case minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero) of
+                Left e -> error e
+                Right a -> intersection a a `shouldBe` Nothing
         it "returns nothing if both great arc are equals (opposite orientation)" $
-            case inverse (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero) of
-                Nothing -> error "fail"
-                (Just g1) ->
-                    case inverse (s84Pos 52.885 1.235 zero) (s84Pos 51.885 0.235 zero) of
-                        Nothing -> error "fail"
-                        (Just g2) -> intersection g1 g2 `shouldBe` Nothing
+            case minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero) of
+                Left e1 -> error e1
+                Right a1 ->
+                    case minorArcBetween (s84Pos 52.885 1.235 zero) (s84Pos 51.885 0.235 zero) of
+                        Left e2 -> error e2
+                        Right a2 -> intersection a1 a2 `shouldBe` Nothing
         it "returns nothing if great circle intersection is outside either great arc" $
-            case inverse (s84Pos 0 0 zero) (s84Pos 0 10 zero) of
-                Nothing -> error "fail"
-                (Just g1) ->
-                    case inverse (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero) of
-                        Nothing -> error "fail"
-                        (Just g2) -> intersection g1 g2 `shouldBe` Nothing
+            case minorArcBetween (s84Pos 0 0 zero) (s84Pos 0 10 zero) of
+                Left e1 -> error e1
+                Right a1 ->
+                    case minorArcBetween (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero) of
+                        Left e2 -> error e2
+                        Right a2 -> intersection a1 a2 `shouldBe` Nothing
         it "returns nothing if great circle intersection is outside both great arcs" $
-            case inverse (s84Pos 0 (-10) zero) (s84Pos 0 (-1) zero) of
-                Nothing -> error "fail"
-                (Just g1) ->
-                    case inverse (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero) of
-                        Nothing -> error "fail"
-                        (Just g2) -> intersection g1 g2 `shouldBe` Nothing
+            case minorArcBetween (s84Pos 0 (-10) zero) (s84Pos 0 (-1) zero) of
+                Left e1 -> error e1
+                Right a1 ->
+                    case minorArcBetween (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero) of
+                        Left e2 -> error e2
+                        Right a2 -> intersection a1 a2 `shouldBe` Nothing
         it "returns the point where the two great arcs intersect" $ do
             let spd = kilometresPerHour 1000
             let oneHour = hours 1
             let p11 = s84Pos 51.885 0.235 zero
-            let p12 = positionAfter p11 spd (decimalDegrees 108.63) oneHour
+            let p12 = positionAfter p11 (decimalDegrees 108.63) spd oneHour
             let p21 = s84Pos 49.008 2.549 zero
-            let p22 = positionAfter p21 spd (decimalDegrees 32.72) oneHour
-            case inverse p11 p12 of
-                Nothing -> error "fail"
-                (Just g1) ->
-                    case inverse p21 p22 of
-                        Nothing -> error "fail"
-                        (Just g2) ->
-                            intersection g1 g2 `shouldBe`
+            let p22 = positionAfter p21 (decimalDegrees 32.72) spd oneHour
+            case minorArcBetween p11 p12 of
+                Left e1 -> error e1
+                Right a1 ->
+                    case minorArcBetween p21 p22 of
+                        Left e2 -> error e2
+                        Right a2 ->
+                            intersection a1 a2 `shouldBe`
                             Just (s84Pos 50.9017225 4.494278333333333 zero)
     describe "intersections" $ do
         it "returns nothing if both great circle are equals" $ do

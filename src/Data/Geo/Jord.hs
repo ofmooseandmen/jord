@@ -51,4 +51,4 @@ import Data.Geo.Jord.Vector3d
 
 -- | version.
 jordVersion :: String
-jordVersion = "0.7.0.0"
+jordVersion = "1.0.0.0"

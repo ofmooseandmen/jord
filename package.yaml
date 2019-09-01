@@ -25,6 +25,7 @@ library:
   exposed-modules:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
+    - Data.Geo.Jord.Bearing
     - Data.Geo.Jord.Bodies
     - Data.Geo.Jord.Duration
     - Data.Geo.Jord.Frames
@@ -40,25 +41,26 @@ library:
     - Data.Geo.Jord.Vector3d
   other-modules:
     - Data.Geo.Jord.Parser
-    - Data.Geo.Jord.Spherical
+    - Data.Geo.Jord.Internal
 
 executables:
-  jord-repl:
-    main:                Main.hs
-    other-modules:
-      - Eval
-      - Show
-      - State
-    source-dirs:         app
-    dependencies:
-    - jord
-    - haskeline >= 0.7 && < 0.8
+#  jord-repl:
+#    main:                Main.hs
+#    other-modules:
+#      - Eval
+#      - Show
+#      - State
+#    source-dirs:         app
+#    dependencies:
+#    - jord
+#   - haskeline >= 0.7 && < 0.8
   jord-benchmarks:
     main:                Main.hs
     other-modules:
-      - GeodeticsBG
+      - BearingBG
+      - GreatCircleBG
       - KinematicsBG
-      - TransformationBG
+      - PositionBG
     source-dirs:         benchmarks
     dependencies:
     - jord

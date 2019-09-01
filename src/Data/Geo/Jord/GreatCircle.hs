@@ -27,6 +27,8 @@ module Data.Geo.Jord.GreatCircle
     , angularDistance
     , crossTrackDistance
     , crossTrackDistance'
+    , greatCircleDistance
+    , greatCircleDestination
     , interpolate
     , intersection
     , intersections
@@ -49,7 +51,7 @@ import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Spherical
+import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Vector3d
 
 -- | A circle on the __surface__ of a __sphere__ which lies in a plane
@@ -192,6 +194,31 @@ crossTrackDistance p (GreatCircle n _ _) = arcLength (sub a (decimalDegrees 90))
 --
 crossTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
 crossTrackDistance' p s b = crossTrackDistance p (greatCircleHeadingOn s b)
+
+-- | @greatCircleDestination p b d@ computes the position along the great circle, reached from
+-- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@.
+-- Note that the  bearing will normally vary before destination is reached.
+-- TODO examples + mention great circle vs geodesic?
+greatCircleDestination :: (Spherical a) => Position a -> Angle -> Length -> Position a
+greatCircleDestination p b d
+    | d == zero = p
+    | otherwise = nvh nvd (height p) (model p)
+  where
+    nv = nvec p
+    ed = vunit (vcross nvNorthPole nv) -- east direction vector at v
+    nd = vcross nv ed -- north direction vector at v
+    r = radius p
+    ta = central d r -- central angle
+    de = vadd (vscale nd (cos' b)) (vscale ed (sin' b)) -- vunit vector in the direction of the azimuth
+    nvd = vadd (vscale nv (cos' ta)) (vscale de (sin' ta))
+
+-- | @greatCircleDistance p1 p2@ computes the surface distance on the great circle between the
+-- positions @p1@ and @p2@.
+-- TODO examples + mention great circle vs geodesic?
+greatCircleDistance :: (Spherical a) => Position a -> Position a -> Length
+greatCircleDistance p1 p2 = arcLength a (radius p1)
+  where
+    a = radians (angleRadians (nvec p1) (nvec p2))
 
 -- | @interpolate p0 p1 f# computes the position at fraction @f@ between the @p0@ and @p1@.
 --

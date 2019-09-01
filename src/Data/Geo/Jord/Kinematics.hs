@@ -45,12 +45,14 @@ import Control.Applicative ((<|>))
 import Data.Maybe (fromJust, isNothing)
 
 import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Bearing
 import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Duration
+import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Spherical
+import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Speed
 import Data.Geo.Jord.Vector3d
 
@@ -162,7 +164,7 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
     t = timeToCpa p1 c1 s1 p2 c2 s2
     cp1 = position' p1 c1 s1 t
     cp2 = position' p2 c2 s2 t
-    d = surfaceDistance cp1 cp2 (radius p1)
+    d = greatCircleDistance cp1 cp2
 
 -- | @intercept t p@ computes the __minimum__ speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place.
@@ -236,7 +238,7 @@ interceptByTime t p d
          in Just (Intercept d idist ipos (fromJust ib) is)
   where
     ipos = trackPositionAfter t d
-    idist = surfaceDistance p ipos (radius p)
+    idist = greatCircleDistance p ipos
     ib = initialBearing p ipos <|> initialBearing p (trackPosition t)
 
 -- private

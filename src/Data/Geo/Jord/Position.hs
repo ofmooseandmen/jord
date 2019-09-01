@@ -62,9 +62,9 @@ module Data.Geo.Jord.Position
     , latLong
     , latLong'
     , northPole
+    , southPole
     , nvNorthPole
     , nvSouthPole
-    , southPole
     ) where
 
 import Text.ParserCombinators.ReadP (ReadP, option, readP_to_S, skipSpaces)
@@ -359,7 +359,7 @@ latLong' p = (latitude p, longitude p)
 nvh :: (Model a) => Vector3d -> Length -> a -> Position a
 nvh nv h m = Position lat lon h nv e m
   where
-    (lat, lon) = nvectorToLatLong' nv
+    (lat, lon) = llWrapped nv (longitudeRange m)
     e = nvectorToEcef' (nv, h) (shape m)
 
 nvectorToLatLong' :: Vector3d -> (Angle, Angle)

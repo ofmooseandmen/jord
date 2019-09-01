@@ -44,7 +44,7 @@ spec =
         describe "cpa" $ do
             it "returns nothing for trailing tracks at same speed" $ do
                 let p1 = s84Pos 20 30 zero
-                let px = destination p1 (decimalDegrees 20) (kilometres 1)
+                let px = greatCircleDestination p1 (decimalDegrees 20) (kilometres 1)
                 let p2 = interpolate p1 px 0.25
                 let b1 = fromJust (initialBearing p1 px)
                 let b2 = fromJust (initialBearing p2 px)
@@ -53,7 +53,7 @@ spec =
                 cpa t1 t2 `shouldBe` Nothing
             it "returns nothing for trailing tracks with track ahead escaping" $ do
                 let p1 = s84Pos 20 30 zero
-                let px = destination p1 (decimalDegrees 20) (kilometres 1)
+                let px = greatCircleDestination p1 (decimalDegrees 20) (kilometres 1)
                 let p2 = interpolate p1 px 0.25
                 let b1 = fromJust (initialBearing p1 px)
                 let b2 = fromJust (initialBearing p2 px)
@@ -62,7 +62,7 @@ spec =
                 cpa t1 t2 `shouldBe` Nothing
             it "handles trailing tracks with track behind catching up" $ do
                 let p1 = s84Pos 20 30 zero
-                let px = destination p1 (decimalDegrees 20) (kilometres 1)
+                let px = greatCircleDestination p1 (decimalDegrees 20) (kilometres 1)
                 let p2 = interpolate p1 px 0.25
                 let b1 = fromJust (initialBearing p1 px)
                 let b2 = fromJust (initialBearing p2 px)

@@ -8,15 +8,6 @@ import Data.Geo.Jord
 
 spec :: Spec
 spec = do
-    describe "antipode" $ do
-        it "returns the antipodal position" $ do
-            let p = s84Pos 45 154 (metres 15000)
-            let e = s84Pos (-45) (-26) (metres 15000)
-            antipode p `shouldBe` e
-        it "returns the south pole when called with the north pole" $
-            antipode (northPole S84) `shouldBe` southPole S84
-        it "returns the north pole when called with the south pole" $
-            antipode (southPole S84) `shouldBe` northPole S84
     describe "destination" $ do
         it "return the given position if distance is 0 meter" $ do
             let p0 = s84Pos 53.320556 (-1.729722) zero

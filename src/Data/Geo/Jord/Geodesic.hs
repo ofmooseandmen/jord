@@ -1,11 +1,5 @@
 module Data.Geo.Jord.Geodesic
-    ( Geodesic
-    , geodesicStart
-    , geodesicEnd
-    , geodesicLength
-    , geodesicInitialBearing
-    , geodesicFinalBearing
-    , direct
+    ( direct
     , inverse
     , antipode
     , destination
@@ -21,33 +15,11 @@ import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Vector3d
 
-data Geodesic a =
-    Geodesic
-        { geodesicStart :: Position a
-        , geodesicEnd :: Position a
-        , geodesicLength :: Length
-        , geodesicInitialBearing :: Angle
-        , geodesicFinalBearing :: Angle
-        }
-    deriving (Eq, Show)
+direct :: (Model a) => Position a -> Angle -> Length -> Maybe (Position a, Angle)
+direct p b d = Nothing
 
-direct :: (Model a) => Position a -> Angle -> Length -> Maybe (Geodesic a)
-direct p b d = fmap (Geodesic p e d b) fb
-  where
-    e = destination p b d
-    fb = finalBearing p e
-
-inverse :: (Model a) => Position a -> Position a -> Maybe (Geodesic a)
-inverse p1 p2 =
-    pure (Geodesic p1 p2) <*> surfaceDistance p1 p2 <*> initialBearing p1 p2 <*> finalBearing p1 p2
-
--- | @antipode p@ computes the antipodal position of @p@: the position which is
--- diametrically opposite to @p@.
-antipode :: (Model a) => Position a -> Position a
-antipode p = nvh nv h (model p)
-  where
-    h = height p
-    nv = vscale (nvec p) (-1.0)
+inverse :: (Model a) => Position a -> Position a -> Maybe (Length, Angle, Angle)
+inverse p1 p2 = Nothing
 
 -- | @destination p b d@ computes the position reached from position @p@ having
 -- travelled the distance @d@ on the initial bearing (compass angle) @b@.

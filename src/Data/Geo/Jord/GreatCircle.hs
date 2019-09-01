@@ -6,7 +6,8 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Geographical Position calculations on great circles, i.e. assuming a __spherical__ earth model.
+-- Geographical Position calculations on great circles, i.e. using a __sphere__ to represent
+-- the celestial body that positions refer to..
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -43,7 +44,6 @@ import Data.List (subsequences)
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bodies
-import Data.Geo.Jord.Geodesic
 import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
@@ -61,21 +61,20 @@ data GreatCircle a =
     GreatCircle !Vector3d !a String
     deriving (Eq)
 
-instance Show (GreatCircle a) where
+instance (Model a) => Show (GreatCircle a) where
     show (GreatCircle _ _ s) = s
 
--- | 'GreatCircle' from geodesic. -- TODO great circle description
-greatCircle :: (Spherical a) => Geodesic a -> GreatCircle a
-greatCircle g = GreatCircle (normal g) (model . geodesicStart $ g) ""
+-- | 'GreatCircle' from 'MinorArc'. -- TODO great circle description
+greatCircle :: (Spherical a) => MinorArc a -> GreatCircle a
+greatCircle (MinorArc n s _) = GreatCircle n (model s) ""
 
 -- | 'GreatCircle' passing by both given positions.
 -- A 'Left' indicates that given positions are equal.
 --
 -- @
---     TODO new API, great circle description
---     let p1 = decimalLatLongHeight 45.0 (-143.5) (metres 1500) S84
---     let p2 = decimalLatLongHeight 46.0 14.5 (metres 3000) S84
---     greatCircleThrough p1 p2 -- heights are ignored, great circle are always at earth surface.
+--     let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
+--     let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
+--     greatCircleThrough p1 p2 -- heights are ignored, great circle is always at surface.
 -- @
 greatCircleThrough :: (Spherical a) => Position a -> Position a -> Either String (GreatCircle a)
 greatCircleThrough p1 p2
@@ -85,8 +84,9 @@ greatCircleThrough p1 p2
 -- | 'GreatCircle' passing by the given position and heading on given bearing.
 --
 -- @
---     TODO new API, great circle description
---     greatCircleHeadingOn (readPoint "283321N0290700W" S84) decimalDegrees 33.0
+--     let p = latLongPos 45.0 (-143.5) S84
+--     let b = decimalDegrees 33.0
+--     greatCircleHeadingOn p b
 -- @
 greatCircleHeadingOn :: (Spherical a) => Position a -> Angle -> GreatCircle a
 greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) ""
@@ -97,18 +97,27 @@ greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) ""
     e' = vscale e (cos' b / vnorm e)
     n' = vscale n (sin' b / vnorm n)
 
--- | @alongTrackDistance p ga@ how far Position @p@ is along a path described
--- by geodesic arc @g@: if a perpendicular is drawn from @p@  to the great arc, the
+-- | Minor arc of a great circle between two positions.
+data MinorArc a = MinorArc !Vector3d (Position a) (Position a)
+    deriving (Eq)
+
+instance (Model a) => Show (MinorArc a) where
+  show (MinorArc _ s e) = "Minor Arc { from: " ++ (show s) ++ ", to: " ++ (show e) ++ "}"
+
+
+-- | @alongTrackDistance p a@ computes how far Position @p@ is along a path described
+-- by the minor arc @a@: if a perpendicular is drawn from @p@  to the path, the
 -- along-track distance is the signed distance from the start point to where the
 -- perpendicular crosses the path.
 --
+-- @ TODO review
+--     let p = s84Pos 53.2611 (-0.7972) zero
+--     let g = inverse (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
+--     alongTrackDistance p g
+--     -- 62.3315757 kilometres
 -- @
---     let p = decimalLatLong 53.2611 (-0.7972) S84
---     let ga = greatArcBetween (decimalLatLong 53.3206 (-1.7297)) (decimalLatLong 53.1887 0.1334)
---     alongTrackDistance p ga -- 62.3315757 kilometres
--- @
-alongTrackDistance :: (Spherical a) => Position a -> Geodesic a -> Length
-alongTrackDistance p g = alongTrackDistance'' p (geodesicStart g) (normal g)
+alongTrackDistance :: (Spherical a) => Position a -> MinorArc a -> Length
+alongTrackDistance p (MinorArc n s _) = alongTrackDistance'' p s n
 
 alongTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
 alongTrackDistance' p s b = alongTrackDistance'' p s n
@@ -184,7 +193,7 @@ interpolate p0 p1 f
     iv = vunit (vadd nv0 (vscale (vsub nv1 nv0) f))
     ih = lrph h0 h1 f
 
--- | Computes the intersection between the two given 'Geodesic's.
+-- | Computes the intersection between the two given minor arcs of great circle.
 --
 -- see also 'intersections'
 --
@@ -197,16 +206,14 @@ interpolate p0 p1 f
 --     let ga2 = greatArc (t2, oneHour)
 --     intersection ga1 ga2 = Just (decimalLatLong 50.9017225 4.494278333333333)
 -- @
-intersection :: (Spherical a) => Geodesic a -> Geodesic a -> Maybe (Position a)
-intersection g1 g2 =
-    case intersections' (normal g1) (normal g2) m of
+intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Position a)
+intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
+    case intersections' n1 n2 (model s1) of
         Nothing -> Nothing
         (Just (i1, i2))
-            | isBetween i1 g1 && isBetween i1 g2 -> Just i1
-            | isBetween i2 g1 && isBetween i2 g2 -> Just i2
+            | isBetween i1 a1 && isBetween i1 a2 -> Just i1
+            | isBetween i2 a1 && isBetween i2 a2 -> Just i2
             | otherwise -> Nothing
-  where
-    m = model . geodesicStart $ g1
 
 -- | Computes the intersections between the two given 'GreatCircle's.
 -- Two 'GreatCircle's intersect exactly twice unless there are equal (regardless of orientation),
@@ -222,17 +229,18 @@ intersection g1 g2 =
 intersections :: (Spherical a) => GreatCircle a -> GreatCircle a -> Maybe (Position a, Position a)
 intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 
--- | @isBetween p g@ determines whether position @p@ is between start and end points
--- of the 'Geodesic' @ga@.
--- If @p@ is not on the geodesic, returns whether @p@ is within the area bound
--- by perpendiculars to the geodesic at each point (in the same hemisphere).
+-- | @isBetween p a@ determines whether position @p@ is within the minor arc
+-- of great circle @a@.
 --
-isBetween :: (Spherical a) => Position a -> Geodesic a -> Bool
-isBetween p g = between && hemisphere
+-- If @p@ is not on the arc, returns whether @p@ is within the area bound
+-- by perpendiculars to the arc at each point (in the same hemisphere).
+--
+isBetween :: (Spherical a) => Position a -> MinorArc a -> Bool
+isBetween p (MinorArc _ s e) = between && hemisphere
   where
     v0 = nvec p
-    v1 = nvec . geodesicStart $ g
-    v2 = nvec . geodesicEnd $ g
+    v1 = nvec s
+    v2 = nvec e
     v10 = vsub v0 v1
     v12 = vsub v2 v1
     v20 = vsub v0 v2
@@ -327,9 +335,6 @@ intersections' n1 n2 s
 -- | reference sphere radius.
 radius :: (Spherical a) => Position a -> Length
 radius = modelRadius . model
-
-normal :: (Spherical a) => Geodesic a -> Vector3d
-normal g = normal' (geodesicStart g) (geodesicEnd g)
 
 normal' :: (Spherical a) => Position a -> Position a -> Vector3d
 normal' p1 p2 = vcross (nvec p1) (nvec p2)

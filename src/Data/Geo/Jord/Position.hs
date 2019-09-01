@@ -56,6 +56,7 @@ module Data.Geo.Jord.Position
     , readPosition
     , positionP
     -- * Misc.
+    , antipode
     , nvector
     , ecef
     , latLong
@@ -154,6 +155,14 @@ ey (EcefVector _ y _) = y
 -- | z-component of the given 'EcefVector'.
 ez :: EcefVector -> Length
 ez (EcefVector _ _ z) = z
+
+-- | @antipode p@ computes the antipodal position of @p@: the position which is
+-- diametrically opposite to @p@.
+antipode :: (Model a) => Position a -> Position a
+antipode p = nvh nv h (model p)
+  where
+    h = height p
+    nv = vscale (nvec p) (-1.0)
 
 -- | @nvector p@ returns the horizontal position of position @p@ as a /n/-vector.
 nvector :: (Model a) => Position a -> NVector
@@ -265,9 +274,13 @@ s84Pos lat lon h = latLongHeightPos lat lon h S84
 s84Pos' :: Angle -> Angle -> Length -> Position S84
 s84Pos' lat lon h = latLongHeightPos' lat lon h S84
 
+-- | 'Position' from given x, y and z ECEF coordinates with respect to
+-- the given model.
 ecefPos :: (Model a) => Length -> Length -> Length -> a -> Position a
 ecefPos x y z = ecefMetresPos (toMetres x) (toMetres y) (toMetres z)
 
+-- | 'Position' from given x, y and z ECEF coordinates in __metres__ with
+-- respect to the given model.
 ecefMetresPos :: (Model a) => Double -> Double -> Double -> a -> Position a
 ecefMetresPos x y z m = Position lat lon h nv ev m
   where
@@ -275,35 +288,51 @@ ecefMetresPos x y z m = Position lat lon h nv ev m
     (nv, h) = nvectorFromEcef' ev (shape m)
     (lat, lon) = nvectorToLatLong' nv
 
+-- | 'Position' from given /n/-vector x, y, z coordinates at the surface
+-- of the given model. Vector (x, y, z) will be normalised to a unit vector
+-- to get a valid /n/-vector.
 nvectorPos :: (Model a) => Double -> Double -> Double -> a -> Position a
 nvectorPos x y z = nvectorHeightPos x y z zero
 
+-- | 'Position' from given /n/-vector x, y, z coordinates and height with
+-- around the given model. Vector (x, y, z) will be normalised to a unit vector
+-- to get a valid /n/-vector.
 nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Position a
 nvectorHeightPos x y z = nvh (vunit (Vector3d x y z))
 
+-- | @nvectorToLatLong nv@ returns (latitude, longitude) pair equivalent to the
+-- given /n/-vector @nv@.
 nvectorToLatLong :: NVector -> (Angle, Angle)
 nvectorToLatLong nv = nvectorToLatLong' (Vector3d (nx nv) (ny nv) (nz nv))
 
+-- | @nvectorToLatLong ll@ returns /n/-vector equivalent to the
+-- given (latitude, longitude) pair @ll@.
 nvectorFromLatLong :: (Angle, Angle) -> NVector
 nvectorFromLatLong ll = NVector x y z
   where
     (Vector3d x y z) = nvectorFromLatLong' ll
 
+-- | @nvectorToEcef (nv, h) s@ returns the ECEF vector equivalent to the
+-- given /n/-vector @nv@ and height @h@ using the celestial body shape @s@.
 nvectorToEcef :: (NVector, Length) -> Shape -> EcefVector
 nvectorToEcef (nv, h) s = EcefVector (metres x) (metres y) (metres z)
   where
     v = Vector3d (nx nv) (ny nv) (nz nv)
     (Vector3d x y z) = nvectorToEcef' (v, h) s
 
+-- | @nvectorFromEcef ev s@ returns the /n/-vector equivalent to the
+-- given ECEF vector @ev@ using the celestial body shape @s@.
 nvectorFromEcef :: EcefVector -> Shape -> (NVector, Length)
 nvectorFromEcef ev s = (NVector x y z, h)
   where
     v = Vector3d (toMetres . ex $ ev) (toMetres . ey $ ev) (toMetres . ez $ ev)
     (Vector3d x y z, h) = nvectorFromEcef' v s
 
+-- | (latitude, longitude) pair in __decimal degrees__ from given position.
 latLong :: (Model a) => Position a -> (Double, Double)
 latLong p = (toDecimalDegrees . latitude $ p, toDecimalDegrees . longitude $ p)
 
+-- | (latitude, longitude) pair from given position.
 latLong' :: (Model a) => Position a -> (Angle, Angle)
 latLong' p = (latitude p, longitude p)
 

@@ -8,6 +8,16 @@ import Data.Geo.Jord
 
 spec :: Spec
 spec = do
+  describe "antipode" $ do
+      it "returns the antipodal position" $ do
+          antipode (wgs84Pos 45 154 (metres 15000)) `shouldBe` (wgs84Pos (-45) (-26) (metres 15000))
+          antipode (s84Pos 45 154 (metres 15000)) `shouldBe` s84Pos (-45) (-26) (metres 15000)
+      it "returns the south pole when called with the north pole" $ do
+          antipode (northPole WGS84) `shouldBe` southPole WGS84
+          antipode (northPole S84) `shouldBe` southPole S84
+      it "returns the north pole when called with the south pole" $ do
+          antipode (southPole WGS84) `shouldBe` northPole WGS84
+          antipode (southPole S84) `shouldBe` northPole S84
     describe "Geodetic <=> Geocentric (Ellipsoidal)" $ do
         it "n-vector <=> ECEF" $ do
             let p = nvectorPos 0.5 0.5 0.7071 WGS84

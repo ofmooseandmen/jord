@@ -49,10 +49,10 @@ import Data.Geo.Jord.Bearing
 import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Duration
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Speed
 import Data.Geo.Jord.Vector3d
 
@@ -100,7 +100,8 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
     r = mdot (mdot (rz (negate' lon)) (ry lat)) (rx b)
 
 -- | @positionAfter p b s d@ computes the position of a vehicle currently at position @p@
--- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed.
+-- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed assuming
+-- that the vehicle does not change altitude.
 --
 -- @positionAfter p b s d@ is a shortcut for @positionAfter' ('course' p b) s d@.
 --
@@ -116,11 +117,13 @@ positionAfter :: (Spherical a) => Position a -> Angle -> Speed -> Duration -> Po
 positionAfter p b s d = position' p (course p b) s (toSeconds d)
 
 -- | @positionAfter p c s d@ computes the position of a vehicle currently at position @p@
--- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed.
+-- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed assuming
+-- that the vehicle does not change altitude.
 positionAfter' :: (Spherical a) => Position a -> Course -> Speed -> Duration -> Position a
 positionAfter' p c s d = position' p c s (toSeconds d)
 
--- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed.
+-- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed
+-- assuming that the vehicle does not change altitude.
 --
 -- @trackPositionAfter ('Track' p b s) d@ is a equivalent to @positionAfter' p ('course' p b) s d@.
 --
@@ -135,7 +138,10 @@ positionAfter' p c s d = position' p c s (toSeconds d)
 trackPositionAfter :: (Spherical a) => Track a -> Duration -> Position a
 trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 
--- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@.
+-- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@ disregarding
+-- their respective altitude.
+-- If a closest point of approach is found, height of 'cpaPosition1' - respectively 'cpaPosition2',
+-- will be the height of the first - respectively second, track.
 --
 -- ==== __Examples__
 --
@@ -155,7 +161,7 @@ trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 --
 cpa :: (Spherical a) => Track a -> Track a -> Maybe (Cpa a)
 cpa (Track p1 b1 s1) (Track p2 b2 s2)
-    | p1 == p2 = Just (Cpa zero zero p1 p2)
+    | llEq p1 p2 = Just (Cpa zero zero p1 p2)
     | t < 0 = Nothing
     | otherwise = Just (Cpa (seconds t) d cp1 cp2)
   where
@@ -174,6 +180,9 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 --     * interceptor and target are at the same position
 --
 --     * interceptor is "behind" the target
+--
+-- The computation disregards the altitude of both the track and the interceptor. If an intercept
+-- is found 'interceptPosition' will be at the altitude of the track.
 --
 -- ==== __Examples__
 --
@@ -195,6 +204,10 @@ intercept t p = interceptByTime t p (seconds (timeToIntercept t p))
 --     * interceptor and target are at the same position
 --
 --     * interceptor speed is below minimum speed returned by 'intercept'
+--
+-- The computation disregards the altitude of both the track and the interceptor. If an intercept
+-- is found 'interceptPosition' will be at the altitude of the track.
+--
 interceptBySpeed :: (Spherical a) => Track a -> Position a -> Speed -> Maybe (Intercept a)
 interceptBySpeed t p s
     | isNothing minInt = Nothing
@@ -207,6 +220,9 @@ interceptBySpeed t p s
 -- position @p@ needed for an intercept with target track @t@ to take place
 -- after duration @d@. Returns 'Nothing' if given duration is <= 0 or
 -- interceptor and target are at the same position.
+--
+-- The computation disregards the altitude of both the track and the interceptor. If an intercept
+-- is found 'interceptPosition' will be at the altitude of the track.
 --
 -- Note: contrary to 'intercept' and 'interceptBySpeed' this function handles
 -- cases where the interceptor has to catch up the target.
@@ -231,7 +247,7 @@ interceptBySpeed t p s
 interceptByTime :: (Spherical a) => Track a -> Position a -> Duration -> Maybe (Intercept a)
 interceptByTime t p d
     | toMilliseconds d <= 0 = Nothing
-    | trackPosition t == p = Nothing
+    | llEq (trackPosition t) p = Nothing
     | isNothing ib = Nothing
     | otherwise =
         let is = averageSpeed idist d
@@ -242,7 +258,6 @@ interceptByTime t p d
     ib = initialBearing p ipos <|> initialBearing p (trackPosition t)
 
 -- private
-
 -- | position from speed course and seconds.
 position' :: (Spherical a) => Position a -> Course -> Speed -> Double -> Position a
 position' p0 (Course c) s sec = nvh v1 h0 (model p0)
@@ -415,7 +430,6 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
 -- course c2 and speed s2.
 sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Double -> Double -> Double
 sep v10 v20 c2 s2 r ti = angleRadians v10 (position'' v20 c2 s2 ti r)
-
 
 -- | reference sphere radius.
 radius :: (Spherical a) => Position a -> Length

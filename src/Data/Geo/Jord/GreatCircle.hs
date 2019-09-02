@@ -48,10 +48,10 @@ import Data.List (subsequences)
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bodies
+import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Vector3d
 
 -- | A circle on the __surface__ of a __sphere__ which lies in a plane
@@ -80,7 +80,7 @@ instance (Model a) => Show (GreatCircle a) where
 --
 greatCircleThrough :: (Spherical a) => Position a -> Position a -> Either String (GreatCircle a)
 greatCircleThrough p1 p2
-    | p1 == p2 = Left "Invalid Great Circle: positions are equal"
+    | llEq p1 p2 = Left "Invalid Great Circle: positions are equal"
     | otherwise = Right (GreatCircle (normal' p1 p2) (model p1) dscr)
   where
     dscr = "Great Circle { through " ++ show p1 ++ " & " ++ show p2 ++ " }"
@@ -116,7 +116,7 @@ instance (Model a) => Show (MinorArc a) where
 -- | @minorArcBetween p1 p2@ return the 'MinorArc' from @p1@ to @p2@.
 minorArcBetween :: (Spherical a) => Position a -> Position a -> Either String (MinorArc a)
 minorArcBetween p1 p2
-    | p1 == p2 = Left "Invalid Minor Arc: positions are equal"
+    | llEq p1 p2 = Left "Invalid Minor Arc: positions are equal"
     | otherwise = Right (MinorArc (normal' p1 p2) p1 p2)
 
 -- | @alongTrackDistance p a@ computes how far Position @p@ is along a path described
@@ -309,8 +309,8 @@ isBetween p (MinorArc _ s e) = between && hemisphere
     between = e1 >= 0 && e2 >= 0
     hemisphere = vdot v0 v1 >= 0 && vdot v0 v2 >= 0
 
--- | @isInsideSurface p ps@ determines whether position @p@ is inside the polygon defined by
--- positions @ps@.
+-- | @isInsideSurface p ps@ determines whether position @p@ is inside the __surface__ polygon defined by
+-- positions @ps@ (i.e. ignoring the height of the positions).
 -- The polygon can be opened or closed (i.e. if @head ps /= last ps@).
 --
 -- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
@@ -336,7 +336,7 @@ isBetween p (MinorArc _ s e) = between && hemisphere
 isInsideSurface :: (Spherical a) => Position a -> [Position a] -> Bool
 isInsideSurface p ps
     | null ps = False
-    | head ps == last ps = isInsideSurface p (init ps)
+    | llEq (head ps) (last ps) = isInsideSurface p (init ps)
     | length ps < 3 = False
     | otherwise =
         let aSum =
@@ -377,7 +377,6 @@ mean ps =
     nv = vunit $ foldl vadd vzero vs
 
 -- private
-
 alongTrackDistance'' :: (Spherical a) => Position a -> Position a -> Vector3d -> Length
 alongTrackDistance'' p s n = arcLength a (radius s)
   where

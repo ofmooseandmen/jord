@@ -8,6 +8,7 @@
 --
 -- Ellipsoidal and derived spherical models representing celestial bodies.
 --
+-- TODO: CelestialBody.hs and generated file CelestialBodies.hs
 module Data.Geo.Jord.Bodies
     ( Shape(..)
     , Ellipse(..)

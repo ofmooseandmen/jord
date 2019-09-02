@@ -11,7 +11,7 @@
 module Data.Geo.Jord.Internal
     ( angleRadians
     , signedAngleRadians
-    , posEq
+    , llEq
     ) where
 
 import Data.Geo.Jord.Position
@@ -31,6 +31,7 @@ signedAngleRadians v1 v2 n = atan2 sinO cosO
     sinO = sign * vnorm (vcross v1 v2)
     cosO = vdot v1 v2
 
--- | both position have same latitude and longitude ?
-posEq :: Position a -> Position a -> Bool
-posEq p1 p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2
+-- | both position have same latitude and longitude irrespective of model ?
+-- TODO add test where height is ignored (cpa, intercept, ...)
+llEq :: Position a -> Position a -> Bool
+llEq p1 p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2

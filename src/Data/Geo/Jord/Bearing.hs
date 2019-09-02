@@ -28,7 +28,7 @@ import Data.Geo.Jord.Vector3d
 -- Returns 'Nothing' if both positions are equals.
 finalBearing :: (Model a) => Position a -> Position a -> Maybe Angle
 finalBearing p1 p2
-    | posEq p1 p2 = Nothing
+    | llEq p1 p2 = Nothing
     | otherwise =
         case shape . model $ p1 of
             (Sphere _) -> Just (sFinalBearing p1 p2)
@@ -41,7 +41,7 @@ finalBearing p1 p2
 -- Returns 'Nothing' if both positions are equals.
 initialBearing :: (Model a) => Position a -> Position a -> Maybe Angle
 initialBearing p1 p2
-    | posEq p1 p2 = Nothing
+    | llEq p1 p2 = Nothing
     | otherwise =
         case shape . model $ p1 of
             (Sphere _) -> Just (sInitialBearing p1 p2)

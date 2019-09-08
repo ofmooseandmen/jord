@@ -14,8 +14,9 @@ module Data.Geo.Jord.Bearing
     ) where
 
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Bodies
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Internal
+import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Vector3d
 
@@ -30,9 +31,9 @@ finalBearing :: (Model a) => Position a -> Position a -> Maybe Angle
 finalBearing p1 p2
     | llEq p1 p2 = Nothing
     | otherwise =
-        case shape . model $ p1 of
-            (Sphere _) -> Just (sFinalBearing p1 p2)
-            (Ellipsoid _) -> Nothing -- TODO ellispoidal
+        if isSphere' p1
+            then Just (sFinalBearing p1 p2)
+            else Nothing -- TODO ellispoidal
 
 -- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 --
@@ -43,9 +44,9 @@ initialBearing :: (Model a) => Position a -> Position a -> Maybe Angle
 initialBearing p1 p2
     | llEq p1 p2 = Nothing
     | otherwise =
-        case shape . model $ p1 of
-            (Sphere _) -> Just (sInitialBearing p1 p2)
-            (Ellipsoid _) -> error "TODO ellispoidal"
+        if isSphere' p1
+            then Just (sInitialBearing p1 p2)
+            else Nothing --  "TODO ellispoidal"
 
 sFinalBearing :: Position a -> Position a -> Angle
 sFinalBearing p1 p2 = normalise (sInitialBearing p2 p1) (decimalDegrees 180)
@@ -58,3 +59,6 @@ sInitialBearing p1 p2 = normalise a (decimalDegrees 360)
     gc1 = vcross v1 v2 -- great circle through p1 & p2
     gc2 = vcross v1 nvNorthPole -- great circle through p1 & north pole
     a = radians (signedAngleRadians gc1 gc2 (Just v1))
+
+isSphere' :: (Model a) => Position a -> Bool
+isSphere' = isSphere . surface . model

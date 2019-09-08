@@ -1,4 +1,4 @@
-module Data.Geo.Jord.FramesSpec
+module Data.Geo.Jord.LocalFramesSpec
     ( spec
     ) where
 

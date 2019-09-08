@@ -19,14 +19,17 @@
 module Data.Geo.Jord
     ( module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.Bearing
-    , module Data.Geo.Jord.Bodies
     , module Data.Geo.Jord.Duration
-    , module Data.Geo.Jord.Frames
+    , module Data.Geo.Jord.Ellipsoid
+    , module Data.Geo.Jord.Ellipsoids
+    , module Data.Geo.Jord.LocalFrames
     , module Data.Geo.Jord.Geodesic
     , module Data.Geo.Jord.GreatCircle
     , module Data.Geo.Jord.Kinematics
     , module Data.Geo.Jord.LatLong
     , module Data.Geo.Jord.Length
+    , module Data.Geo.Jord.Model
+    , module Data.Geo.Jord.Models
     , module Data.Geo.Jord.Position
     , module Data.Geo.Jord.Quantity
     , module Data.Geo.Jord.Rotation
@@ -37,15 +40,18 @@ module Data.Geo.Jord
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bearing
-import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Duration
-import Data.Geo.Jord.Frames
+import Data.Geo.Jord.Ellipsoid
+import Data.Geo.Jord.Ellipsoids
 import Data.Geo.Jord.Geodesic
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Kinematics
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
-import Data.Geo.Jord.Position hiding (evec, nvNorthPole, nvSouthPole, nvec, nvh)
+import Data.Geo.Jord.LocalFrames
+import Data.Geo.Jord.Model
+import Data.Geo.Jord.Models
+import Data.Geo.Jord.Position hiding (gcvec, nvNorthPole, nvSouthPole, nvec, nvh)
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Rotation
 import Data.Geo.Jord.Speed

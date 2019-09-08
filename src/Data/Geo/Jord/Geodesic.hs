@@ -6,8 +6,8 @@ module Data.Geo.Jord.Geodesic
     ) where
 
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 
 direct :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a, Angle)

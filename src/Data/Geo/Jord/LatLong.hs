@@ -23,7 +23,7 @@ import Data.Maybe ()
 import Text.ParserCombinators.ReadP (ReadP, char, option, pfail)
 
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Bodies
+import Data.Geo.Jord.Model
 import Data.Geo.Jord.Parser
 
 -- | @isValidLatLong lat lon m@ determines whether the given latitude & longitude are

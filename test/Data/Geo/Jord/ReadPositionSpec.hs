@@ -63,8 +63,9 @@ spec = do
             mapMaybe (`readPosition` S84) texts `shouldBe` positions
         it "reads Mars surface positions" $ do
             let texts = ["54S360E", "55°36'21''N 341°34'02''E"]
-            let positions = [latLongPos (-54.0) 360 Mars, latLongPos 55.6058333 341.5672222 Mars]
-            mapMaybe (`readPosition` Mars) texts `shouldBe` positions
+            let positions =
+                    [latLongPos (-54.0) 360 Mars2000, latLongPos 55.6058333 341.5672222 Mars2000]
+            mapMaybe (`readPosition` Mars2000) texts `shouldBe` positions
     describe "Attempting to read invalid DMS text" $ do
         it "fails to read syntactically invalid positions" $ do
             let texts = ["553621K0130002E", "011659S0364900Z", "4736221221955W", "54480S0681811W"]
@@ -74,4 +75,4 @@ spec = do
             mapMaybe (`readPosition` WGS84) texts `shouldBe` []
         it "fails to read invalid Mars surface positions" $ do
             let texts = ["914807S0681811E", "5448S06818W"]
-            mapMaybe (`readPosition` Mars) texts `shouldBe` []
+            mapMaybe (`readPosition` Mars2000) texts `shouldBe` []

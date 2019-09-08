@@ -6,18 +6,22 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Type and functions for working with delta vectors in different reference frames.
+-- Type and functions for working with delta vectors in different local reference frames: all frames are location dependent.
+-- 
+-- Notes:
 --
--- Note: though the API accept spherical models, doing so defeats the purpose of this module
--- which is to find exact solutions. Prefer using ellipsoidal models.
+--     * The term Earth is used to be consistent with the paper. However any celestial body reference frame can be used.
+--
+--     * Though the API accept spherical models, doing so defeats the purpose of this module
+--       which is to find exact solutions. Prefer using ellipsoidal models.
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
-module Data.Geo.Jord.Frames
+module Data.Geo.Jord.LocalFrames
     (
-    -- * Reference frame
-      Frame(..)
+    -- * Local Reference frame
+      LocalFrame(..)
     -- * Body frame
     , FrameB
     , yaw
@@ -25,7 +29,7 @@ module Data.Geo.Jord.Frames
     , roll
     , bOrigin
     , frameB
-    -- * Local frame
+    -- * Local level/wander azimuth frame
     , FrameL
     , wanderAzimuth
     , lOrigin
@@ -59,13 +63,13 @@ module Data.Geo.Jord.Frames
     ) where
 
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Rotation
 import Data.Geo.Jord.Vector3d
 
--- | class for reference frames.
+-- | class for local reference frames: a reference frame which is location dependant.
 --
 -- Supported frames:
 --
@@ -75,7 +79,7 @@ import Data.Geo.Jord.Vector3d
 --
 --     * 'FrameN': 'rEF' returns R_EN
 --
-class Frame a where
+class LocalFrame a where
     rEF :: a -> [Vector3d] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
 
 -- | Body frame (typically of a vehicle).
@@ -101,7 +105,7 @@ frameB :: (Model a) => Angle -> Angle -> Angle -> Position a -> FrameB a
 frameB = FrameB
 
 -- | R_EB: frame B to Earth
-instance Frame (FrameB a) where
+instance LocalFrame (FrameB a) where
     rEF (FrameB y p r o) = rm
       where
         rNB = zyx2r y p r
@@ -134,7 +138,7 @@ data FrameL a =
     deriving (Eq, Show)
 
 -- | R_EL: frame L to Earth
-instance Frame (FrameL m) where
+instance LocalFrame (FrameL m) where
     rEF (FrameL w o) = rm
       where
         lat = latitude o
@@ -168,7 +172,7 @@ newtype FrameN a =
     deriving (Eq, Show)
 
 -- | R_EN: frame N to Earth
-instance Frame (FrameN a) where
+instance LocalFrame (FrameN a) where
     rEF (FrameN o) = transpose rm
       where
         vo = nvec o
@@ -250,7 +254,7 @@ slantRange :: Ned -> Length
 slantRange (Ned v) = metres (vnorm v)
 
 -- | @deltaBetween p1 p2 f@ computes the exact 'Delta' between the two
--- positions @p1@ and @p2@ in frame @f@.
+-- positions @p1@ and @p2@ in local frame @f@.
 --
 -- ==== __Examples__
 --
@@ -260,12 +264,12 @@ slantRange (Ned v) = metres (vnorm v)
 -- >>> deltaBetween p1 p2 (frameL w)
 -- Delta (Vector3d {vx = 359490.5782, vy = 302818.5225, vz = 17404.2714})
 --
-deltaBetween :: (Frame a, Model b) => Position b -> Position b -> (Position b -> a) -> Delta
+deltaBetween :: (LocalFrame a, Model b) => Position b -> Position b -> (Position b -> a) -> Delta
 deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
   where
-    e1 = evec p1
-    e2 = evec p2
-    de = vsub e2 e1
+    g1 = gcvec p1
+    g2 = gcvec p2
+    de = vsub g2 g1
     -- rotation matrix to go from Earth Frame to Frame at p1
     rm = transpose (rEF (f p1))
     d = vrotate de rm
@@ -293,7 +297,7 @@ nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
   where
     (Delta d) = deltaBetween p1 p2 frameN
 
--- | @target p0 f d@ computes the target position from position @p0@ and delta @d@ in frame @f@.
+-- | @target p0 f d@ computes the target position from position @p0@ and delta @d@ in local frame @f@.
 --
 -- ==== __Examples__
 --
@@ -305,13 +309,13 @@ nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
 -- >>> target p0 (frameB y r p) d
 -- 49°41'30.486"N,3°28'52.561"E 6.0077m (WGS84)
 --
-target :: (Frame a, Model b) => Position b -> (Position b -> a) -> Delta -> Position b
-target p0 f (Delta d) = ecefMetresPos x y z (model p0)
+target :: (LocalFrame a, Model b) => Position b -> (Position b -> a) -> Delta -> Position b
+target p0 f (Delta d) = geocentricMetresPos x y z (model p0)
   where
-    e0 = evec p0
+    g0 = gcvec p0
     rm = rEF (f p0)
     c = vrotate d rm
-    (Vector3d x y z) = vadd e0 c
+    (Vector3d x y z) = vadd g0 c
 
 -- | @targetN p0 d@ computes the target position from position @p0@ and north, east, down @d@.
 --

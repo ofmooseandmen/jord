@@ -46,11 +46,12 @@ import Data.Maybe (fromJust, isNothing)
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Bearing
-import Data.Geo.Jord.Bodies
 import Data.Geo.Jord.Duration
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Speed
@@ -433,7 +434,7 @@ sep v10 v20 c2 s2 r ti = angleRadians v10 (position'' v20 c2 s2 ti r)
 
 -- | reference sphere radius.
 radius :: (Spherical a) => Position a -> Length
-radius = modelRadius . model
+radius = equatorialRadius . surface . model
 
 -- | reference sphere radius in metres.
 radiusM :: (Spherical a) => Position a -> Double

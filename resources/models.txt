@@ -1,0 +1,118 @@
+module: Data.Geo.Jord.Models
+
+# World Geodetic 84 - static surface #
+ellipsoidal static WGS84
+  surface: WGS84
+  longitudeRange: L180
+
+# Geodetic Reference System 1980 #
+ellipsoidal static GRS80
+  surface: GRS80
+  longitudeRange: L180
+
+# World Geodetic 1972 #
+ellipsoidal static WGS72
+  surface: WGS72
+  longitudeRange: L180
+
+# European Terrestrial Reference System 1989 #
+ellipsoidal static ETRS89
+  surface: GRS80
+  longitudeRange: L180
+
+# North American Datum of 1983 - static surface #
+ellipsoidal static NAD83
+  surface: GRS80
+  longitudeRange: L180
+
+# Mars Orbiter Laser Altimeter #
+ellipsoidal static Mars2000
+  surface: Mars2000
+  longitudeRange: L360
+
+# International Terrestrial Reference System (2014) #
+ellipsoidal dynamic ITRF2014
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2010.0
+
+# International Terrestrial Reference System (2008) #
+ellipsoidal dynamic ITRF2008
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2005.0
+
+# International Terrestrial Reference System (2005) #
+ellipsoidal dynamic ITRF2005
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2000.0
+
+# International Terrestrial Reference System (2000) #
+ellipsoidal dynamic ITRF2000
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1997.0
+
+# International Terrestrial Reference System (93) #
+ellipsoidal dynamic ITRF93
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1988.0
+
+# International Terrestrial Reference System (91) #
+ellipsoidal dynamic ITRF91
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1988.0
+
+# World Geodetic System 1984 (G1762) - dynamic surface #
+ellipsoidal dynamic WGS84_G1762
+  surface: WGS84
+  longitudeRange: L180
+  epoch: 2005.0
+
+# World Geodetic System 1984 (G1674) - dynamic surface #
+ellipsoidal dynamic WGS84_G1674
+  surface: WGS84
+  longitudeRange: L180
+  epoch: 2005.0
+
+# World Geodetic System 1984 (G1150) - dynamic surface #
+ellipsoidal dynamic WGS84_G1150
+  surface: WGS84
+  longitudeRange: L180
+  epoch: 2001.0
+
+# European Terrestrial Reference System (2000) #
+ellipsoidal dynamic ETRF2000
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2005.0
+
+# NAD83 (Continuously Operating Reference Station 1996) - dynamic surface #
+ellipsoidal dynamic NAD83_CORS96
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1997.0
+
+# Geocentric Datum Of Australia 1994 - TODO static or dynamic #
+ellipsoidal dynamic GDA94
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1994.0
+
+# Spherical Earth model derived from WGS84 ellipsoid #
+spherical S84
+  surface: WGS84
+  longitudeRange: L180
+
+# Spherical Mars model derived from Mars2000 ellipsoid #
+spherical SMars2000
+  surface: Mars2000
+  longitudeRange: L360
+
+# Moon IAU/IAG #
+spherical Moon
+  surface: Moon
+  longitudeRange: L180

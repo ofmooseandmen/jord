@@ -26,14 +26,17 @@ library:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
     - Data.Geo.Jord.Bearing
-    - Data.Geo.Jord.Bodies
     - Data.Geo.Jord.Duration
-    - Data.Geo.Jord.Frames
+    - Data.Geo.Jord.Ellipsoid
+    - Data.Geo.Jord.Ellipsoids
     - Data.Geo.Jord.Geodesic
     - Data.Geo.Jord.GreatCircle
     - Data.Geo.Jord.Kinematics
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
+    - Data.Geo.Jord.LocalFrames
+    - Data.Geo.Jord.Model
+    - Data.Geo.Jord.Models
     - Data.Geo.Jord.Position
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Rotation
@@ -54,6 +57,14 @@ executables:
 #    dependencies:
 #    - jord
 #   - haskeline >= 0.7 && < 0.8
+  jord-gen:
+    main:                Main.hs
+    other-modules:
+      - Ellipsoids
+      - Generator
+      - Models
+      - Parsers
+    source-dirs:         gen
   jord-benchmarks:
     main:                Main.hs
     other-modules:
@@ -63,14 +74,14 @@ executables:
       - PositionBG
     source-dirs:         benchmarks
     dependencies:
-    - jord
-    - criterion
+      - jord
+      - criterion
 
 tests:
   jord-test:
     main:                Spec.hs
     source-dirs:         test
     dependencies:
-    - jord
-    - hspec == 2.*
-    - HUnit == 1.6.*
+      - jord
+      - hspec == 2.*
+      - HUnit == 1.6.*

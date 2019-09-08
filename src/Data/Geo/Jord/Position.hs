@@ -6,7 +6,8 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Position of points with respect to a celestial body model (e.g. Earth WGS84).
+-- Position of points in specified models (e.g. WGS84) and conversion functions between
+-- coordinate system (geodetic <-> geocentric).
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -21,18 +22,18 @@ module Data.Geo.Jord.Position
     , longitude
     , height
     , nvec
-    , evec
+    , gcvec
     , model
     -- * /n/-vector
     , NVector
     , nx
     , ny
     , nz
-    -- * ECEF
-    , EcefVector
-    , ex
-    , ey
-    , ez
+    -- * Geocentric coordinates
+    , Geocentric
+    , gx
+    , gy
+    , gz
     -- * smart constructors
     , latLongPos
     , latLongHeightPos
@@ -44,21 +45,21 @@ module Data.Geo.Jord.Position
     , s84Pos'
     , nvectorPos
     , nvectorHeightPos
-    , ecefPos
-    , ecefMetresPos
+    , geocentricPos
+    , geocentricMetresPos
     , nvh
     -- * Conversions/Transformations
     , nvectorToLatLong
     , nvectorFromLatLong
-    , nvectorToEcef
-    , nvectorFromEcef
+    , nvectorToGeocentric
+    , nvectorFromGeocentric
     -- * Read/Show points
     , readPosition
     , positionP
     -- * Misc.
     , antipode
     , nvector
-    , ecef
+    , geocentric
     , latLong
     , latLong'
     , northPole
@@ -70,17 +71,18 @@ module Data.Geo.Jord.Position
 import Text.ParserCombinators.ReadP (ReadP, option, readP_to_S, skipSpaces)
 
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Bodies
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.Model
+import Data.Geo.Jord.Models (S84(..), WGS84(..))
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
--- | 3-D position relative to a celestial body represented by a specified
--- model (spherical or ellipsoidal).
+-- | Coordinates of a position in a specified 'Model'.
 -- A position provides both geodetic latitude & longitude, height and
--- Earth Centred Earth Fixed (ECEF) coordinates. The horizontal position
--- (i.e. coordinates at the surface of the celestial body) are also provided
+-- geocentric coordinates. The horizontal position
+-- (i.e. coordinates at the surface of the celestial body) is also provided
 -- as /n/-vector.
 --
 -- The "show" instance gives position in degrees, minutes, seconds,
@@ -95,7 +97,7 @@ data Position a =
         , longitude :: Angle -- ^ geodetic longitude
         , height :: Length -- ^ height above the surface of the celestial body
         , nvec :: !Vector3d -- ^ /n/-vector representing the horizontal coordinates of the position
-        , evec :: Vector3d -- ^ ECEF vector representing the ECEF coordinates of the position
+        , gcvec :: Vector3d -- ^ vector representing the geocentric coordinates of the position
         , model :: !a -- ^ model (e.g. WGS84)
         }
 
@@ -109,7 +111,7 @@ instance (Model a) => Eq (Position a) where
         latitude p1 == latitude p2 &&
         longitude p1 == longitude p2 && height p1 == height p2 && model p1 == model p2
 
--- | normal vector to the celestial body shape.
+-- | normal vector to the surface of a celestial body.
 --
 -- Orientation: z-axis points to the North Pole along the body's rotation axis,
 -- x-axis points towards the point where latitude = longitude = 0.
@@ -131,29 +133,32 @@ ny (NVector _ y _) = y
 nz :: NVector -> Double
 nz (NVector _ _ z) = z
 
--- | Position coordinates in the Earth Centred, Earth Fixed (ECEF) coordinates system.
+-- | Geocentric (cartesian) coordinates in the fixed-body coordinates system.
 --
--- @ex-ey@ plane is the equatorial plane, @ex@ is on the prime meridian, and @ez@ on the polar axis.
+-- @x-y@ plane is the equatorial plane, @x@ is on the prime meridian, and @z@ on the polar axis.
 --
--- Note: on a spherical model earth, an /n/-vector is equivalent to a normalised version of an
--- (ECEF) cartesian coordinate.
-data EcefVector =
-    EcefVector Length Length Length
+-- On a spherical celestial body, an /n/-vector is equivalent to a normalised version of an
+-- geocentric cartesian coordinate.
+--
+-- Note: For Earth, this is known as the Earth-Centred Earth Fixed coordinates system (ECEF).
+--
+data Geocentric =
+    Geocentric Length Length Length
 
-instance Show EcefVector where
-    show (EcefVector x y z) = "ecef {" ++ show x ++ ", " ++ show y ++ ", " ++ show z ++ "}"
+instance Show Geocentric where
+    show (Geocentric x y z) = "geocentric {" ++ show x ++ ", " ++ show y ++ ", " ++ show z ++ "}"
 
--- | x-component of the given 'EcefVector'.
-ex :: EcefVector -> Length
-ex (EcefVector x _ _) = x
+-- | x-coordinate of the given 'Geocentric' coordinates.
+gx :: Geocentric -> Length
+gx (Geocentric x _ _) = x
 
--- | y-component of the given 'EcefVector'.
-ey :: EcefVector -> Length
-ey (EcefVector _ y _) = y
+-- | y-coordinate of the given 'Geocentric' coordinates.
+gy :: Geocentric -> Length
+gy (Geocentric _ y _) = y
 
--- | z-component of the given 'EcefVector'.
-ez :: EcefVector -> Length
-ez (EcefVector _ _ z) = z
+-- | z-coordinate of the given 'Geocentric' coordinates.
+gz :: Geocentric -> Length
+gz (Geocentric _ _ z) = z
 
 -- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically
 -- opposite to @p@.
@@ -169,24 +174,24 @@ nvector p = NVector x y z
   where
     (Vector3d x y z) = nvec p
 
--- | @ecef p@ returns the ECEF coordinates of position @p@.
+-- | @geocentric p@ returns the 'Geocentric' coordinates of position @p@.
 --
 -- ==== __Examples__
 --
 -- >>> let p = wgs84Pos 54 154 (metres 1000)
--- >>> ecef p
--- ecef {-3377.4908375km, 1647.312349km, 5137.5528484km}
+-- >>> geocentric p
+-- geocentric {-3377.4908375km, 1647.312349km, 5137.5528484km}
 --
-ecef :: (Model a) => Position a -> EcefVector
-ecef p = EcefVector (metres x) (metres y) (metres z)
+geocentric :: (Model a) => Position a -> Geocentric
+geocentric p = Geocentric (metres x) (metres y) (metres z)
   where
-    (Vector3d x y z) = evec p
+    (Vector3d x y z) = gcvec p
 
--- | surface position of the North Pole for the specified model.
+-- | surface position of the North Pole in the given model.
 northPole :: (Model a) => a -> Position a
 northPole = nvh nvNorthPole zero
 
--- | surface position of the South Pole for the specified model.
+-- | surface position of the South Pole in the given model.
 southPole :: (Model a) => a -> Position a
 southPole = nvh nvSouthPole zero
 
@@ -229,40 +234,42 @@ positionP m = do
     h <- option zero lengthP
     return (latLongHeightPos' lat lon h m)
 
--- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ at the surface of
--- the given model. Latitude & longitude values are converted to 'Angle' (ensuring thus consistent
+-- | Ground 'Position' from given geodetic latitude & longitude in __decimal degrees__ in
+-- the given model.
+-- Latitude & longitude values are converted to 'Angle' (ensuring thus consistent
 -- resolution with the rest of the API) and wrapped to their respective range.
 --
--- @latLongPos lat lon m@ is a shortcut for @'latLongHeightPos' lat lon zero m@.
+-- @latLongPos lat lon model@ is a shortcut for @'latLongHeightPos' lat lon zero model@.
 --
 latLongPos :: (Model a) => Double -> Double -> a -> Position a
 latLongPos lat lon = latLongHeightPos lat lon zero
 
--- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height around
--- the surface of the given model. Latitude & longitude values are converted to 'Angle' (ensuring
+-- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height
+-- in the given model. Latitude & longitude values are converted to 'Angle' (ensuring
 -- thus consistent resolution with the rest of the API) and wrapped to their respective range.
 latLongHeightPos :: (Model a) => Double -> Double -> Length -> a -> Position a
 latLongHeightPos lat lon = latLongHeightPos' (decimalDegrees lat) (decimalDegrees lon)
 
--- | 'Position' from given geodetic latitude & longitude at the surface of the given model.
+-- | Ground 'Position' from given geodetic latitude & longitude in
+-- the given model.
 -- Latitude & longitude values are wrapped to their respective range.
 --
--- @latLongPos' lat lon m@ is a shortcut for @'latLongHeightPos'' lat lon zero m@.
+-- @latLongPos' lat lon datum@ is a shortcut for @'latLongHeightPos'' lat lon zero model@.
 --
 latLongPos' :: (Model a) => Angle -> Angle -> a -> Position a
 latLongPos' lat lon = latLongHeightPos' lat lon zero
 
--- | 'Position' from given geodetic latitude & longitude and height around the surface of the given
--- model. Latitude & longitude values are wrapped to their respective range.
+-- | 'Position' from given geodetic latitude & longitude and height in the given model.
+-- Latitude & longitude values are wrapped to their respective range.
 latLongHeightPos' :: (Model a) => Angle -> Angle -> Length -> a -> Position a
-latLongHeightPos' lat lon h m = Position lat' lon' h nv e m
+latLongHeightPos' lat lon h m = Position lat' lon' h nv g m
   where
     nv = nvectorFromLatLong' (lat, lon)
-    e = nvectorToEcef' (nv, h) (shape m)
+    g = nvectorToGeocentric' (nv, h) (surface m)
     (lat', lon') = wrap lat lon nv m
 
--- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height around
--- the surface of the WGS84 ellispoid. Latitude & longitude values are converted to 'Angle' (ensuring
+-- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height in
+-- the WGS84 datum. Latitude & longitude values are converted to 'Angle' (ensuring
 -- thus consistent resolution with the rest of the API) and wrapped to their respective range.
 --
 -- @wgs84Pos lat lon h@ is a shortcut for @'latLongHeightPos' lat lon h WGS84@.
@@ -270,16 +277,16 @@ latLongHeightPos' lat lon h m = Position lat' lon' h nv e m
 wgs84Pos :: Double -> Double -> Length -> Position WGS84
 wgs84Pos lat lon h = latLongHeightPos lat lon h WGS84
 
--- | 'Position' from given geodetic latitude & longitude and height around the surface of the
--- WGS84 ellispoid. Latitude & longitude values are wrapped to their respective range.
+-- | 'Position' from given geodetic latitude & longitude and height in the WGS84 datum.
+-- Latitude & longitude values are wrapped to their respective range.
 --
 -- @wgs84Pos' lat lon h@ is a shortcut for @latLongHeightPos'' lat lon h WGS84@.
 --
 wgs84Pos' :: Angle -> Angle -> Length -> Position WGS84
 wgs84Pos' lat lon h = latLongHeightPos' lat lon h WGS84
 
--- | 'Position' from given latitude & longitude in __decimal degrees__ and height around the surface
--- of the sphere derived from WGS84 ellispoid. Latitude & longitude values are converted to 'Angle'
+-- | 'Position' from given latitude & longitude in __decimal degrees__ and height in the
+-- spherical datum derived from WGS84. Latitude & longitude values are converted to 'Angle'
 -- (ensuring thus consistent resolution with the rest of the API) and wrapped to their respective
 -- range.
 --
@@ -288,32 +295,35 @@ wgs84Pos' lat lon h = latLongHeightPos' lat lon h WGS84
 s84Pos :: Double -> Double -> Length -> Position S84
 s84Pos lat lon h = latLongHeightPos lat lon h S84
 
--- | 'Position' from given latitude & longitude and height around the surface of the sphere derived
--- from WGS84 ellispoid. Latitude & longitude values are wrapped to their respective range.
+-- | 'Position' from given latitude & longitude and height in the spherical datum derived
+-- from WGS84. Latitude & longitude values are wrapped to their respective range.
 --
 -- @s84Pos' lat lon h@ is a shortcut for @latLongHeightPos'' lat lon h S84@.
 --
 s84Pos' :: Angle -> Angle -> Length -> Position S84
 s84Pos' lat lon h = latLongHeightPos' lat lon h S84
 
--- | 'Position' from given x, y and z ECEF coordinates with respect to the given model.
-ecefPos :: (Model a) => Length -> Length -> Length -> a -> Position a
-ecefPos x y z = ecefMetresPos (toMetres x) (toMetres y) (toMetres z)
+-- | 'Position' from given geocentric coordinates x, y and z in the given model.
+geocentricPos :: (Model a) => Length -> Length -> Length -> a -> Position a
+geocentricPos x y z = geocentricMetresPos (toMetres x) (toMetres y) (toMetres z)
 
--- | 'Position' from given x, y and z ECEF coordinates in __metres__ with respect to the given model.
-ecefMetresPos :: (Model a) => Double -> Double -> Double -> a -> Position a
-ecefMetresPos x y z m = Position lat lon h nv ev m
+-- | 'Position' from given geocentric coordinates x, y and z in __metres__ in the given model.
+geocentricMetresPos :: (Model a) => Double -> Double -> Double -> a -> Position a
+geocentricMetresPos x y z m = Position lat lon h nv ev m
   where
     ev = Vector3d x y z
-    (nv, h) = nvectorFromEcef' ev (shape m)
+    (nv, h) = nvectorFromGeocentric' ev (surface m)
     (lat, lon) = nvectorToLatLong' nv
 
--- | 'Position' from given /n/-vector x, y, z coordinates at the surface of the given model.
+-- | 'Position' from given /n/-vector x, y, z coordinates in the given model.
 -- Vector (x, y, z) will be normalised to a unit vector to get a valid /n/-vector.
+--
+-- @nvectorPos x y z model@ is a shortcut for @nvectorHeightPos x y z zero model@.
+--
 nvectorPos :: (Model a) => Double -> Double -> Double -> a -> Position a
 nvectorPos x y z = nvectorHeightPos x y z zero
 
--- | 'Position' from given /n/-vector x, y, z coordinates and height with around the given model.
+-- | 'Position' from given /n/-vector x, y, z coordinates and height in the given model.
 -- Vector (x, y, z) will be normalised to a unit vector to get a valid /n/-vector.
 nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Position a
 nvectorHeightPos x y z = nvh (vunit (Vector3d x y z))
@@ -330,21 +340,21 @@ nvectorFromLatLong ll = NVector x y z
   where
     (Vector3d x y z) = nvectorFromLatLong' ll
 
--- | @nvectorToEcef (nv, h) s@ returns the ECEF vector equivalent to the given /n/-vector @nv@ and
--- height @h@ using the celestial body shape @s@.
-nvectorToEcef :: (NVector, Length) -> Shape -> EcefVector
-nvectorToEcef (nv, h) s = EcefVector (metres x) (metres y) (metres z)
+-- | @nvectorToGeocentric (nv, h) e@ returns the geocentric coordinates equivalent to the given
+-- /n/-vector @nv@ and height @h@ using the ellispoid @e@.
+nvectorToGeocentric :: (NVector, Length) -> Ellipsoid -> Geocentric
+nvectorToGeocentric (nv, h) e = Geocentric (metres x) (metres y) (metres z)
   where
     v = Vector3d (nx nv) (ny nv) (nz nv)
-    (Vector3d x y z) = nvectorToEcef' (v, h) s
+    (Vector3d x y z) = nvectorToGeocentric' (v, h) e
 
--- | @nvectorFromEcef ev s@ returns the /n/-vector equivalent to the given ECEF vector @ev@ using
--- the celestial body shape @s@.
-nvectorFromEcef :: EcefVector -> Shape -> (NVector, Length)
-nvectorFromEcef ev s = (NVector x y z, h)
+-- | @nvectorFromGeocentric g e@ returns the /n/-vector equivalent to the geocentric
+-- coordinates @g@ using the ellispoid @e@.
+nvectorFromGeocentric :: Geocentric -> Ellipsoid -> (NVector, Length)
+nvectorFromGeocentric g s = (NVector x y z, h)
   where
-    v = Vector3d (toMetres . ex $ ev) (toMetres . ey $ ev) (toMetres . ez $ ev)
-    (Vector3d x y z, h) = nvectorFromEcef' v s
+    v = Vector3d (toMetres . gx $ g) (toMetres . gy $ g) (toMetres . gz $ g)
+    (Vector3d x y z, h) = nvectorFromGeocentric' v s
 
 -- | (latitude, longitude) pair in __decimal degrees__ from given position.
 latLong :: (Model a) => Position a -> (Double, Double)
@@ -355,12 +365,11 @@ latLong' :: (Model a) => Position a -> (Angle, Angle)
 latLong' p = (latitude p, longitude p)
 
 -- private
-
 nvh :: (Model a) => Vector3d -> Length -> a -> Position a
-nvh nv h m = Position lat lon h nv e m
+nvh nv h m = Position lat lon h nv g m
   where
     (lat, lon) = llWrapped nv (longitudeRange m)
-    e = nvectorToEcef' (nv, h) (shape m)
+    g = nvectorToGeocentric' (nv, h) (surface m)
 
 nvectorToLatLong' :: Vector3d -> (Angle, Angle)
 nvectorToLatLong' nv = (lat, lon)
@@ -376,12 +385,18 @@ nvectorFromLatLong' (lat, lon) = Vector3d x y z
     y = cl * sin' lon
     z = sin' lat
 
-nvectorToEcef' :: (Vector3d, Length) -> Shape -> Vector3d
-nvectorToEcef' (nv, h) (Sphere r) = ev
+nvectorToGeocentric' :: (Vector3d, Length) -> Ellipsoid -> Vector3d
+nvectorToGeocentric' (nv, h) e
+    | isSphere e = nvectorToGeocentricS (nv, h) (equatorialRadius e)
+    | otherwise = nvectorToGeocentricE (nv, h) e
+
+nvectorToGeocentricS :: (Vector3d, Length) -> Length -> Vector3d
+nvectorToGeocentricS (nv, h) r = vscale nv (toMetres n)
   where
     n = add h r
-    ev = vscale nv (toMetres n)
-nvectorToEcef' (nv, h) (Ellipsoid e) = Vector3d ex' ey' ez'
+
+nvectorToGeocentricE :: (Vector3d, Length) -> Ellipsoid -> Vector3d
+nvectorToGeocentricE (nv, h) e = Vector3d gx' gy' gz'
   where
     a = toMetres . equatorialRadius $ e
     b = toMetres . polarRadius $ e
@@ -391,24 +406,31 @@ nvectorToEcef' (nv, h) (Ellipsoid e) = Vector3d ex' ey' ez'
     m = (a * a) / (b * b)
     n = b / sqrt ((nx' * nx' * m) + (ny' * ny' * m) + (nz' * nz'))
     h' = toMetres h
-    ex' = n * m * nx' + h' * nx'
-    ey' = n * m * ny' + h' * ny'
-    ez' = n * nz' + h' * nz'
+    gx' = n * m * nx' + h' * nx'
+    gy' = n * m * ny' + h' * ny'
+    gz' = n * nz' + h' * nz'
 
-nvectorFromEcef' :: Vector3d -> Shape -> (Vector3d, Length)
-nvectorFromEcef' ev (Sphere r) = (vunit ev, h)
+nvectorFromGeocentric' :: Vector3d -> Ellipsoid -> (Vector3d, Length)
+nvectorFromGeocentric' g e
+    | isSphere e = nvectorFromGeocentricS g (equatorialRadius e)
+    | otherwise = nvectorFromGeocentricE g e
+
+nvectorFromGeocentricS :: Vector3d -> Length -> (Vector3d, Length)
+nvectorFromGeocentricS g r = (vunit g, h)
   where
-    h = sub (metres (vnorm ev)) r
-nvectorFromEcef' ev (Ellipsoid e) = (nvecEllipsoidal d e2 k px py pz, metres h)
+    h = sub (metres (vnorm g)) r
+
+nvectorFromGeocentricE :: Vector3d -> Ellipsoid -> (Vector3d, Length)
+nvectorFromGeocentricE g e = (nvecEllipsoidal d e2 k px py pz, metres h)
   where
     e' = eccentricity e
     e2 = e' * e'
     e4 = e2 * e2
     a = toMetres . equatorialRadius $ e
     a2 = a * a
-    px = vx ev
-    py = vy ev
-    pz = vz ev
+    px = vx g
+    py = vy g
+    pz = vz g
     p = (px * px + py * py) / a2
     q = ((1 - e2) / a2) * (pz * pz)
     r = (p + q - e4) / 6.0

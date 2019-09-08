@@ -1,0 +1,25 @@
+module: Data.Geo.Jord.Ellipsoids
+
+# World Geodetic 84 Ellipsoid #
+WGS84
+   a: 6378137.0m
+   1/f: 298.257223563
+
+# Geodetic Reference System 1980 Ellipsoid #
+GRS80
+  a: 6378137.0m
+  1/f: 298.257222101
+
+# World Geodetic 72 Ellipsoid #
+WGS72
+  a: 6378135.0m
+  1/f: 298.26
+
+# Mars Orbiter Laser Altimeter Ellipsoid #
+Mars2000
+  a: 3398627.0m
+  1/f: 169.8
+
+# Moon IAU/IAG Sphere #
+Moon
+  r: 1737400.0m

@@ -47,9 +47,10 @@ import Data.Fixed (Nano)
 import Data.List (subsequences)
 
 import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Bodies
+import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Length
+import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
@@ -403,7 +404,7 @@ intersections' n1 n2 s
 
 -- | reference sphere radius.
 radius :: (Spherical a) => Position a -> Length
-radius = modelRadius . model
+radius = equatorialRadius . surface . model
 
 normal' :: (Spherical a) => Position a -> Position a -> Vector3d
 normal' p1 p2 = vcross (nvec p1) (nvec p2)

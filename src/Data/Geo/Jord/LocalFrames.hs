@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.Frames
+-- Module:      Data.Geo.Jord.LocalFrames
 -- Copyright:   (c) 2019 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>

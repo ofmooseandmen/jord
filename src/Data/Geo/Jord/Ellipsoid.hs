@@ -8,7 +8,7 @@
 --
 -- Types and functions for working with ellipsoids (including spheres).
 --
--- see 'Ellipsoids' for supported ellipsoids (such as WGS84).
+-- see 'Ellipsoids' for supported ellipsoids.
 --
 module Data.Geo.Jord.Ellipsoid
     ( Ellipsoid

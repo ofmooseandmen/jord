@@ -41,6 +41,7 @@ library:
     - Data.Geo.Jord.Quantity
     - Data.Geo.Jord.Rotation
     - Data.Geo.Jord.Speed
+    - Data.Geo.Jord.Transformation
     - Data.Geo.Jord.Vector3d
   other-modules:
     - Data.Geo.Jord.Parser

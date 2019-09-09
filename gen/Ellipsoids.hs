@@ -7,15 +7,14 @@ module Ellipsoids
 import Control.Applicative ((<|>))
 import Text.ParserCombinators.ReadP (ReadP, char, skipSpaces, string)
 
-import Generator
+import qualified Generator as G
 import qualified Parsers as P
 
-data Ellipsoid =
-    Ellipsoid
-        { name :: String
-        , comment :: String
-        , params :: Either (Double, Double) Double
-        }
+data Ellipsoid = Ellipsoid
+    { name :: String
+    , comment :: String
+    , params :: Either (Double, Double) Double
+    }
 
 parser :: ReadP Ellipsoid
 parser = do
@@ -56,8 +55,8 @@ radius = do
     _ <- char 'm'
     return d
 
-generator :: Generator Ellipsoid
-generator = Generator ["Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Length"] ellipsoidToString
+generator :: G.Generator Ellipsoid
+generator = G.Generator ["Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Length"] ellipsoidToString
 
 ellipsoidToString :: Ellipsoid -> String
 ellipsoidToString e =

@@ -5,26 +5,26 @@ module Models
     ) where
 
 import Control.Applicative ((<|>))
-import Data.List (intersperse)
-import Text.ParserCombinators.ReadP (ReadP, char, choice, skipSpaces, string)
+import Data.Char (isAlpha)
+import Data.List (intersperse, stripPrefix)
+import Data.Maybe (isJust)
+import Text.ParserCombinators.ReadP (ReadP, char, choice, look, skipSpaces, string)
 
-import Generator
+import qualified Generator as G
 import qualified Parsers as P
 
-data Model =
-    Model
-        { mtype :: ModelType
-        , name :: String
-        , comment :: String
-        , surface :: String
-        , longitudeRange :: String
-        , epoch :: (Int, Int)
-        }
+data Model = Model
+    { mtype :: ModelType
+    , mid :: String
+    , comment :: String
+    , surface :: String
+    , longitudeRange :: String
+    , epoch :: Maybe (Int, Int)
+    }
 
 data ModelType
     = Spherical
-    | EllipsoidalStatic
-    | EllipsoidalDynamic
+    | Ellipsoidal
     deriving (Eq)
 
 parser :: ReadP Model
@@ -38,17 +38,17 @@ parser = do
     s <- surface'
     P.eol
     lr <- longitudeRange'
-    ep <- epoch' t
+    ep <- maybeEpoch t
     P.eol
     return (Model t n c s lr ep)
 
 type' :: ReadP ModelType
 type' = do
-    s <- string "spherical" <|> string "ellipsoidal static" <|> string "ellipsoidal dynamic"
+    s <- string "spherical " <|> string "ellipsoidal "
     case s of
-        "spherical" -> return Spherical
-        "ellipsoidal static" -> return EllipsoidalStatic
-        _ -> return EllipsoidalDynamic
+        "spherical " -> return Spherical
+        "ellipsoidal " -> return Ellipsoidal
+        _ -> error "unsupported model type"
 
 surface' :: ReadP String
 surface' = do
@@ -62,29 +62,34 @@ longitudeRange' = do
     _ <- string "longitudeRange: "
     choice [string "L180", string "L360"]
 
-epoch' :: ModelType -> ReadP (Int, Int)
-epoch' t =
-    case t of
-        EllipsoidalDynamic -> epoch''
-        _ -> return (0, 0)
+maybeEpoch :: ModelType -> ReadP (Maybe (Int, Int))
+maybeEpoch Spherical = return Nothing
+maybeEpoch _ = do
+    n <- look
+    if hasEpoch n
+        then fmap Just epoch'
+        else return Nothing
 
-epoch'' :: ReadP (Int, Int)
-epoch'' = do
+hasEpoch :: String -> Bool
+hasEpoch s = isJust (stripPrefix "epoch" (dropWhile (not . isAlpha) s))
+
+epoch' :: ReadP (Int, Int)
+epoch' = do
     skipSpaces
-    _ <- string "epoch: "
+    _ <- (string "epoch: ")
     y <- P.integer
     _ <- char '.'
     d <- P.integer
     return (y, d)
 
-generator :: String -> Generator Model
+generator :: String -> G.Generator Model
 generator ellipsoids =
-    Generator [ellipsoids, "Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Model"] modelToString
+    G.Generator [ellipsoids, "Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Model"] modelToString
 
 modelToString :: Model -> String
 modelToString m = unlines' ([d, model, eq, show'] ++ instanceType m)
   where
-    d = "-- | " ++ comment m ++ ".\ndata " ++ name m ++ " = " ++ "\n" ++ "    " ++ name m
+    d = "-- | " ++ comment m ++ ".\ndata " ++ mid m ++ " = " ++ "\n" ++ "    " ++ mid m
     model = instanceModel m
     eq = instanceEq m
     show' = instanceShow m
@@ -92,13 +97,11 @@ modelToString m = unlines' ([d, model, eq, show'] ++ instanceType m)
 instanceModel :: Model -> String
 instanceModel m =
     "instance Model " ++
-    name m ++
+    mid m ++
     " where\n" ++
-    "    surface _ = " ++
-    s ++
-    "\n" ++
-    "    longitudeRange _ = " ++
-    longitudeRange m ++ "\n" ++ "    name _ = ModelName \"" ++ name m ++ "\""
+    "    modelId _ = ModelId \"" ++
+    mid m ++
+    "\"\n" ++ "    surface _ = " ++ s ++ "\n" ++ "    longitudeRange _ = " ++ longitudeRange m
   where
     s =
         if mtype m == Spherical
@@ -106,30 +109,27 @@ instanceModel m =
             else "e" ++ surface m
 
 instanceEq :: Model -> String
-instanceEq m = "instance Eq " ++ name m ++ " where\n    _ == _ = True"
+instanceEq m = "instance Eq " ++ mid m ++ " where\n    _ == _ = True"
 
 instanceShow :: Model -> String
-instanceShow m = "instance Show " ++ name m ++ " where\n    show m = show (name m)"
+instanceShow m = "instance Show " ++ mid m ++ " where\n    show m = show (modelId m)"
 
 instanceType :: Model -> [String]
 instanceType m
     | mtype m == Spherical = instanceSpherical n
-    | mtype m == EllipsoidalStatic = instanceStatic n
-    | mtype m == EllipsoidalDynamic = instanceDynamic n (epoch m)
+    | mtype m == Ellipsoidal = instanceEllipsoidal n (epoch m)
     | otherwise = error "unsupported type"
   where
-    n = name m
+    n = mid m
 
 instanceSpherical :: String -> [String]
 instanceSpherical n = ["instance Spherical " ++ n]
 
-instanceStatic :: String -> [String]
-instanceStatic n = ["instance Ellipsoidal " ++ n, "instance StaticSurface " ++ n]
-
-instanceDynamic :: String -> (Int, Int) -> [String]
-instanceDynamic n (y, d) =
+instanceEllipsoidal :: String -> Maybe (Int, Int) -> [String]
+instanceEllipsoidal n Nothing = ["instance Ellipsoidal " ++ n]
+instanceEllipsoidal n (Just (y, d)) =
     [ "instance Ellipsoidal " ++ n
-    , "instance DynamicSurface " ++
+    , "instance EllipsoidalT0 " ++
       n ++ " where\n" ++ "    epoch _ = Epoch " ++ show y ++ " " ++ show d
     ]
 

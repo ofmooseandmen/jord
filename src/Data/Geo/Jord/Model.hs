@@ -1,106 +1,77 @@
+-- |
+-- Module:      Data.Geo.Jord.Model
+-- Copyright:   (c) 2019 Cedric Liegeois
+-- License:     BSD3
+-- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
+-- Stability:   experimental
+-- Portability: portable
+--
+-- Definition of celestial body models.
+--
+-- see 'Models' for supported models.
+--
 module Data.Geo.Jord.Model
     ( LongitudeRange(..)
-    , ModelName(..)
+    , ModelId(..)
+    , Epoch(..)
     , Model(..)
     , Spherical
     , Ellipsoidal
-    , StaticSurface
-    , Epoch(..)
-    , DynamicSurface(..)
+    , EllipsoidalT0(..)
     ) where
 
 import Data.Geo.Jord.Ellipsoid
 
--- | longitude range.
+-- | Longitude range.
 data LongitudeRange
     = L180 -- ^  [-180°, 180°]: range for Earth, Moon and Sun.
     | L360 -- ^  [0°, 360°]: range for other celestial bodies (e.g. Mars).
 
-newtype ModelName =
-    ModelName String
+-- | Epoch (decimal years) such as 2018.60: the 219th day of the year or August 7, 2018
+-- in the Gregorian calendar.
+data Epoch = Epoch
+    { year :: Int -- ^ year (e.g. 2018).
+    , decimal :: Int -- ^ decimal part (e.g. 60).
+    } deriving (Eq, Show)
+
+-- | identifier of a model.
+newtype ModelId =
+    ModelId String
     deriving (Eq)
 
-instance Show ModelName where
-    show (ModelName n) = n
+instance Show ModelId where
+    show (ModelId i) = i
 
+-- | Model for a celestial body: the same celestial body can be represented by different
+-- models (e.g. Earth: WGS84, ITRF2014, Spherical, etc...).
 class (Eq a, Show a) =>
       Model a
     where
-    surface :: a -> Ellipsoid
-    longitudeRange :: a -> LongitudeRange
-    name :: a -> ModelName
+    modelId :: a -> ModelId -- ^ model identifier, must be unique for coordinate transformation.
+    surface :: a -> Ellipsoid -- ^ surface of the celestial body.
+    longitudeRange :: a -> LongitudeRange -- ^ longitude range.
 
+-- | Models that approximate the surface of the celestial body to a sphere.
+-- Such an approximation is satisfactory for many purposes and allows a wide
+-- range of calculations: see "Data.Geo.Jord.Kinematics", "Data.Geo.Jord.GreatCircle" and "Data.Geo.Jord.LocalFrames".
 class (Model a) =>
       Spherical a
 
 
+-- | Models that represent the surface of the celestial body with an ellispoid.
+-- Compare to 'Spherical' models, less calculations are available and they are more CPU
+-- intensive: see "Data.Geo.Jord.Geodesic" and "Data.Geo.Jord.LocalFrames".
+-- Coordinates transformation between different ellispoidal models is possible
+-- provided that the 7-parameter transformation (Helmert) is known: see "Data.Geo.Jord.Transformation".
 class (Model a) =>
       Ellipsoidal a
 
 
+-- | Time-dependent 'Ellipsoidal' models, such as International Terrestrial Reference Frames (ITRF).
+-- The epoch allows to account for unmodelled measurement biases and tectonic processes: coordinates
+-- transformation between different time-dependent ellispoidal models at a known epoch is possible
+-- provided that the 14-parameter transformation (Helmert) is known: see "Data.Geo.Jord.Transformation".
 class (Ellipsoidal a) =>
-      StaticSurface a
-
-
-data Epoch =
-    Epoch
-        { year :: Int
-        , decimal :: Int
-        }
-    deriving (Eq, Show)
-
-class (Ellipsoidal a) =>
-      DynamicSurface a
+      EllipsoidalT0 a
     where
-    epoch :: a -> Epoch
-{-|
-data WGS84 =
-    WGS84
-
-instance Datum WGS84 where
-    surface _ = eWGS84
-    longitudeRange _ = L180
-    name _ = DatumName "WGS84"
-
-instance Ellipsoidal WGS84 where
-    epoch _ = Epoch 1984 0
-
-instance Eq WGS84 where
-    _ == _ = True
-
-instance Show WGS84 where
-    show = show . name
-
-data GRS80 =
-    GRS80
-
-instance Datum GRS80 where
-    surface _ = eGRS80
-    longitudeRange _ = L180
-    name _ = DatumName "GRS80"
-
-instance Ellipsoidal GRS80 where
-    epoch _ = Epoch 1980 0
-
-instance Eq GRS80 where
-    _ == _ = True
-
-instance Show GRS80 where
-    show = show . name
-
-data S84 =
-    S84
-
-instance Datum S84 where
-    surface _ = toSphere eWGS84
-    longitudeRange _ = L180
-    name _ = (DatumName "Mean Radius WGS84")
-
-instance Spherical S84
-
-instance Eq S84 where
-    _ == _ = True
-
-instance Show S84 where
-    show = show . name
--}
+    epoch :: a -> Epoch -- ^ epoch to which coordinates are referenced.

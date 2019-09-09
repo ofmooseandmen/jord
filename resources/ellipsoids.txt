@@ -1,3 +1,4 @@
+# Common ellipsoids of different celestial bodies #
 module: Data.Geo.Jord.Ellipsoids
 
 # World Geodetic 84 Ellipsoid #

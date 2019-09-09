@@ -5,7 +5,7 @@ import Text.ParserCombinators.ReadP (ReadP, many1, readP_to_S)
 import qualified Ellipsoids as E
 import Generator
 import qualified Models as M
-import Parsers
+import qualified Parsers as P
 
 main :: IO ()
 main = do
@@ -19,28 +19,30 @@ main = do
 
 process :: FilePath -> FilePath -> ReadP a -> Generator a -> IO String
 process inf outd p g = do
-    mps <- parse p <$> readFile inf
-    case mps of
-        Just (m, ps) -> do
-            writeFile (outf outd m) (generate m g ps)
-            return m
+    r <- parse p <$> readFile inf
+    case r of
+        Just (h, ps) -> do
+            writeFile (outf outd h) (generate h g ps)
+            return (module' h)
         Nothing -> error ("invalid definition in " ++ show inf)
 
-parse :: ReadP a -> String -> Maybe (String, [a])
+parse :: ReadP a -> String -> Maybe (Header, [a])
 parse p s =
     case map fst $ filter (null . snd) $ readP_to_S (parser p) s of
         [] -> Nothing
         rs:_ -> Just rs
 
-parser :: ReadP a -> ReadP (String, [a])
+parser :: ReadP a -> ReadP (Header, [a])
 parser p = do
-    m <- module'
-    eol
+    hc <- P.comment
+    P.eol
+    m <- P.module'
+    P.eol
     es <- many1 p
-    return (m, es)
+    return (Header hc m, es)
 
-outf :: FilePath -> String -> FilePath
-outf d m = d ++ "/" ++ toPath m ++ ".hs"
+outf :: FilePath -> Header -> FilePath
+outf d h = d ++ "/" ++ toPath (module' h) ++ ".hs"
 
 toPath :: String -> FilePath
 toPath m =

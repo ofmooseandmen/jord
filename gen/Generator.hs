@@ -4,15 +4,17 @@ module Generator
     , generate
     ) where
 
-data Header = Header
-    { comment :: String
-    , module' :: String
-    }
+data Header =
+    Header
+        { comment :: String
+        , module' :: String
+        }
 
-data Generator a = Generator
-    { imports :: [String]
-    , toString :: a -> String
-    }
+data Generator a =
+    Generator
+        { imports :: [String]
+        , toString :: a -> String
+        }
 
 generate :: Header -> Generator a -> [a] -> String
 generate h (Generator is ts) elts =

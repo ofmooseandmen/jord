@@ -38,6 +38,7 @@ data Ellipsoid =
         }
     deriving (Eq, Show)
 
+-- | @ellispoid eqr invf@: ellipsoid with equatorial radius @eqr@ and inverse flattening @invf@.
 ellispoid :: Length -> Double -> Ellipsoid
 ellispoid eqr invf = Ellipsoid eqr (metres b) e f
   where
@@ -46,15 +47,20 @@ ellispoid eqr invf = Ellipsoid eqr (metres b) e f
     b = a * (1.0 - f)
     e = sqrt (1.0 - (b * b) / (a * a))
 
+-- | @sphere r@: ellipsoid with equatorial & polar radius radius @r@.
+-- The returned ellipsoid is a sphere.
 sphere :: Length -> Ellipsoid
 sphere r = Ellipsoid r r 0.0 0.0
 
+-- | @toSphere e@: sphere from mean radius of ellipsoid @e@.
 toSphere :: Ellipsoid -> Ellipsoid
 toSphere = sphere . meanRadius
 
+-- | @isSphere e@ returns True if ellipsoid @e@ is a sphere.
 isSphere :: Ellipsoid -> Bool
 isSphere e = eccentricity e == 0.0
 
+-- | @meanRadius e@ computes the mean radius of ellipsoid @e@.
 meanRadius :: Ellipsoid -> Length
 meanRadius e = metres ((2.0 * a + b) / 3.0)
   where

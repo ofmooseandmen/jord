@@ -6,21 +6,22 @@ module Models
 
 import Control.Applicative ((<|>))
 import Data.Char (isAlpha)
-import Data.List (intersperse, stripPrefix)
+import Data.List (intercalate, stripPrefix)
 import Data.Maybe (isJust)
 import Text.ParserCombinators.ReadP (ReadP, char, choice, look, skipSpaces, string)
 
 import qualified Generator as G
 import qualified Parsers as P
 
-data Model = Model
-    { mtype :: ModelType
-    , mid :: String
-    , comment :: String
-    , surface :: String
-    , longitudeRange :: String
-    , epoch :: Maybe (Int, Int)
-    }
+data Model =
+    Model
+        { mtype :: ModelType
+        , mid :: String
+        , comment :: String
+        , surface :: String
+        , longitudeRange :: String
+        , epoch :: Maybe (Int, Int)
+        }
 
 data ModelType
     = Spherical
@@ -76,7 +77,7 @@ hasEpoch s = isJust (stripPrefix "epoch" (dropWhile (not . isAlpha) s))
 epoch' :: ReadP (Int, Int)
 epoch' = do
     skipSpaces
-    _ <- (string "epoch: ")
+    _ <- string "epoch: "
     y <- P.integer
     _ <- char '.'
     d <- P.integer
@@ -134,4 +135,4 @@ instanceEllipsoidal n (Just (y, d)) =
     ]
 
 unlines' :: [String] -> String
-unlines' s = foldl (++) "" (intersperse "\n\n" s)
+unlines' = intercalate "\n\n"

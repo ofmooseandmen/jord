@@ -36,9 +36,11 @@ import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 
 -- | A duration with a resolution of 1 millisecond.
-newtype Duration = Duration
-    { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
-    } deriving (Eq)
+newtype Duration =
+    Duration
+        { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
+        }
+    deriving (Eq)
 
 -- | See 'durationP'.
 instance Read Duration where

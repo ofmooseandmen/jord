@@ -1,3 +1,13 @@
+-- |
+-- Module:      Data.Geo.Jord.Geodesic
+-- Copyright:   (c) 2019 Cedric Liegeois
+-- License:     BSD3
+-- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
+-- Stability:   experimental
+-- Portability: portable
+--
+-- TODO
+--
 module Data.Geo.Jord.Geodesic
     ( direct
     , inverse

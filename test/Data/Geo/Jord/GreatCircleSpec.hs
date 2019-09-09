@@ -62,7 +62,8 @@ spec = do
             let p2 = s84Pos 58.643889 (-3.07) zero
             greatCircleDistance p1 p2 `shouldBe` metres 968854.8685
         it "handles singularity at the pole" $
-            greatCircleDistance (northPole S84) (southPole S84) `shouldBe` kilometres 20015.114352200002
+            greatCircleDistance (northPole S84) (southPole S84) `shouldBe`
+            kilometres 20015.114352200002
         it "handles the discontinuity at the Date Line" $ do
             let p1 = s84Pos 50.066389 (-179.999722) zero
             let p2 = s84Pos 50.066389 179.999722 zero

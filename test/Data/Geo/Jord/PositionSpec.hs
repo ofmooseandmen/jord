@@ -41,7 +41,11 @@ spec = do
                     , geocentricMetresPos 0 0 6356752.3142 WGS84
                     , geocentricMetresPos 0 0 (-6356752.3142) WGS84
                     , geocentricMetresPos 3194669.1450999997 3194669.1450999997 4487701.9622 WGS84
-                    , geocentricMetresPos 3194669.1450999997 (-3194669.1450999997) (-4487701.9622) WGS84
+                    , geocentricMetresPos
+                          3194669.1450999997
+                          (-3194669.1450999997)
+                          (-4487701.9622)
+                          WGS84
                     ]
             refLlh `shouldBe` refGeocentrics
     describe "Geodetic <=> Geocentric (Spherical)" $ do

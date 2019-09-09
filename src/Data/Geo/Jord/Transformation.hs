@@ -24,31 +24,32 @@ import Data.Geo.Jord.Position
 import Data.Geo.Jord.Vector3d
 
 -- | 7-parameter transformation parameters (Helmert).
-data Params = Params
-    { translation :: Vector3d -- ^ translation vector containing the three translations along the coordinate axes: tx, ty, tz in __millimetres__.
-    , scaleFactor :: Double -- ^  scale factor (unitless) in __part per billion__.
-    , rotation :: Vector3d -- ^  rotation matrix (orthogonal) consisting of the three axes rx, ry, rz in __millidegrees__.
-    }
+data Params =
+    Params
+        { translation :: Vector3d -- ^ translation vector containing the three translations along the coordinate axes: tx, ty, tz in __millimetres__.
+        , scaleFactor :: Double -- ^  scale factor (unitless) in __part per billion__.
+        , rotation :: Vector3d -- ^  rotation matrix (orthogonal) consisting of the three axes rx, ry, rz in __millidegrees__.
+        }
 
 -- | Transformation rates: used when for the 14-parameter transformation (Helmert).
-data Rates = Rates
-    { translationRate :: Vector3d -- ^ translation rate in __millimetres per year__.
-    , scaleFactorRate :: Double -- ^ scale factor rate in __part per billion per year__.
-    , rotationRate :: Vector3d -- ^ rotation rate in __millidegrees per year__.
-    }
+data Rates =
+    Rates
+        { translationRate :: Vector3d -- ^ translation rate in __millimetres per year__.
+        , scaleFactorRate :: Double -- ^ scale factor rate in __part per billion per year__.
+        , rotationRate :: Vector3d -- ^ rotation rate in __millidegrees per year__.
+        }
 
 -- | Static transformation between 2 ellispoidal models.
-data StaticTf = StaticTf
-    { fromModel :: ModelId -- ^ from model.
-    , toModel :: ModelId -- ^ to model.
-    , params :: Params -- ^ parameters.
-    }
+data StaticTf =
+    StaticTf
+        { fromModel :: ModelId -- ^ from model.
+        , toModel :: ModelId -- ^ to model.
+        , params :: Params -- ^ parameters.
+        }
 
 -- | Dynamic transformation between 2 ellispoidal models: static part, epoch (t0 of the rates) and rates.
 data DynamicTf =
-    DynamicTf StaticTf
-              Epoch
-              Rates
+    DynamicTf StaticTf Epoch Rates
 
 sTransform :: (Ellipsoidal a, Ellipsoidal b) => a -> b -> [StaticTf] -> [StaticTf]
 sTransform _ _ _ = []

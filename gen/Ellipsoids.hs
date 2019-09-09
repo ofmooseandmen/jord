@@ -10,11 +10,12 @@ import Text.ParserCombinators.ReadP (ReadP, char, skipSpaces, string)
 import qualified Generator as G
 import qualified Parsers as P
 
-data Ellipsoid = Ellipsoid
-    { name :: String
-    , comment :: String
-    , params :: Either (Double, Double) Double
-    }
+data Ellipsoid =
+    Ellipsoid
+        { name :: String
+        , comment :: String
+        , params :: Either (Double, Double) Double
+        }
 
 parser :: ReadP Ellipsoid
 parser = do

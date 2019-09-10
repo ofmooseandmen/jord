@@ -97,19 +97,16 @@ data Position a =
         , longitude :: Angle -- ^ geodetic longitude
         , height :: Length -- ^ height above the surface of the celestial body
         , nvec :: !Vector3d -- ^ /n/-vector representing the horizontal coordinates of the position
-        , gcvec :: Vector3d -- ^ vector representing the geocentric coordinates of the position
+        , gcvec :: Vector3d -- ^ vector representing the geocentric coordinates of the position (metres)
         , model :: !a -- ^ model (e.g. WGS84)
         }
 
 instance (Model a) => Show (Position a) where
-    show p =
-        showLatLong (latitude p, longitude p) ++
-        " " ++ (show . height $ p) ++ " (" ++ (show . model $ p) ++ ")"
+    show p = showLatLong (latitude p, longitude p) ++ " " ++ (show . height $ p) ++ " (" ++ (show . model $ p) ++ ")"
 
 instance (Model a) => Eq (Position a) where
     p1 == p2 =
-        latitude p1 == latitude p2 &&
-        longitude p1 == longitude p2 && height p1 == height p2 && model p1 == model p2
+        latitude p1 == latitude p2 && longitude p1 == longitude p2 && height p1 == height p2 && model p1 == model p2
 
 -- | normal vector to the surface of a celestial body.
 --
@@ -364,7 +361,8 @@ latLong p = (toDecimalDegrees . latitude $ p, toDecimalDegrees . longitude $ p)
 latLong' :: (Model a) => Position a -> (Angle, Angle)
 latLong' p = (latitude p, longitude p)
 
--- private
+-- | position from /n/-vector, height and model; this method is to be used only if
+ -- given 'Vector3d' is a /n/-vector.
 nvh :: (Model a) => Vector3d -> Length -> a -> Position a
 nvh nv h m = Position lat lon h nv g m
   where

@@ -24,7 +24,7 @@ import Text.ParserCombinators.ReadP (ReadP, char, count, munch1, option, satisfy
 digits :: Int -> ReadP Int
 digits n = fmap read (count n digit)
 
--- | Parses optionally a @-@ followed by a 'positive'.'positive' and returns the read 'Double'.
+-- | Parses optionally a @-@ followed by a 'natural'.'natural' and returns the read 'Double'.
 double :: ReadP Double
 double = do
     s <- option 1.0 (fmap (\_ -> -1.0) (char '-'))
@@ -32,7 +32,7 @@ double = do
     f <- char '.' >> natural
     return (s * (read (show i ++ "." ++ show f) :: Double))
 
--- | Parses optionally a @-@ followed by a 'positive' and returns the read 'Int'.
+-- | Parses optionally a @-@ followed by a 'natural' and returns the read 'Int'.
 integer :: ReadP Int
 integer = do
     s <- option 1 (fmap (\_ -> -1) (char '-'))

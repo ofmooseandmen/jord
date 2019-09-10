@@ -272,7 +272,7 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
     de = vsub g2 g1
     -- rotation matrix to go from Earth Frame to Frame at p1
     rm = transpose (rEF (f p1))
-    d = vrotate de rm
+    d = vmultm de rm
 
 -- | @nedBetween p1 p2@ computes the exact 'Ned' vector between the two
 -- positions @p1@ and @p2@, in north, east, and down.
@@ -314,7 +314,7 @@ target p0 f (Delta d) = geocentricMetresPos x y z (model p0)
   where
     g0 = gcvec p0
     rm = rEF (f p0)
-    c = vrotate d rm
+    c = vmultm d rm
     (Vector3d x y z) = vadd g0 c
 
 -- | @targetN p0 d@ computes the target position from position @p0@ and north, east, down @d@.

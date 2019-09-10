@@ -8,7 +8,7 @@
 --
 -- Definition of celestial body models.
 --
--- see 'Models' for supported models.
+-- see "Data.Geo.Jord.Models" for supported models.
 --
 module Data.Geo.Jord.Model
     ( LongitudeRange(..)

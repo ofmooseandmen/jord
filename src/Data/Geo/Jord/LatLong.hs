@@ -31,10 +31,6 @@ import Data.Geo.Jord.Parser
 isValidLatLong :: (Model a) => Angle -> Angle -> a -> Bool
 isValidLatLong lat lon m = isValidLat lat && isValidLong lon m
 
--- | Produced string format: d°(m')(s'')[N|S],d°(m')(s'')[E|W] - e.g. 55°36'21''N,13°0'2''E.
-showLatLong :: (Angle, Angle) -> String
-showLatLong (lat, lon) = showLat lat ++ "," ++ showLon lon
-
 -- | latitude and longitude reader.
 -- Formats:
 --
@@ -122,6 +118,10 @@ hlon = do
     if m' == 'E'
         then return lon
         else return (negate' lon)
+
+-- | Show a (latitude, longitude) pair as DMS - e.g. 55°36'21''N,13°0'2''E.
+showLatLong :: (Angle, Angle) -> String
+showLatLong (lat, lon) = showLat lat ++ "," ++ showLon lon
 
 -- | Latitude to string.
 showLat :: Angle -> String

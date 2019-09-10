@@ -34,6 +34,7 @@ module Data.Geo.Jord
     , module Data.Geo.Jord.Quantity
     , module Data.Geo.Jord.Rotation
     , module Data.Geo.Jord.Speed
+    , module Data.Geo.Jord.Transformation
     , module Data.Geo.Jord.Vector3d
     , jordVersion
     ) where
@@ -55,6 +56,7 @@ import Data.Geo.Jord.Position hiding (gcvec, nvNorthPole, nvSouthPole, nvec, nvh
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Rotation
 import Data.Geo.Jord.Speed
+import Data.Geo.Jord.Transformation
 import Data.Geo.Jord.Vector3d
 
 -- | version.

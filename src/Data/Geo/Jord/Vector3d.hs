@@ -15,7 +15,7 @@ module Data.Geo.Jord.Vector3d
     , vdot
     , vnorm
     , vcross
-    , vrotate
+    , vmultm
     , vscale
     , vunit
     , vzero
@@ -68,10 +68,10 @@ vnorm v = sqrt (x * x + y * y + z * z)
     y = vy v
     z = vz v
 
--- | @vrotate v rm@ applies rotation matrix @rm@ to @v@.
-vrotate :: Vector3d -> [Vector3d] -> Vector3d
-vrotate v rm
-    | length rm /= 3 = error ("Invalid rotation matrix" ++ show rm)
+-- | @vmultm v rm@ multiplies vector @v@ by __3x3__ matrix @m@ (rows).
+vmultm :: Vector3d -> [Vector3d] -> Vector3d
+vmultm v rm
+    | length rm /= 3 = error ("Invalid matrix" ++ show rm)
     | otherwise = Vector3d x y z
   where
     [x, y, z] = map (vdot v) rm
@@ -107,7 +107,7 @@ transpose' :: [[Double]] -> [[Double]]
 transpose' ([]:_) = []
 transpose' x = map head x : transpose' (map tail x)
 
--- | multiplies 2 __square (3x3)__ matrices of 'Vector3d'.
+-- | multiplies 2 __3x3__ matrices.
 mdot :: [Vector3d] -> [Vector3d] -> [Vector3d]
 mdot a b = fmap ds2v [[vdot ar bc | bc <- transpose b] | ar <- a]
 

@@ -49,6 +49,7 @@ library
       Data.Geo.Jord.Rotation
       Data.Geo.Jord.Speed
       Data.Geo.Jord.Transformation
+      Data.Geo.Jord.Transformations
       Data.Geo.Jord.Vector3d
   other-modules:
       Data.Geo.Jord.Parser
@@ -83,6 +84,7 @@ executable jord-gen
       Generator
       Models
       Parsers
+      Transformations
   hs-source-dirs:
       gen
   ghc-options: -Wall

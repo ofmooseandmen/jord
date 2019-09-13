@@ -6,6 +6,7 @@ import qualified Ellipsoids as E
 import Generator
 import qualified Models as M
 import qualified Parsers as P
+import qualified Transformations as T
 
 main :: IO ()
 main = do
@@ -14,6 +15,7 @@ main = do
         [inDir, outDir] -> do
             ellipsoidsModule <- process (inDir ++ "/ellipsoids.txt") outDir E.parser E.generator
             _ <- process (inDir ++ "/models.txt") outDir M.parser (M.generator ellipsoidsModule)
+            _ <- process (inDir ++ "/transformations.txt") outDir T.parser (T.generator)
             return ()
         _ -> putStrLn ("Invalid arguments: " ++ show args)
 
@@ -35,7 +37,6 @@ parse p s =
 parser :: ReadP a -> ReadP (Header, [a])
 parser p = do
     hc <- P.comment
-    P.eol
     m <- P.module'
     P.eol
     es <- many1 p

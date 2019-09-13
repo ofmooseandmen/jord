@@ -30,10 +30,7 @@ data LongitudeRange
 -- | Epoch (decimal years) such as 2018.60: the 219th day of the year or August 7, 2018
 -- in the Gregorian calendar.
 data Epoch =
-    Epoch
-        { year :: Int -- ^ year (e.g. 2018).
-        , decimal :: Int -- ^ decimal part (e.g. 60).
-        }
+    Epoch Double
     deriving (Eq, Show)
 
 -- | identifier of a model.

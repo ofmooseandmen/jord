@@ -5,10 +5,8 @@ module Models
     ) where
 
 import Control.Applicative ((<|>))
-import Data.Char (isAlpha)
-import Data.List (intercalate, stripPrefix)
-import Data.Maybe (isJust)
-import Text.ParserCombinators.ReadP (ReadP, char, choice, look, skipSpaces, string)
+import Data.List (intercalate)
+import Text.ParserCombinators.ReadP (ReadP, choice, skipSpaces, string)
 
 import qualified Generator as G
 import qualified Parsers as P
@@ -17,10 +15,10 @@ data Model =
     Model
         { mtype :: ModelType
         , mid :: String
-        , comment :: String
+        , comment :: [String]
         , surface :: String
         , longitudeRange :: String
-        , epoch :: Maybe (Int, Int)
+        , epoch :: Maybe Double
         }
 
 data ModelType
@@ -31,7 +29,6 @@ data ModelType
 parser :: ReadP Model
 parser = do
     c <- P.comment
-    P.eol
     t <- type'
     skipSpaces
     n <- P.name
@@ -63,25 +60,9 @@ longitudeRange' = do
     _ <- string "longitudeRange: "
     choice [string "L180", string "L360"]
 
-maybeEpoch :: ModelType -> ReadP (Maybe (Int, Int))
+maybeEpoch :: ModelType -> ReadP (Maybe Double)
 maybeEpoch Spherical = return Nothing
-maybeEpoch _ = do
-    n <- look
-    if hasEpoch n
-        then fmap Just epoch'
-        else return Nothing
-
-hasEpoch :: String -> Bool
-hasEpoch s = isJust (stripPrefix "epoch" (dropWhile (not . isAlpha) s))
-
-epoch' :: ReadP (Int, Int)
-epoch' = do
-    skipSpaces
-    _ <- string "epoch: "
-    y <- P.integer
-    _ <- char '.'
-    d <- P.integer
-    return (y, d)
+maybeEpoch _ = P.epoch
 
 generator :: String -> G.Generator Model
 generator ellipsoids =
@@ -90,7 +71,7 @@ generator ellipsoids =
 modelToString :: Model -> String
 modelToString m = unlines' ([d, model, eq, show'] ++ instanceType m)
   where
-    d = "-- | " ++ comment m ++ ".\ndata " ++ mid m ++ " = " ++ "\n" ++ "    " ++ mid m
+    d = G.commentToString (comment m) ++ "data " ++ mid m ++ " = " ++ "\n" ++ "    " ++ mid m
     model = instanceModel m
     eq = instanceEq m
     show' = instanceShow m
@@ -126,12 +107,11 @@ instanceType m
 instanceSpherical :: String -> [String]
 instanceSpherical n = ["instance Spherical " ++ n]
 
-instanceEllipsoidal :: String -> Maybe (Int, Int) -> [String]
+instanceEllipsoidal :: String -> Maybe Double -> [String]
 instanceEllipsoidal n Nothing = ["instance Ellipsoidal " ++ n]
-instanceEllipsoidal n (Just (y, d)) =
+instanceEllipsoidal n (Just yd) =
     [ "instance Ellipsoidal " ++ n
-    , "instance EllipsoidalT0 " ++
-      n ++ " where\n" ++ "    epoch _ = Epoch " ++ show y ++ " " ++ show d
+    , "instance EllipsoidalT0 " ++ n ++ " where\n" ++ "    epoch _ = Epoch " ++ show yd
     ]
 
 unlines' :: [String] -> String

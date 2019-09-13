@@ -5,13 +5,18 @@ module Parsers
     , integer
     , eol
     , module'
+    , epoch
     ) where
 
 import Control.Applicative ((<|>))
-import Data.Char (isAlphaNum, isDigit)
+import Data.Char (isAlpha, isAlphaNum, isDigit)
+import Data.List (stripPrefix)
+import Data.Maybe (isJust)
 import Text.ParserCombinators.ReadP
     ( ReadP
     , char
+    , look
+    , many
     , many1
     , munch1
     , option
@@ -20,15 +25,15 @@ import Text.ParserCombinators.ReadP
     , string
     )
 
-comment :: ReadP String
-comment = do
+comment :: ReadP [String]
+comment = many commentL
+
+commentL :: ReadP String
+commentL = do
     _ <- char '#'
-    skipSpaces
-    c <- many1 (satisfy (/= '#'))
-    _ <- char '#'
-    case last c of
-        ' ' -> return (init c)
-        _ -> return c
+    c <- many (satisfy (\c -> c /= '\n' && c /= '\r'))
+    eol
+    return c
 
 name :: ReadP String
 name = many1 (satisfy (\c -> c == '_' || isAlphaNum c))
@@ -59,5 +64,21 @@ eol = do
 
 module' :: ReadP String
 module' = do
-    _ <- string "module: "
+    _ <- string "module "
     many1 (satisfy (\c -> c == '.' || isAlphaNum c))
+
+epoch :: ReadP (Maybe Double)
+epoch = do
+    n <- look
+    if hasEpoch n
+        then fmap Just epoch'
+        else return Nothing
+
+hasEpoch :: String -> Bool
+hasEpoch s = isJust (stripPrefix "epoch" (dropWhile (not . isAlpha) s))
+
+epoch' :: ReadP Double
+epoch' = do
+    skipSpaces
+    _ <- string "epoch: "
+    double

@@ -1,0 +1,25 @@
+# Coordinates transformations.
+#
+# params: tx ty tz s rx ry rz
+# rates:  tx ty tz s rx ry rz
+#
+# translations in millimetres, rates in millimetres per year
+# scale factors in parts per billion, rates in parts per billion per year
+# rotations in milliarcseconds, rates in milliarcseconds per year
+module Data.Geo.Jord.Transformations
+
+# WGS84 to NAD83 transformation parameters.
+WGS84 -> NAD83
+    params: 995.6  -1910.3  -521.5  -0.62  25.915  9.426  11.599
+
+# ITRF2014 to ITRF2008 transformation parameters.
+ITRF2014 -> ITRF2008
+    epoch: 2010.0
+    params: 1.6    1.9    2.4   -0.02    0.00    0.00    0.00
+    rates:  0.0    0.0   -0.1    0.03    0.00    0.00    0.00
+
+# ITRF2014 to ETRF2000 transformation parameters.
+ITRF2014 -> ETRF2000
+    epoch: 2000.0
+    params: 53.7   51.2  -55.1   1.02    0.891   5.390  -8.712
+    rates:  0.1     0.1  -1.9    0.11    0.081   0.490  -0.792

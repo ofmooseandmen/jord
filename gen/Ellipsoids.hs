@@ -13,14 +13,13 @@ import qualified Parsers as P
 data Ellipsoid =
     Ellipsoid
         { name :: String
-        , comment :: String
+        , comment :: [String]
         , params :: Either (Double, Double) Double
         }
 
 parser :: ReadP Ellipsoid
 parser = do
     c <- P.comment
-    P.eol
     n <- P.name
     P.eol
     ps <- params'
@@ -61,11 +60,12 @@ generator = G.Generator ["Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Length"] elli
 
 ellipsoidToString :: Ellipsoid -> String
 ellipsoidToString e =
-    "-- | " ++
-    comment e ++
-    ".\n" ++ "e" ++ name e ++ " :: Ellipsoid" ++ "\n" ++ "e" ++ name e ++ " = " ++ value
+    G.commentToString (comment e) ++ func e ++ " :: Ellipsoid" ++ "\n" ++ func e ++ " = " ++ value
   where
     value =
         case params e of
             Left (a, invf) -> "ellispoid (metres " ++ show a ++ ") " ++ show invf
             Right r -> "sphere (metres " ++ show r ++ ")"
+
+func :: Ellipsoid -> String
+func e = "e" ++ name e

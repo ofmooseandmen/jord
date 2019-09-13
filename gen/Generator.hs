@@ -2,11 +2,12 @@ module Generator
     ( Header(..)
     , Generator(..)
     , generate
+    , commentToString
     ) where
 
 data Header =
     Header
-        { comment :: String
+        { comment :: [String]
         , module' :: String
         }
 
@@ -35,10 +36,11 @@ header h =
     \-- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr> \n\
     \-- Stability:   experimental \n\
     \-- Portability: portable \n\
-    \--\n\
-    \-- " ++
-    comment h ++
-    ". \n\
-    \--\n\
+    \--\n" ++
+    commentToString (comment h) ++
+    "--\n\
     \-- This module has been generated.\n\
     \--\n"
+
+commentToString :: [String] -> String
+commentToString c = unlines (map (\s -> "--" ++ s) c)

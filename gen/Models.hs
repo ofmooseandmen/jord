@@ -71,7 +71,7 @@ generator ellipsoids =
 modelToString :: Model -> String
 modelToString m = unlines' ([d, model, eq, show'] ++ instanceType m)
   where
-    d = G.commentToString (comment m) ++ "data " ++ mid m ++ " = " ++ "\n" ++ "    " ++ mid m
+    d = G.documentation (comment m) ++ "data " ++ mid m ++ " = " ++ "\n" ++ "    " ++ mid m
     model = instanceModel m
     eq = instanceEq m
     show' = instanceShow m

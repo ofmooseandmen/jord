@@ -60,7 +60,7 @@ generator = G.Generator ["Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Length"] elli
 
 ellipsoidToString :: Ellipsoid -> String
 ellipsoidToString e =
-    G.commentToString (comment e) ++ func e ++ " :: Ellipsoid" ++ "\n" ++ func e ++ " = " ++ value
+    G.documentation (comment e) ++ func e ++ " :: Ellipsoid" ++ "\n" ++ func e ++ " = " ++ value
   where
     value =
         case params e of

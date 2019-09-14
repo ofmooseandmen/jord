@@ -16,7 +16,7 @@ import Data.Geo.Jord.Ellipsoids
 import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Model
 
--- World Geodetic System 1984.
+-- | World Geodetic System 1984.
 data WGS84 = 
     WGS84
 
@@ -33,7 +33,7 @@ instance Show WGS84 where
 
 instance Ellipsoidal WGS84
 
--- Geodetic Reference System 1980.
+-- | Geodetic Reference System 1980.
 data GRS80 = 
     GRS80
 
@@ -50,7 +50,7 @@ instance Show GRS80 where
 
 instance Ellipsoidal GRS80
 
--- World Geodetic System 1972.
+-- | World Geodetic System 1972.
 data WGS72 = 
     WGS72
 
@@ -67,7 +67,7 @@ instance Show WGS72 where
 
 instance Ellipsoidal WGS72
 
--- European Terrestrial Reference System 1989.
+-- | European Terrestrial Reference System 1989.
 data ETRS89 = 
     ETRS89
 
@@ -84,7 +84,7 @@ instance Show ETRS89 where
 
 instance Ellipsoidal ETRS89
 
--- North American Datum of 1983.
+-- | North American Datum of 1983.
 data NAD83 = 
     NAD83
 
@@ -101,7 +101,7 @@ instance Show NAD83 where
 
 instance Ellipsoidal NAD83
 
--- Mars Orbiter Laser Altimeter.
+-- | Mars Orbiter Laser Altimeter.
 data Mars2000 = 
     Mars2000
 
@@ -118,7 +118,7 @@ instance Show Mars2000 where
 
 instance Ellipsoidal Mars2000
 
--- International Terrestrial Reference System (2014).
+-- | International Terrestrial Reference System (2014).
 data ITRF2014 = 
     ITRF2014
 
@@ -138,7 +138,7 @@ instance Ellipsoidal ITRF2014
 instance EllipsoidalT0 ITRF2014 where
     epoch _ = Epoch 2010.0
 
--- International Terrestrial Reference System (2008).
+-- | International Terrestrial Reference System (2008).
 data ITRF2008 = 
     ITRF2008
 
@@ -158,7 +158,7 @@ instance Ellipsoidal ITRF2008
 instance EllipsoidalT0 ITRF2008 where
     epoch _ = Epoch 2005.0
 
--- International Terrestrial Reference System (2005).
+-- | International Terrestrial Reference System (2005).
 data ITRF2005 = 
     ITRF2005
 
@@ -178,7 +178,7 @@ instance Ellipsoidal ITRF2005
 instance EllipsoidalT0 ITRF2005 where
     epoch _ = Epoch 2000.0
 
--- International Terrestrial Reference System (2000).
+-- | International Terrestrial Reference System (2000).
 data ITRF2000 = 
     ITRF2000
 
@@ -198,7 +198,7 @@ instance Ellipsoidal ITRF2000
 instance EllipsoidalT0 ITRF2000 where
     epoch _ = Epoch 1997.0
 
--- International Terrestrial Reference System (93).
+-- | International Terrestrial Reference System (93).
 data ITRF93 = 
     ITRF93
 
@@ -218,7 +218,7 @@ instance Ellipsoidal ITRF93
 instance EllipsoidalT0 ITRF93 where
     epoch _ = Epoch 1988.0
 
--- International Terrestrial Reference System (91).
+-- | International Terrestrial Reference System (91).
 data ITRF91 = 
     ITRF91
 
@@ -238,7 +238,7 @@ instance Ellipsoidal ITRF91
 instance EllipsoidalT0 ITRF91 where
     epoch _ = Epoch 1988.0
 
--- World Geodetic System 1984 (G1762).
+-- | World Geodetic System 1984 (G1762).
 data WGS84_G1762 = 
     WGS84_G1762
 
@@ -258,7 +258,7 @@ instance Ellipsoidal WGS84_G1762
 instance EllipsoidalT0 WGS84_G1762 where
     epoch _ = Epoch 2005.0
 
--- World Geodetic System 1984 (G1674).
+-- | World Geodetic System 1984 (G1674).
 data WGS84_G1674 = 
     WGS84_G1674
 
@@ -278,7 +278,7 @@ instance Ellipsoidal WGS84_G1674
 instance EllipsoidalT0 WGS84_G1674 where
     epoch _ = Epoch 2005.0
 
--- World Geodetic System 1984 (G1150).
+-- | World Geodetic System 1984 (G1150).
 data WGS84_G1150 = 
     WGS84_G1150
 
@@ -298,7 +298,7 @@ instance Ellipsoidal WGS84_G1150
 instance EllipsoidalT0 WGS84_G1150 where
     epoch _ = Epoch 2001.0
 
--- European Terrestrial Reference System (2000).
+-- | European Terrestrial Reference System (2000).
 data ETRF2000 = 
     ETRF2000
 
@@ -318,7 +318,7 @@ instance Ellipsoidal ETRF2000
 instance EllipsoidalT0 ETRF2000 where
     epoch _ = Epoch 2005.0
 
--- NAD83 (Continuously Operating Reference Station 1996).
+-- | NAD83 (Continuously Operating Reference Station 1996).
 data NAD83_CORS96 = 
     NAD83_CORS96
 
@@ -338,7 +338,7 @@ instance Ellipsoidal NAD83_CORS96
 instance EllipsoidalT0 NAD83_CORS96 where
     epoch _ = Epoch 1997.0
 
--- Geocentric Datum Of Australia 1994.
+-- | Geocentric Datum Of Australia 1994.
 data GDA94 = 
     GDA94
 
@@ -358,7 +358,7 @@ instance Ellipsoidal GDA94
 instance EllipsoidalT0 GDA94 where
     epoch _ = Epoch 1994.0
 
--- Spherical Earth model derived from WGS84 ellipsoid.
+-- | Spherical Earth model derived from WGS84 ellipsoid.
 data S84 = 
     S84
 
@@ -375,7 +375,7 @@ instance Show S84 where
 
 instance Spherical S84
 
--- Spherical Mars model derived from Mars2000 ellipsoid.
+-- | Spherical Mars model derived from Mars2000 ellipsoid.
 data SMars2000 = 
     SMars2000
 
@@ -392,7 +392,7 @@ instance Show SMars2000 where
 
 instance Spherical SMars2000
 
--- Moon IAU/IAG.
+-- | Moon IAU/IAG.
 data Moon = 
     Moon
 

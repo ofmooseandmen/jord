@@ -1,11 +1,14 @@
 # Coordinates transformations.
 #
-# params: tx ty tz s rx ry rz
-# rates:  tx ty tz s rx ry rz
+#    * params: tx ty tz s rx ry rz
 #
-# translations in millimetres, rates in millimetres per year
-# scale factors in parts per billion, rates in parts per billion per year
-# rotations in milliarcseconds, rates in milliarcseconds per year
+#    * rates:  tx ty tz s rx ry rz
+#
+#    * translations in millimetres, rates in millimetres per year
+#
+#    * scale factors in parts per billion, rates in parts per billion per year
+#
+#    * rotations in milliarcseconds, rates in milliarcseconds per year
 module Data.Geo.Jord.Transformations
 
 # WGS84 to NAD83 transformation parameters.

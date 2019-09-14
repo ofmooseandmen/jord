@@ -78,7 +78,7 @@ transformationToString t
 
 dynamicTx :: Transformation -> String
 dynamicTx t =
-    G.commentToString (comment t) ++
+    G.documentation (comment t) ++
     func t ++
     " :: DynamicTx\n" ++
     func t ++
@@ -96,7 +96,7 @@ dynamicTx t =
 
 staticTx :: Transformation -> String
 staticTx t =
-    G.commentToString (comment t) ++
+    G.documentation (comment t) ++
     func t ++
     " :: StaticTx\n" ++
     func t ++

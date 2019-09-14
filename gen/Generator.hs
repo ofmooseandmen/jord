@@ -2,7 +2,7 @@ module Generator
     ( Header(..)
     , Generator(..)
     , generate
-    , commentToString
+    , documentation
     ) where
 
 data Header =
@@ -37,10 +37,14 @@ header h =
     \-- Stability:   experimental \n\
     \-- Portability: portable \n\
     \--\n" ++
-    commentToString (comment h) ++
+    genComment (comment h) ++
     "--\n\
     \-- This module has been generated.\n\
     \--\n"
 
-commentToString :: [String] -> String
-commentToString c = unlines (map (\s -> "--" ++ s) c)
+documentation :: [String] -> String
+documentation [] = ""
+documentation (c:cs) = ("-- |" ++ c ++ "\n") ++ (genComment cs)
+
+genComment :: [String] -> String
+genComment cs = unlines (map (\s -> "--" ++ s) cs)

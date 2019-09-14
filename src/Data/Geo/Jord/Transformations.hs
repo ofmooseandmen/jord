@@ -8,12 +8,15 @@
 --
 -- Coordinates transformations.
 --
--- params: tx ty tz s rx ry rz
--- rates:  tx ty tz s rx ry rz
+--    * params: tx ty tz s rx ry rz
 --
--- translations in millimetres, rates in millimetres per year
--- scale factors in parts per billion, rates in parts per billion per year
--- rotations in milliarcseconds, rates in milliarcseconds per year
+--    * rates:  tx ty tz s rx ry rz
+--
+--    * translations in millimetres, rates in millimetres per year
+--
+--    * scale factors in parts per billion, rates in parts per billion per year
+--
+--    * rotations in milliarcseconds, rates in milliarcseconds per year
 --
 -- This module has been generated.
 --
@@ -22,7 +25,7 @@ module Data.Geo.Jord.Transformations where
 import Data.Geo.Jord.Model
 import Data.Geo.Jord.Transformation
 
--- WGS84 to NAD83 transformation parameters.
+-- | WGS84 to NAD83 transformation parameters.
 from_WGS84_to_NAD83 :: StaticTx
 from_WGS84_to_NAD83 =
     staticTx
@@ -30,7 +33,7 @@ from_WGS84_to_NAD83 =
         (ModelId "WGS84")
         (txParams7 (995.6, -1910.3, -521.5) (-0.62) (25.915, 9.426, 11.599))
 
--- ITRF2014 to ITRF2008 transformation parameters.
+-- | ITRF2014 to ITRF2008 transformation parameters.
 from_ITRF2014_to_ITRF2008 :: DynamicTx
 from_ITRF2014_to_ITRF2008 =
     dynamicTx
@@ -41,7 +44,7 @@ from_ITRF2014_to_ITRF2008 =
              (txParams7 (1.6, 1.9, 2.4) (-0.2) (0.0, 0.0, 0.0))
              (txRates (0.0, 0.0, -0.1) 0.3 (0.0, 0.0, 0.0)))
 
--- ITRF2014 to ETRF2000 transformation parameters.
+-- | ITRF2014 to ETRF2000 transformation parameters.
 from_ITRF2014_to_ETRF2000 :: DynamicTx
 from_ITRF2014_to_ETRF2000 =
     dynamicTx

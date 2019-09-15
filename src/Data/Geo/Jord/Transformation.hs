@@ -9,7 +9,9 @@
 -- Coordinates transformation between ellipsoidal models.
 --
 module Data.Geo.Jord.Transformation
-    ( Tx
+    (
+    -- * transformation between 2 models.
+    , Tx
     , modelA
     , modelB
     , txParams
@@ -18,14 +20,23 @@ module Data.Geo.Jord.Transformation
     , staticTx
     , DynamicTx
     , dynamicTx
+    -- * transformation parameters.
     , TxParams7
     , TxRates
     , TxParams15(..)
     , txParams7
     , txRates
+    -- * transformation graph.
+    , TxGraph
+    , txGraph
+    , txParamsBetween
+    -- * coordinates transformation.
     , transformCoords
     , transformCoordsAt
     ) where
+
+import Data.List (find, foldl', nub)
+import Data.Maybe (catMaybes)
 
 import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
@@ -98,6 +109,112 @@ inverseTxParams15 (TxParams15 e p (TxRates c s r)) =
     ic = vscale c (-1.0)
     is = (-s)
     ir = vscale r (-1.0)
+
+-- | node to adjacent nodes.
+data Connection =
+    Connection
+        { node :: !ModelId
+        , adjacents :: ![ModelId]
+        }
+
+-- | graph edge: from model, tx params, to model.
+data Edge a =
+    Edge ModelId a ModelId
+
+-- queued, visited.
+data State =
+    State [ModelId] [ModelId]
+
+-- | Transformation graph: vertices are 'ModelId' and edges are transformation parameters.
+data TxGraph a =
+    TxGraph ![Connection] ![Edge a]
+
+-- | @txGraph ts@ returns a transformation graph containing all given direct and inverse
+-- (i.e. for each 'Tx': 'txParams' & 'inverseTxParams') transformations.
+txGraph :: [Tx a] -> TxGraph a
+txGraph ts = foldl' addTx emptyGraph ts
+
+-- | @txParamsBetween m0 m1 g@ computes the ordered list of transformation parameters to be
+-- successively applied when transforming the coordinates of a position in model @m0@ to model @m1@.
+-- The returned list is empty, if either model is not in the graph (i.e. not a vertex) or if no such
+-- transformation exists (i.e. model @m1@ cannot be reached from model @m0@).
+txParamsBetween :: ModelId -> ModelId -> TxGraph a -> [a]
+txParamsBetween m0 m1 g
+    | null ms = []
+    | otherwise = findParams ms g
+  where
+    ms = bfs (State [m0] []) m1 g
+
+-- | empty graph.
+emptyGraph :: TxGraph a
+emptyGraph = TxGraph [] []
+
+-- | add 'Tx' to graph.
+addTx :: TxGraph a -> Tx a -> TxGraph a
+addTx (TxGraph cs es) t = TxGraph cs' es'
+  where
+    ma = modelA t
+    mb = modelB t
+    cs1 = addConnection cs ma mb
+    cs' = addConnection cs1 mb ma
+    es' = (Edge ma (txParams t) mb) : (Edge mb (inverseTxParams t) ma) : es
+
+-- | add connection to graph.
+addConnection :: [Connection] -> ModelId -> ModelId -> [Connection]
+addConnection cs m1 m2
+    | null filtered = (Connection m1 [m2]) : cs
+    | otherwise =
+        map
+            (\c' ->
+                 if (node c' == m1)
+                     then updated
+                     else c')
+            cs
+  where
+    filtered = filter (\c -> node c == m1) cs
+    cur = head filtered
+    updated = cur {adjacents = m2 : (adjacents cur)}
+
+-- | successors of given model in given graph.
+successors :: ModelId -> TxGraph a -> [ModelId]
+successors m (TxGraph cs _) = concatMap adjacents (filter (\c -> node c == m) cs)
+
+-- | add model to queue/visited.
+addToState :: State -> ModelId -> State
+addToState (State q0 v0) m = (State (m : q0) (m : v0))
+
+-- | visit every given model.
+visit :: [ModelId] -> State -> State
+visit ms s0@(State _ v0) = foldl' addToState s0 (nub (filter (\x -> notElem x v0) ms))
+
+-- | breadth-first search.
+bfs :: State -> ModelId -> TxGraph a -> [ModelId]
+bfs (State [] _) _ _ = []
+bfs (State (c:[]) []) t g = bfs (State [c] [c]) t g
+bfs (State (c:r) v) t g
+    | elem t succs = reverse (t : v)
+    | otherwise = bfs s'' t g
+  where
+    s' = (State r v)
+    succs = successors c g
+    s'' = visit succs s'
+
+-- | find tx params between given models: [A, B, C] => params (A, B), params (B, C).
+findParams :: [ModelId] -> TxGraph a -> [a]
+findParams ms (TxGraph _ es)
+    | length ps == (length r) = r
+    | otherwise = []
+  where
+    ps = zip ms (tail ms)
+    r = catMaybes (map (\p -> findParam p es) ps)
+
+-- | find tx params between (A, B).
+findParam :: (ModelId, ModelId) -> [Edge a] -> Maybe a
+findParam p es = fmap (\(Edge _ pa _) -> pa) (find (\e -> edgeEq p e) es)
+
+-- | edge eq given pair?
+edgeEq :: (ModelId, ModelId) -> Edge a -> Bool
+edgeEq (m1, m2) (Edge m1' _ m2') = m1 == m1' && m2 == m2'
 
 -- | @transformCoords p1 m2 tx@ transforms the coordinates of the position @p1@ from its coordinate system
 -- into the coordinate system defined by the model @m2@ using the 7-parameters transformation @tx@.

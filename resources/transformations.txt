@@ -21,8 +21,26 @@ ITRF2014 -> ITRF2008
     params: 1.6    1.9    2.4   -0.02    0.00    0.00    0.00
     rates:  0.0    0.0   -0.1    0.03    0.00    0.00    0.00
 
+# ITRF2014 to ITRF2005 transformation parameters.
+ITRF2014 -> ITRF2005
+    epoch: 2010.0
+    params: 2.6    1.0   -2.3    0.92    0.00    0.00    0.00
+    rates:  0.3    0.0   -0.1    0.03    0.00    0.00    0.00
+
+# ITRF2014 to ITRF2000 transformation parameters.
+ITRF2014 -> ITRF2000
+    epoch: 2010.0
+    params: 0.7    1.2   -26.1   2.12    0.00    0.00    0.00
+    rates:  0.1    0.1    -1.9   0.11    0.00    0.00    0.00
+
 # ITRF2014 to ETRF2000 transformation parameters.
 ITRF2014 -> ETRF2000
     epoch: 2000.0
     params: 53.7   51.2  -55.1   1.02    0.891   5.390  -8.712
     rates:  0.1     0.1  -1.9    0.11    0.081   0.490  -0.792
+
+# ITRF2000 to NAD83 (CORS96) transformation parameters.
+ITRF2000 -> NAD83_CORS96
+    epoch: 1997.0
+    params: 995.6  -1901.3  -521.5   0.62  25.915   9.426   11.599
+    rates:    0.7     -0.7     0.5  -0.18   0.067  -0.757  -0.051

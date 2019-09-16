@@ -11,7 +11,7 @@
 module Data.Geo.Jord.Transformation
     (
     -- * transformation between 2 models.
-    , Tx
+      Tx
     , modelA
     , modelB
     , txParams
@@ -32,7 +32,9 @@ module Data.Geo.Jord.Transformation
     , txParamsBetween
     -- * coordinates transformation.
     , transformCoords
+    , transformCoords'
     , transformCoordsAt
+    , transformCoordsAt'
     ) where
 
 import Data.List (find, foldl', nub)
@@ -136,10 +138,11 @@ txGraph ts = foldl' addTx emptyGraph ts
 
 -- | @txParamsBetween m0 m1 g@ computes the ordered list of transformation parameters to be
 -- successively applied when transforming the coordinates of a position in model @m0@ to model @m1@.
--- The returned list is empty, if either model is not in the graph (i.e. not a vertex) or if no such
--- transformation exists (i.e. model @m1@ cannot be reached from model @m0@).
+-- The returned list is empty, if either model is not in the graph (i.e. not a vertex), if both models
+-- are the equal or if no such transformation exists (i.e. model @m1@ cannot be reached from model @m0@).
 txParamsBetween :: ModelId -> ModelId -> TxGraph a -> [a]
 txParamsBetween m0 m1 g
+    | m0 == m1 = []
     | null ms = []
     | otherwise = findParams ms g
   where
@@ -216,22 +219,61 @@ findParam p es = fmap (\(Edge _ pa _) -> pa) (find (\e -> edgeEq p e) es)
 edgeEq :: (ModelId, ModelId) -> Edge a -> Bool
 edgeEq (m1, m2) (Edge m1' _ m2') = m1 == m1' && m2 == m2'
 
--- | @transformCoords p1 m2 tx@ transforms the coordinates of the position @p1@ from its coordinate system
+-- | @transformCoords p1 m2 g@ transforms the coordinates of the position @p1@ from its coordinate
+-- system into the coordinate system defined by the model @m2@ using the graph @g@ to find the
+-- sequence of transformation parameters. Returns 'Nothing' if the given graph does not contain a
+-- transformation from @m1@ to @m2@ - see 'txParamsBetween'.
+--
+-- ==== __Examples__
+--
+-- >>> let pWGS84 = wgs84Pos 48.6921 6.1844 (metres 188)
+-- >>> pNAD83 = transformCoords pWGS84 NAD83 staticTransformations
+-- >>> Just 48°41'31.523"N,6°11'3.723"E 188.1212m (NAD83)
+--
+transformCoords ::
+       (Ellipsoidal a, Ellipsoidal b) => Position a -> b -> TxGraph TxParams7 -> Maybe (Position b)
+transformCoords p1 m2 g = transformCoordsF p1 m2 g id
+
+-- | @transformCoords' p1 m2 tx@ transforms the coordinates of the position @p1@ from its coordinate system
 -- into the coordinate system defined by the model @m2@ using the 7-parameters transformation @tx@.
+--
+-- TODO: what about a == b ?
 --
 -- ==== __Examples__
 --
 -- >>> let tx = txParams7 (995.6, -1910.3, -521.5) (-0.62) (25.915, 9.426, 11.599) -- WGS84 -> NAD83
 -- >>> let pWGS84 = wgs84Pos 48.6921 6.1844 (metres 188)
--- >>> pNAD83 = transformCoords pWGS84 NAD83 tx
+-- >>> pNAD83 = transformCoords' pWGS84 NAD83 tx
 -- >>> 48°41'31.523"N,6°11'3.723"E 188.1212m (NAD83)
 --
-transformCoords :: (Ellipsoidal a, Ellipsoidal b) => Position a -> b -> TxParams7 -> Position b
-transformCoords p1 m2 (TxParams7 c s r) = transformCoords' p1 m2 c s r
+transformCoords' :: (Ellipsoidal a, Ellipsoidal b) => Position a -> b -> TxParams7 -> Position b
+transformCoords' p1 m2 ps = transformPosCoords p1 m2 ps
 
--- | @transformCoordsAt p1 e m2 tx@ transforms the coordinates of the position @p1@ observed at epoch @e@
+-- | @transformCoordsAt p1 e m2 g@ transforms the coordinates of the position @p1@ observed at epoch @e@
+-- from its coordinate system into the coordinate system defined by the model @m2@ using the graph @g@ to
+-- find the sequence of transformation parameters. Returns 'Nothing' if the given graph does not contain a
+-- transformation from @m1@ to @m2@ - see 'txParamsBetween'.
+--
+-- ==== __Examples__
+--
+-- >>> let pITRF2014 = latLongHeightPos 48.6921 6.1844 (metres 188) ITRF2014
+-- >>> pETRF2000 = transformCoordsAt pITRF2014 (Epoch 2019.0) ETRF2000 dynamicTransformations
+-- >>> 48°41'31.561"N,6°11'3.865"E 188.0178m (ETRF2000)
+--
+transformCoordsAt ::
+       (EllipsoidalT0 a, EllipsoidalT0 b)
+    => Position a
+    -> Epoch
+    -> b
+    -> TxGraph TxParams15
+    -> Maybe (Position b)
+transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
+
+-- | @transformCoordsAt' p1 e m2 tx@ transforms the coordinates of the position @p1@ observed at epoch @e@
 -- from its coordinate system into the coordinate system defined by the model @m2@ using
 -- the 15-parameters transformation @tx@.
+--
+-- TODO: what about a == b ?
 --
 -- ==== __Examples__
 --
@@ -239,25 +281,51 @@ transformCoords p1 m2 (TxParams7 c s r) = transformCoords' p1 m2 c s r
 -- >>> let txR = txRates (0.1, 0.1, -1.9) 0.11 (0.81, 0.49, -0.792)
 -- >>> let tx = TxParams15 (Epoch 2000.0) tx7 txR -- ITRF2014 -> ETRF2000
 -- >>> let pITRF2014 = latLongHeightPos 48.6921 6.1844 (metres 188) ITRF2014
--- >>> pETRF2000 = transformCoordsAt pITRF2014 (Epoch 2019.0) ETRF2000 tx
+-- >>> pETRF2000 = transformCoordsAt' pITRF2014 (Epoch 2019.0) ETRF2000 tx
 -- >>> 48°41'31.561"N,6°11'3.865"E 188.0178m (ETRF2000)
 --
-transformCoordsAt ::
+transformCoordsAt' ::
        (EllipsoidalT0 a, EllipsoidalT0 b) => Position a -> Epoch -> b -> TxParams15 -> Position b
-transformCoordsAt p1 (Epoch e) m2 (TxParams15 (Epoch pe) (TxParams7 c s r) (TxRates rc rs rr)) =
-    transformCoords' p1 m2 c' s' r'
+transformCoordsAt' p1 e m2 ps = transformPosCoords p1 m2 (txParamsAt e ps)
+
+transformCoordsF ::
+       (Ellipsoidal a, Ellipsoidal b)
+    => Position a
+    -> b
+    -> TxGraph p
+    -> (p -> TxParams7)
+    -> Maybe (Position b)
+transformCoordsF p1 m2 g f
+    | mi1 == mi2 = Just (geocentricMetresPos v1x v1y v1z m2)
+    | otherwise =
+        case ps of
+            [] -> Nothing
+            _ -> Just (geocentricMetresPos v2x v2y v2z m2)
+  where
+    mi1 = modelId . model $ p1
+    mi2 = modelId m2
+    gc1@(Vector3d v1x v1y v1z) = gcvec p1
+    ps = txParamsBetween mi1 mi2 g
+    (Vector3d v2x v2y v2z) = foldl (\gc p -> transformGeoc gc (f p)) gc1 ps
+
+transformPosCoords :: (Model a, Model b) => Position a -> b -> TxParams7 -> Position b
+transformPosCoords p1 m2 ps = geocentricMetresPos v2x v2y v2z m2
+  where
+    (Vector3d v2x v2y v2z) = transformGeoc (gcvec p1) ps
+
+-- | geocentric coordinates transformation.
+transformGeoc :: Vector3d -> TxParams7 -> Vector3d
+transformGeoc gc (TxParams7 c s r) = vadd c (vscale (vmultm gc (rotation r)) (1.0 + s))
+
+-- | tx parameters at epoch.
+txParamsAt :: Epoch -> TxParams15 -> TxParams7
+txParamsAt (Epoch e) (TxParams15 (Epoch pe) (TxParams7 c s r) (TxRates rc rs rr)) =
+    TxParams7 c' s' r'
   where
     de = pe - e
     c' = vadd c (vscale rc de)
     s' = s + de * rs
     r' = vadd r (vscale rr de)
-
-transformCoords' ::
-       (Model a, Model b) => Position a -> b -> Vector3d -> Double -> Vector3d -> Position b
-transformCoords' p1 m2 c s r = geocentricMetresPos v2x v2y v2z m2
-  where
-    v1 = gcvec p1
-    (Vector3d v2x v2y v2z) = vadd c (vscale (vmultm v1 (rotation r)) (1.0 + s))
 
 mmToMetres :: (Double, Double, Double) -> Vector3d
 mmToMetres (cx, cy, cz) = vscale (Vector3d cx cy cz) (1.0 / 1000.0)

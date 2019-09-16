@@ -66,10 +66,10 @@ maybeEpoch _ = P.epoch
 
 generator :: String -> G.Generator Model
 generator ellipsoids =
-    G.Generator [ellipsoids, "Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Model"] modelToString
+    G.Generator [ellipsoids, "Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Model"] genModel (const "")
 
-modelToString :: Model -> String
-modelToString m = unlines' ([d, model, eq, show'] ++ instanceType m)
+genModel :: Model -> String
+genModel m = unlines' ([d, model, eq, show'] ++ instanceType m)
   where
     d = G.documentation (comment m) ++ "data " ++ mid m ++ " = " ++ "\n" ++ "    " ++ mid m
     model = instanceModel m

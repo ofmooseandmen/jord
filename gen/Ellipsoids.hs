@@ -56,10 +56,10 @@ radius = do
     return d
 
 generator :: G.Generator Ellipsoid
-generator = G.Generator ["Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Length"] ellipsoidToString
+generator = G.Generator ["Data.Geo.Jord.Ellipsoid", "Data.Geo.Jord.Length"] genEllipsoid (const "")
 
-ellipsoidToString :: Ellipsoid -> String
-ellipsoidToString e =
+genEllipsoid :: Ellipsoid -> String
+genEllipsoid e =
     G.documentation (comment e) ++ func e ++ " :: Ellipsoid" ++ "\n" ++ func e ++ " = " ++ value
   where
     value =

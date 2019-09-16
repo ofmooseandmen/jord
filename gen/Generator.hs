@@ -12,18 +12,15 @@ data Header =
         }
 
 data Generator a =
-    Generator
-        { imports :: [String]
-        , toString :: a -> String
-        }
+    Generator [String] (a -> String) ([a] -> String)
 
 generate :: Header -> Generator a -> [a] -> String
-generate h (Generator is ts) elts =
+generate h (Generator imports genElt genAll) elts =
     header h ++
     "module " ++
     module' h ++
     " where\n\n" ++
-    unlines (map (\i -> "import " ++ i) is) ++ "\n" ++ unlines (map (\e -> ts e ++ "\n") elts)
+    unlines (map (\i -> "import " ++ i) imports) ++ "\n" ++ unlines (map (\e -> genElt e ++ "\n") elts) ++ genAll elts
 
 header :: Header -> String
 header h =

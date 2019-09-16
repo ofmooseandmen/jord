@@ -4,7 +4,7 @@ module Transformations
     , generator
     ) where
 
-import Data.List (intersperse)
+import Data.List (intercalate, partition)
 import Data.Maybe (isJust)
 import Text.ParserCombinators.ReadP (ReadP, skipSpaces, string)
 
@@ -68,11 +68,10 @@ params' n = do
     return (Params [tx, ty, tz] s [rx, ry, rz])
 
 generator :: G.Generator Transformation
-generator =
-    G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Transformation"] transformationToString
+generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Transformation"] genTx genAll
 
-transformationToString :: Transformation -> String
-transformationToString t
+genTx :: Transformation -> String
+genTx t
     | isJust (epoch t) = dynamicTx t
     | otherwise = staticTx t
 
@@ -84,15 +83,14 @@ dynamicTx t =
     func t ++
     " =\n    dynamicTx\n" ++
     "        " ++
-    (idToString (from t)) ++
+    idToString (from t) ++
     "\n        " ++
-    (idToString (to t)) ++
+    idToString (to t) ++
     "\n        " ++
     "(TxParams15" ++
     "\n             " ++
-    (epochToString (epoch t)) ++
-    "\n             " ++
-    tx7ToString (params t) ++ "\n             " ++ ratesToString (rates t) ++ ")"
+    epochToString (epoch t) ++
+    "\n             " ++ tx7ToString (params t) ++ "\n             " ++ ratesToString (rates t) ++ ")"
 
 staticTx :: Transformation -> String
 staticTx t =
@@ -101,23 +99,19 @@ staticTx t =
     " :: StaticTx\n" ++
     func t ++
     " =\n    staticTx\n" ++
-    "        " ++
-    (idToString (from t)) ++
-    "\n        " ++ (idToString (from t)) ++ "\n        " ++ (tx7ToString (params t))
+    "        " ++ idToString (from t) ++ "\n        " ++ idToString (from t) ++ "\n        " ++ tx7ToString (params t)
 
 idToString :: String -> String
 idToString s = "(ModelId \"" ++ s ++ "\")"
 
 tx7ToString :: Params -> String
-tx7ToString (Params t s r) =
-    "(txParams7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+tx7ToString (Params t s r) = "(txParams7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 ratesToString :: Params -> String
-ratesToString (Params t s r) =
-    "(txRates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+ratesToString (Params t s r) = "(txRates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 dsToString :: [Double] -> String
-dsToString ds = "(" ++ (concat (intersperse ", " (map show ds))) ++ ")"
+dsToString ds = "(" ++ intercalate ", " (map show ds) ++ ")"
 
 dToString :: Double -> String
 dToString d
@@ -130,3 +124,32 @@ func t = "from_" ++ from t ++ "_to_" ++ to t
 epochToString :: Maybe Double -> String
 epochToString Nothing = error "no epoch"
 epochToString (Just yd) = "(Epoch " ++ show yd ++ ")"
+
+genAll :: [Transformation] -> String
+genAll ts = genStaticTxs s ++ "\n" ++ genDynamicTxs d
+  where
+    (d, s) = split ts
+
+genStaticTxs :: [Transformation] -> String
+genStaticTxs ts =
+    "-- | Graph of all static transformations.\n\
+   \staticTxs :: TxGraph TxParams7\n\
+   \staticTxs =\n\
+   \    txGraph\n\
+   \        [ " ++
+    funcs ts ++ "\n        ]\n"
+
+genDynamicTxs :: [Transformation] -> String
+genDynamicTxs ts =
+    "-- | Graph of all dynamic transformations.\n\
+   \dynamicTxs :: TxGraph TxParams15\n\
+   \dynamicTxs =\n\
+   \    txGraph\n\
+   \        [ " ++
+    funcs ts ++ "\n        ]\n"
+
+funcs :: [Transformation] -> String
+funcs ts = intercalate "\n        , " (map func ts)
+
+split :: [Transformation] -> ([Transformation], [Transformation])
+split = partition (isJust . epoch)

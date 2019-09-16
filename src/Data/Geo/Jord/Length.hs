@@ -36,6 +36,7 @@ import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 
 -- | A length with a resolution of 0.1 millimetre.
+-- TODO 0.01 millimetre (for coordinates transformation)
 newtype Length =
     Length
         { tenthOfMm :: Int

@@ -88,3 +88,20 @@ from_ITRF2000_to_NAD83_CORS96 =
              (txParams7 (995.6, -1901.3, -521.5) 0.62 (25.915, 9.426, 11.599))
              (txRates (0.7, -0.7, 0.5) (-0.18) (0.67, -0.757, -0.51)))
 
+-- | Graph of all static transformations.
+staticTxs :: TxGraph TxParams7
+staticTxs =
+    txGraph
+        [ from_WGS84_to_NAD83
+        ]
+
+-- | Graph of all dynamic transformations.
+dynamicTxs :: TxGraph TxParams15
+dynamicTxs =
+    txGraph
+        [ from_ITRF2014_to_ITRF2008
+        , from_ITRF2014_to_ITRF2005
+        , from_ITRF2014_to_ITRF2000
+        , from_ITRF2014_to_ETRF2000
+        , from_ITRF2000_to_NAD83_CORS96
+        ]

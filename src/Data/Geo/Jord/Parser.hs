@@ -29,8 +29,8 @@ double :: ReadP Double
 double = do
     s <- option 1.0 (fmap (\_ -> -1.0) (char '-'))
     i <- natural
-    f <- char '.' >> natural
-    return (s * (read (show i ++ "." ++ show f) :: Double))
+    f <- char '.' >> munch1 isDigit
+    return (s * (read (show i ++ "." ++ f) :: Double))
 
 -- | Parses optionally a @-@ followed by a 'natural' and returns the read 'Int'.
 integer :: ReadP Int

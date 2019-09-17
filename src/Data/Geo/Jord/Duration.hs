@@ -35,7 +35,7 @@ import Text.Read (readMaybe)
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 
--- | A duration with a resolution of 1 millisecond.
+-- | A duration with a resolution of 1 millisecond. -- TODO: less?
 newtype Duration =
     Duration
         { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
@@ -55,6 +55,9 @@ instance Show Duration where
         m = truncate (fromIntegral (millis `mod` 3600000) / 60000.0 :: Double) :: Int
         s = truncate (fromIntegral (millis `mod` 60000) / 1000.0 :: Double) :: Int
         ms = mod (abs millis) 1000
+
+instance Ord Duration where
+    (<=) (Duration d1) (Duration d2) = d1 <= d2
 
 -- | Add/Subtract Durations.
 instance Quantity Duration where

@@ -41,8 +41,8 @@ from_ITRF2014_to_ITRF2008 =
         (ModelId "ITRF2008")
         (TxParams15
              (Epoch 2010.0)
-             (txParams7 (1.6, 1.9, 2.4) (-0.2) (0.0, 0.0, 0.0))
-             (txRates (0.0, 0.0, -0.1) 0.3 (0.0, 0.0, 0.0)))
+             (txParams7 (1.6, 1.9, 2.4) (-2.0e-2) (0.0, 0.0, 0.0))
+             (txRates (0.0, 0.0, -0.1) 3.0e-2 (0.0, 0.0, 0.0)))
 
 -- | ITRF2014 to ITRF2005 transformation parameters.
 from_ITRF2014_to_ITRF2005 :: DynamicTx
@@ -53,7 +53,7 @@ from_ITRF2014_to_ITRF2005 =
         (TxParams15
              (Epoch 2010.0)
              (txParams7 (2.6, 1.0, -2.3) 0.92 (0.0, 0.0, 0.0))
-             (txRates (0.3, 0.0, -0.1) 0.3 (0.0, 0.0, 0.0)))
+             (txRates (0.3, 0.0, -0.1) 3.0e-2 (0.0, 0.0, 0.0)))
 
 -- | ITRF2014 to ITRF2000 transformation parameters.
 from_ITRF2014_to_ITRF2000 :: DynamicTx
@@ -74,8 +74,8 @@ from_ITRF2014_to_ETRF2000 =
         (ModelId "ETRF2000")
         (TxParams15
              (Epoch 2000.0)
-             (txParams7 (53.7, 51.2, -55.1) 1.2 (0.891, 5.39, -8.712))
-             (txRates (0.1, 0.1, -1.9) 0.11 (0.81, 0.49, -0.792)))
+             (txParams7 (53.7, 51.2, -55.1) 1.02 (0.891, 5.39, -8.712))
+             (txRates (0.1, 0.1, -1.9) 0.11 (8.1e-2, 0.49, -0.792)))
 
 -- | ITRF2000 to NAD83 (CORS96) transformation parameters.
 from_ITRF2000_to_NAD83_CORS96 :: DynamicTx
@@ -86,7 +86,7 @@ from_ITRF2000_to_NAD83_CORS96 =
         (TxParams15
              (Epoch 1997.0)
              (txParams7 (995.6, -1901.3, -521.5) 0.62 (25.915, 9.426, 11.599))
-             (txRates (0.7, -0.7, 0.5) (-0.18) (0.67, -0.757, -0.51)))
+             (txRates (0.7, -0.7, 0.5) (-0.18) (6.7e-2, -0.757, -5.1e-2)))
 
 -- | Graph of all static transformations.
 staticTxs :: TxGraph TxParams7

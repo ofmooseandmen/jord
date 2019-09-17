@@ -54,21 +54,21 @@ latLongDmsCompactP m = do
 blat :: ReadP Angle
 blat = do
     d' <- digits 2
-    (m', s') <- option (0, 0) (ms <|> mi)
+    (m', s') <- option (0, 0.0) (ms <|> mi)
     h <- hemisphere
     if h == 'N'
-        then dmsF d' m' s' 0
-        else dmsF (-d') m' s' 0
+        then dmsF d' m' s'
+        else dmsF (-d') m' s'
 
 -- | reads longitude in DDDMMSS.
 blon :: ReadP Angle
 blon = do
     d' <- digits 3
-    (m', s') <- option (0, 0) (ms <|> mi)
+    (m', s') <- option (0, 0.0) (ms <|> mi)
     m'' <- meridian
     if m'' == 'E'
-        then dmsF d' m' s' 0
-        else dmsF (-d') m' s' 0
+        then dmsF d' m' s'
+        else dmsF (-d') m' s'
 
 -- | reads N or S char.
 hemisphere :: ReadP Char
@@ -79,17 +79,17 @@ meridian :: ReadP Char
 meridian = char 'E' <|> char 'W'
 
 -- | reads minutes and seconds.
-ms :: ReadP (Int, Int)
+ms :: ReadP (Int, Double)
 ms = do
     m' <- digits 2
-    s' <- digits 2
+    s' <- number
     return (m', s')
 
 -- | reads minutes.
-mi :: ReadP (Int, Int)
+mi :: ReadP (Int, Double)
 mi = do
     m' <- digits 2
-    return (m', 0)
+    return (m', 0.0)
 
 -- | reads (latitude, longitude) from a human friendly text - see 'Angle'.
 latLongDmsSymbolsP :: (Model a) => a -> ReadP (Angle, Angle)
@@ -135,13 +135,13 @@ showLon lon
     | isNegative lon = show (negate' lon) ++ "W"
     | otherwise = show lon ++ "E"
 
-dmsF :: (MonadFail m) => Int -> Int -> Int -> Int -> m Angle
-dmsF degs mins secs millis =
+dmsF :: (MonadFail m) => Int -> Int -> Double -> m Angle
+dmsF degs mins secs =
     case e of
         Left err -> fail err
         Right a -> return a
   where
-    e = dms degs mins secs millis
+    e = dms degs mins secs
 
 isValidLat :: Angle -> Bool
 isValidLat a = isWithin a (decimalDegrees (-90)) (decimalDegrees 90)

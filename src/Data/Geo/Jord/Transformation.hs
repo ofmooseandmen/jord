@@ -137,7 +137,7 @@ txGraph = foldl' addTx emptyGraph
 -- are the equal or if no such transformation exists (i.e. model @m1@ cannot be reached from model @m0@).
 txParamsBetween :: ModelId -> ModelId -> TxGraph a -> [a]
 txParamsBetween m0 m1 g
-    | m0 == m1 = []
+    | m0 == m1 = [] -- FIXME return default for a
     | null ms = []
     | otherwise = findParams ms g
   where
@@ -304,7 +304,7 @@ transformGeoc gc (TxParams7 c s r) = vadd c (vscale (vmultm gc (rotation r)) (1.
 txParamsAt :: Epoch -> TxParams15 -> TxParams7
 txParamsAt (Epoch e) (TxParams15 (Epoch pe) (TxParams7 c s r) (TxRates rc rs rr)) = TxParams7 c' s' r'
   where
-    de = pe - e
+    de = e - pe
     c' = vadd c (vscale rc de)
     s' = s + de * rs
     r' = vadd r (vscale rr de)

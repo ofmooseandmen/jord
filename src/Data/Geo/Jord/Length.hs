@@ -35,11 +35,10 @@ import Text.Read (readMaybe)
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
 
--- | A length with a resolution of 0.1 millimetre.
--- TODO 0.01 millimetre (for coordinates transformation)
+-- | A length with a resolution of 1 micrometre.
 newtype Length =
     Length
-        { tenthOfMm :: Int
+        { micrometre :: Int
         }
     deriving (Eq)
 
@@ -47,35 +46,36 @@ newtype Length =
 instance Read Length where
     readsPrec _ = readP_to_S lengthP
 
--- | Length is shown in metres when absolute value is <= 10,000 m and in kilometres otherwise.
+-- | Length is shown in metres when absolute value is <= 10 km and in kilometres otherwise.
 instance Show Length where
     show l
-        | abs m <= 10000.0 = show m ++ "m"
-        | otherwise = show (m / 1000.0) ++ "km"
-      where
-        m = toMetres l
+        | abs' l <= (kilometres 10) = show (toMetres l) ++ "m"
+        | otherwise = show (toKilometres l) ++ "km"
+
+instance Ord Length where
+    (<=) (Length l1) (Length l2) = l1 <= l2
 
 -- | Add/Subtract 'Length's.
 instance Quantity Length where
-    add a b = Length (tenthOfMm a + tenthOfMm b)
-    sub a b = Length (tenthOfMm a - tenthOfMm b)
+    add a b = Length (micrometre a + micrometre b)
+    sub a b = Length (micrometre a - micrometre b)
     zero = Length 0
 
 -- | 'Length' from given amount of feet.
 feet :: Double -> Length
-feet ft = Length (round (ft * 3048.0))
+feet ft = Length (round (ft * 0.3048 * m2um))
 
 -- | 'Length' from given amount of kilometres.
 kilometres :: Double -> Length
-kilometres km = Length (round (km * 10000000.0))
+kilometres km = Length (round (km * 1000.0 * m2um))
 
 -- | 'Length' from given amount of metres.
 metres :: Double -> Length
-metres m = Length (round (m * 10000.0))
+metres m = Length (round (m * m2um))
 
 -- | 'Length' from given amount of nautical miles.
 nauticalMiles :: Double -> Length
-nauticalMiles nm = Length (round (nm * 18520000.0))
+nauticalMiles nm = Length (round (nm * 1852.0 * m2um))
 
 -- | Reads an a 'Length' from the given string using 'lengthP'.
 readLength :: String -> Maybe Length
@@ -83,23 +83,23 @@ readLength s = readMaybe s :: (Maybe Length)
 
 -- | @toFeet l@ converts @l@ to feet.
 toFeet :: Length -> Double
-toFeet (Length l) = fromIntegral l / 3048.0
+toFeet (Length l) = fromIntegral l / (0.3048 * m2um)
 
 -- | @toKilometres l@ converts @l@ to kilometres.
 toKilometres :: Length -> Double
-toKilometres (Length l) = fromIntegral l / 10000000.0
+toKilometres (Length l) = fromIntegral l / (1000.0 * m2um)
 
 -- | @toMetres l@ converts @l@ to metres.
 toMetres :: Length -> Double
-toMetres (Length l) = fromIntegral l / 10000.0
+toMetres (Length l) = fromIntegral l / m2um
 
 -- | @toMillimetres l@ converts @l@ to millimetres.
 toMillimetres :: Length -> Double
-toMillimetres (Length l) = fromIntegral l / 10.0
+toMillimetres (Length l) = fromIntegral l / 1000.0
 
 -- | @toNauticalMiles l@ converts @l@ to nautical miles.
 toNauticalMiles :: Length -> Double
-toNauticalMiles (Length l) = fromIntegral l / 18520000.0
+toNauticalMiles (Length l) = fromIntegral l / (1852.0 * m2um)
 
 -- | Parses and returns a 'Length' formatted as (-)float[m|km|nm|ft].
 -- e.g. 3000m, 2.5km, -154nm or 10000ft.
@@ -115,3 +115,10 @@ lengthP = do
         "nm" -> return (nauticalMiles v)
         "ft" -> return (feet v)
         _ -> pfail
+
+-- | metre to micrometre.
+m2um :: Double
+m2um = 1000.0 * 1000.0
+
+abs' :: Length -> Length
+abs' (Length um) = Length (abs um)

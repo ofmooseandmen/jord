@@ -104,6 +104,7 @@ data Position a =
 instance (Model a) => Show (Position a) where
     show p = showLatLong (latitude p, longitude p) ++ " " ++ (show . height $ p) ++ " (" ++ (show . model $ p) ++ ")"
 
+-- FIXME model p1 == model p2 useless due to a.
 instance (Model a) => Eq (Position a) where
     p1 == p2 =
         latitude p1 == latitude p2 && longitude p1 == longitude p2 && height p1 == height p2 && model p1 == model p2

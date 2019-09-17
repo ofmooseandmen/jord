@@ -54,6 +54,9 @@ instance Read Speed where
 instance Show Speed where
     show s = show (toKilometresPerHour s) ++ "km/h"
 
+instance Ord Speed where
+    (<=) (Speed s1) (Speed s2) = s1 <= s2
+
 -- | Add/Subtract Speed.
 instance Quantity Speed where
     add a b = Speed (mmPerHour a + mmPerHour b)

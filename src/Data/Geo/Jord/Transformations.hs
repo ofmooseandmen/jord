@@ -29,7 +29,7 @@ import Data.Geo.Jord.Transformation
 from_WGS84_to_NAD83 :: Tx TxParams7
 from_WGS84_to_NAD83 =
     Tx (ModelId "WGS84")
-        (ModelId "WGS84")
+        (ModelId "NAD83")
         (txParams7 (995.6, -1910.3, -521.5) (-0.62) (25.915, 9.426, 11.599))
 
 -- | ITRF2014 to ITRF2008 transformation parameters.

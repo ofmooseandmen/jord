@@ -216,7 +216,7 @@ edgeEq (m1, m2) (Edge m1' _ m2') = m1 == m1' && m2 == m2'
 -- ==== __Examples__
 --
 -- >>> let pWGS84 = wgs84Pos 48.6921 6.1844 (metres 188)
--- >>> pNAD83 = transformCoords pWGS84 NAD83 staticTxs
+-- >>> transformCoords pWGS84 NAD83 staticTxs
 -- >>> Just 48°41'31.523"N,6°11'3.723"E 188.1212m (NAD83)
 --
 transformCoords ::
@@ -226,13 +226,14 @@ transformCoords p1 m2 g = transformCoordsF p1 m2 g id
 -- | @transformCoords' p1 m2 tx@ transforms the coordinates of the position @p1@ from its coordinate system
 -- into the coordinate system defined by the model @m2@ using the 7-parameters transformation @tx@.
 --
--- TODO: what about a == b ? + to be used when actual parameters are known, prefer 'transformCoords'.
+-- Notes: this function does not checks whether both models are equals. It should be used when the
+-- 7-parameter transformation is known. Most of the time prefer using 'transformCoords'.
 --
 -- ==== __Examples__
 --
 -- >>> let tx = txParams7 (995.6, -1910.3, -521.5) (-0.62) (25.915, 9.426, 11.599) -- WGS84 -> NAD83
 -- >>> let pWGS84 = wgs84Pos 48.6921 6.1844 (metres 188)
--- >>> pNAD83 = transformCoords' pWGS84 NAD83 tx
+-- >>> transformCoords' pWGS84 NAD83 tx
 -- >>> 48°41'31.523"N,6°11'3.723"E 188.1212m (NAD83)
 --
 transformCoords' :: (Ellipsoidal a, Ellipsoidal b) => Position a -> b -> TxParams7 -> Position b
@@ -242,12 +243,12 @@ transformCoords' = transformPosCoords
 -- from its coordinate system into the coordinate system defined by the model @m2@ using the graph @g@ to
 -- find the sequence of transformation parameters. Returns 'Nothing' if the given graph does not contain a
 -- transformation from @m1@ to @m2@ - see 'txParamsBetween'.
--- TODO example NAD83 to ITRF2014
+--
 -- ==== __Examples__
 --
 -- >>> let pITRF2014 = latLongHeightPos 48.6921 6.1844 (metres 188) ITRF2014
--- >>> pETRF2000 = transformCoordsAt pITRF2014 (Epoch 2019.0) ETRF2000 dynamicTxs
--- >>> Just 48°41'31.561"N,6°11'3.865"E 188.0178m (ETRF2000)
+-- >>> transformCoordsAt pITRF2014 (Epoch 2019.0) NAD83_CORS96 dynamicTxs -- through ITRF2000
+-- >>> Just 48°41'31.538"N,6°11'3.722"E 188.112035m (NAD83_CORS96)
 --
 transformCoordsAt ::
        (EllipsoidalT0 a, EllipsoidalT0 b)
@@ -262,7 +263,8 @@ transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
 -- from its coordinate system into the coordinate system defined by the model @m2@ using
 -- the 15-parameters transformation @tx@.
 --
--- TODO: what about a == b ? + to be used when actual parameters are known, prefer 'transformCoordsAt'.
+-- Notes: this function does not checks whether both models are equals. It should be used when the
+-- 15-parameter transformation is known. Most of the time prefer using 'transformCoords'.
 --
 -- ==== __Examples__
 --
@@ -270,7 +272,7 @@ transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
 -- >>> let txR = txRates (0.1, 0.1, -1.9) 0.11 (0.81, 0.49, -0.792)
 -- >>> let tx = TxParams15 (Epoch 2000.0) tx7 txR -- ITRF2014 -> ETRF2000
 -- >>> let pITRF2014 = latLongHeightPos 48.6921 6.1844 (metres 188) ITRF2014
--- >>> pETRF2000 = transformCoordsAt' pITRF2014 (Epoch 2019.0) ETRF2000 tx
+-- >>> transformCoordsAt' pITRF2014 (Epoch 2019.0) ETRF2000 tx
 -- >>> 48°41'31.561"N,6°11'3.865"E 188.0178m (ETRF2000)
 --
 transformCoordsAt' ::

@@ -100,7 +100,7 @@ staticTx t =
     func t ++
     " =\n    Tx " ++
     idToString (from t) ++
-    "\n        " ++ idToString (from t) ++ "\n        " ++ tx7ToString (params t)
+    "\n        " ++ idToString (to t) ++ "\n        " ++ tx7ToString (params t)
 
 idToString :: String -> String
 idToString s = "(ModelId \"" ++ s ++ "\")"

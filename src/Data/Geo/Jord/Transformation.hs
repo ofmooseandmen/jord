@@ -167,11 +167,11 @@ successors m (TxGraph cs _) = concatMap adjacents (filter (\c -> node c == m) cs
 visit :: ModelId -> [ModelId] -> State -> State
 visit f ms (State q0 v0) = State q1 v1
   where
-    toVisit = filter (`notElem` (concat v0)) ms -- filter models already visited
+    toVisit = filter (`notElem` concat v0) ms -- filter models already visited
     fs = filter (\v -> head v == f) v0 -- all paths starting at f
     q1 = q0 ++ toVisit
-    updatedPaths = concatMap (\x -> (map (\y -> y : x) toVisit)) fs
-    v1 = updatedPaths ++ (filter (\v -> head v /= f) v0)
+    updatedPaths = concatMap (\x -> map (: x) toVisit) fs
+    v1 = updatedPaths ++ filter (\v -> head v /= f) v0
 
 shortest :: ModelId -> ModelId -> [Path] -> [ModelId]
 shortest c m ps = reverse (m : s)

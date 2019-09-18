@@ -25,7 +25,7 @@ spec = do
                     NAD83
         it "returns the initial coordinates when doing round-trip (direct -> inverse)" $ do
             let tx = txParams from_WGS84_to_NAD83
-            let itx = inverseTxParams from_WGS84_to_NAD83
+            let itx = inverseTxParams tx
             let pWGS84 = wgs84Pos 48.6921 6.1844 (metres 188)
             transformCoords' (transformCoords' pWGS84 NAD83 tx) WGS84 itx `shouldBe` pWGS84
     describe "coordinates dynamic transformation" $ do
@@ -44,7 +44,7 @@ spec = do
             pETRF2000 `shouldBe` geocentricMetresPos 4027894.0452 307045.876 4919474.8735 ETRF2000
         it "returns the initial coordinates when doing round-trip (direct -> inverse)" $ do
             let tx = txParams from_ITRF2014_to_ETRF2000
-            let itx = inverseTxParams from_ITRF2014_to_ETRF2000
+            let itx = inverseTxParams tx
             let pITRF2014 = geocentricMetresPos 4027894.006 307045.600 4919474.910 ITRF2014
             let e = Epoch 2019.0
             transformCoordsAt' (transformCoordsAt' pITRF2014 e ETRF2000 tx) e ITRF2014 itx `shouldBe`

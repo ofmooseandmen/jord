@@ -32,15 +32,15 @@ spec = do
         it "returns the final bearing in compass angle" $ do
             let p1 = s84Pos 50.066389 (-5.714722) zero
             let p2 = s84Pos 58.643889 (-3.07) zero
-            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 11.275200277777778)
+            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 11.27520031611111)
         it "returns the final bearing in compass angle" $ do
             let p1 = s84Pos 58.643889 (-3.07) zero
             let p2 = s84Pos 50.066389 (-5.714722) zero
-            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 189.11981722222222)
+            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 189.1198173275)
         it "returns the final bearing in compass angle" $ do
             let p1 = s84Pos (-53.994722) (-25.9875) zero
             let p2 = s84Pos 54 154 zero
-            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 125.68508638888889)
+            finalBearing p1 p2 `shouldBe` Just (decimalDegrees 125.68508662305555)
     describe "initialBearing" $ do
         it "returns Nothing if both positions are the same (ignoring height)" $ do
             let p = s84Pos 50.066389 (-179.999722) zero
@@ -93,8 +93,8 @@ spec = do
         it "returns the initial bearing in compass angle" $ do
             let p1 = s84Pos 50.066389 (-5.714722) (metres 12000)
             let p2 = s84Pos 58.643889 (-3.07) (metres 5000)
-            initialBearing p1 p2 `shouldBe` Just (decimalDegrees 9.119817222222222)
+            initialBearing p1 p2 `shouldBe` Just (decimalDegrees 9.1198173275)
         it "returns the initial bearing in compass angle" $ do
             let p1 = s84Pos 58.643889 (-3.07) (metres 12000)
             let p2 = s84Pos 50.066389 (-5.714722) (metres 5000)
-            initialBearing p1 p2 `shouldBe` Just (decimalDegrees 191.27520027777777)
+            initialBearing p1 p2 `shouldBe` Just (decimalDegrees 191.27520031611112)

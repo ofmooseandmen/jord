@@ -20,16 +20,16 @@ spec = do
             eccentricity (toSphere eGRS80) `shouldBe` 0
             eccentricity (toSphere eWGS72) `shouldBe` 0
     describe "Polar radius" $ do
-        it "returns 6356752.3142 m for the WGS84 ellipsoid" $
-            polarRadius eWGS84 `shouldBe` metres 6356752.3142
-        it "returns 6356752.3141 m for the GRS80 ellipsoid" $
-            polarRadius eGRS80 `shouldBe` metres 6356752.3141
-        it "returns 6356750.52 m for the WG72 ellipsoid" $
-            polarRadius eWGS72 `shouldBe` metres 6356750.52
+        it "returns 6356752.314245 m for the WGS84 ellipsoid" $
+            polarRadius eWGS84 `shouldBe` metres 6356752.314245
+        it "returns 6356752.31414 m for the GRS80 ellipsoid" $
+            polarRadius eGRS80 `shouldBe` metres 6356752.31414
+        it "returns 6356750.520016 m for the WG72 ellipsoid" $
+            polarRadius eWGS72 `shouldBe` metres 6356750.520016
     describe "Mean radius" $ do
-        it "returns 6371008.7714 m for the WGS84 ellipsoid" $
-            meanRadius eWGS84 `shouldBe` metres 6371008.7714
-        it "returns 6371008.7714 m for the GRS80 ellipsoid" $
-            meanRadius eGRS80 `shouldBe` metres 6371008.7714
-        it "returns 6371006.84 m for the WG72 ellipsoid" $
-            meanRadius eWGS72 `shouldBe` metres 6371006.84
+        it "returns 6371008.771415 m for the WGS84 ellipsoid" $
+            meanRadius eWGS84 `shouldBe` metres 6371008.771415
+        it "returns 6371008.77138 m for the GRS80 ellipsoid" $
+            meanRadius eGRS80 `shouldBe` metres 6371008.77138
+        it "returns 6371006.840005 m for the WG72 ellipsoid" $
+            meanRadius eWGS72 `shouldBe` metres 6371006.840005

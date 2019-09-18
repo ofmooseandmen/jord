@@ -10,17 +10,9 @@
 --
 module Data.Geo.Jord.Transformation
     (
-    -- * transformation between 2 models.
-      Tx
-    , modelA
-    , modelB
-    , txParams
-    , inverseTxParams
-    , StaticTx
-    , staticTx
-    , DynamicTx
-    , dynamicTx
     -- * transformation parameters.
+      Tx(..)
+    , TxParams(..)
     , TxParams7
     , TxRates
     , TxParams15(..)
@@ -37,7 +29,7 @@ module Data.Geo.Jord.Transformation
     , transformCoordsAt'
     ) where
 
-import Data.List (find, foldl', nub)
+import Data.List (find, foldl', sortOn)
 import Data.Maybe (mapMaybe)
 
 import Data.Geo.Jord.Model
@@ -50,27 +42,26 @@ data Tx a =
         { modelA :: ModelId -- ^  model A.
         , modelB :: ModelId -- ^ model B.
         , txParams :: a -- ^ transformation parameters - i.e. 'modelA'-> 'modelB'
-        , inverseTxParams :: a -- ^ parameters of inverse transformation - i.e. 'modelB' -> 'modelA'.
         }
 
--- | Time-__independent__ transformation between 2 ellispoidal models: 7-parameter transformation.
-type StaticTx = Tx TxParams7
-
--- | 'StaticTx' from given direct transformation parameters.
-staticTx :: ModelId -> ModelId -> TxParams7 -> Tx TxParams7
-staticTx f t p = Tx f t p (inverseTxParams7 p)
-
--- | Time-__dependent__ transformation between 2 time-dependant ellispoidal models: 15-parameter transformation.
-type DynamicTx = Tx TxParams15
-
--- | 'DynamicTx' from given direct transformation parameters.
-dynamicTx :: ModelId -> ModelId -> TxParams15 -> Tx TxParams15
-dynamicTx f t p = Tx f t p (inverseTxParams15 p)
+-- | class for transformation parameters.
+class TxParams a where
+    idTxParams :: a -- ^ identity transformation, i.e. @p T idTxParams = p@.
+    inverseTxParams :: a -> a -- ^ inverse transformation parameters.
 
 -- | 7-parameter transformation (Helmert); use 'txParams7' to construct.
 data TxParams7 =
     TxParams7 !Vector3d !Double !Vector3d
     deriving (Show)
+
+instance TxParams TxParams7 where
+    idTxParams = TxParams7 (Vector3d 0 0 0) 0 (Vector3d 0 0 0)
+    inverseTxParams (TxParams7 c s r) = TxParams7 (vscale c (-1.0)) (-s) (vscale r (-1.0))
+
+instance TxParams TxParams15 where
+    idTxParams = TxParams15 (Epoch 0) idTxParams (TxRates (Vector3d 0 0 0) 0 (Vector3d 0 0 0))
+    inverseTxParams (TxParams15 e p (TxRates c s r)) =
+        TxParams15 e (inverseTxParams p) (TxRates (vscale c (-1.0)) (-s) (vscale r (-1.0)))
 
 -- | Transformation rates for the 15-parameter transformation (Helmert); use 'txRates' to construct.
 data TxRates =
@@ -90,10 +81,6 @@ txParams7 ::
     -> TxParams7
 txParams7 c s r = TxParams7 (mmToMetres c) (s / 1e9) (masToRadians r)
 
--- | @inverseTxParams7 t@ returns the 7-parameters of the inverse of transformation @t@.
-inverseTxParams7 :: TxParams7 -> TxParams7
-inverseTxParams7 (TxParams7 c s r) = TxParams7 (vscale c (-1.0)) (-s) (vscale r (-1.0))
-
 -- | rates of the 15-parameter translation (Helmert) from given translation rates, scale factor rate and rotation rates.
 txRates ::
        (Double, Double, Double) -- ^ translation rate in __millimetres per year__.
@@ -101,11 +88,6 @@ txRates ::
     -> (Double, Double, Double) -- ^ rotation rate in __milliarcseconds per year__.
     -> TxRates
 txRates c s r = TxRates (mmToMetres c) (s / 1e9) (masToRadians r)
-
--- | @inverseTxParams15 t@ returns the 15-parameters of the inverse of transformation @t@.
-inverseTxParams15 :: TxParams15 -> TxParams15
-inverseTxParams15 (TxParams15 e p (TxRates c s r)) =
-    TxParams15 e (inverseTxParams7 p) (TxRates (vscale c (-1.0)) (-s) (vscale r (-1.0)))
 
 -- | node to adjacent nodes.
 data Connection =
@@ -118,9 +100,12 @@ data Connection =
 data Edge a =
     Edge ModelId a ModelId
 
+-- path of visited models.
+type Path = [ModelId]
+
 -- queued, visited.
 data State =
-    State [ModelId] [ModelId]
+    State [ModelId] [Path]
 
 -- | Transformation graph: vertices are 'ModelId' and edges are transformation parameters.
 data TxGraph a =
@@ -128,34 +113,35 @@ data TxGraph a =
 
 -- | @txGraph ts@ returns a transformation graph containing all given direct and inverse
 -- (i.e. for each 'Tx': 'txParams' & 'inverseTxParams') transformations.
-txGraph :: [Tx a] -> TxGraph a
+txGraph :: (TxParams a) => [Tx a] -> TxGraph a
 txGraph = foldl' addTx emptyGraph
 
 -- | @txParamsBetween m0 m1 g@ computes the ordered list of transformation parameters to be
 -- successively applied when transforming the coordinates of a position in model @m0@ to model @m1@.
--- The returned list is empty, if either model is not in the graph (i.e. not a vertex), if both models
--- are the equal or if no such transformation exists (i.e. model @m1@ cannot be reached from model @m0@).
-txParamsBetween :: ModelId -> ModelId -> TxGraph a -> [a]
+-- The returned list is empty, if either model is not in the graph (i.e. not a vertex)  or if no
+-- such transformation exists (i.e. model @m1@ cannot be reached from model @m0@).
+txParamsBetween :: (TxParams a) => ModelId -> ModelId -> TxGraph a -> [a]
 txParamsBetween m0 m1 g
-    | m0 == m1 = [] -- FIXME return default for a
+    | m0 == m1 = [idTxParams]
     | null ms = []
     | otherwise = findParams ms g
   where
-    ms = bfs (State [m0] []) m1 g
+    ms = dijkstra (State [m0] []) m1 g
 
 -- | empty graph.
 emptyGraph :: TxGraph a
 emptyGraph = TxGraph [] []
 
 -- | add 'Tx' to graph.
-addTx :: TxGraph a -> Tx a -> TxGraph a
+addTx :: (TxParams a) => TxGraph a -> Tx a -> TxGraph a
 addTx (TxGraph cs es) t = TxGraph cs' es'
   where
     ma = modelA t
     mb = modelB t
     cs1 = addConnection cs ma mb
     cs' = addConnection cs1 mb ma
-    es' = Edge ma (txParams t) mb : Edge mb (inverseTxParams t) ma : es
+    txp = txParams t
+    es' = Edge ma txp mb : Edge mb (inverseTxParams txp) ma : es
 
 -- | add connection to graph.
 addConnection :: [Connection] -> ModelId -> ModelId -> [Connection]
@@ -177,25 +163,33 @@ addConnection cs m1 m2
 successors :: ModelId -> TxGraph a -> [ModelId]
 successors m (TxGraph cs _) = concatMap adjacents (filter (\c -> node c == m) cs)
 
--- | add model to queue/visited.
-addToState :: State -> ModelId -> State
-addToState (State q0 v0) m = State (m : q0) (m : v0)
+-- | visit every given model from given model.
+visit :: ModelId -> [ModelId] -> State -> State
+visit f ms (State q0 v0) = State q1 v1
+  where
+    toVisit = filter (`notElem` (concat v0)) ms -- filter models already visited
+    fs = filter (\v -> head v == f) v0 -- all paths starting at f
+    q1 = q0 ++ toVisit
+    updatedPaths = concatMap (\x -> (map (\y -> y : x) toVisit)) fs
+    v1 = updatedPaths ++ (filter (\v -> head v /= f) v0)
 
--- | visit every given model.
-visit :: [ModelId] -> State -> State
-visit ms s0@(State _ v0) = foldl' addToState s0 (nub (filter (`notElem` v0) ms))
+shortest :: ModelId -> ModelId -> [Path] -> [ModelId]
+shortest c m ps = reverse (m : s)
+  where
+    fs = filter (\v -> head v == c) ps -- all paths starting at c
+    s = head (sortOn length fs)
 
--- | breadth-first search.
-bfs :: State -> ModelId -> TxGraph a -> [ModelId]
-bfs (State [] _) _ _ = []
-bfs (State [c] []) t g = bfs (State [c] [c]) t g
-bfs (State (c:r) v) t g
-    | t `elem` succs = reverse (t : v)
-    | otherwise = bfs s'' t g
+-- | dijkstra.
+dijkstra :: State -> ModelId -> TxGraph a -> [ModelId]
+dijkstra (State [] _) _ _ = []
+dijkstra (State [c] []) t g = dijkstra (State [c] [[c]]) t g
+dijkstra (State (c:r) v) t g
+    | t `elem` succs = shortest c t v
+    | otherwise = dijkstra s'' t g
   where
     s' = State r v
     succs = successors c g
-    s'' = visit succs s'
+    s'' = visit c succs s'
 
 -- | find tx params between given models: [A, B, C] => params (A, B), params (B, C).
 findParams :: [ModelId] -> TxGraph a -> [a]
@@ -225,7 +219,8 @@ edgeEq (m1, m2) (Edge m1' _ m2') = m1 == m1' && m2 == m2'
 -- >>> pNAD83 = transformCoords pWGS84 NAD83 staticTxs
 -- >>> Just 48°41'31.523"N,6°11'3.723"E 188.1212m (NAD83)
 --
-transformCoords :: (Ellipsoidal a, Ellipsoidal b) => Position a -> b -> TxGraph TxParams7 -> Maybe (Position b)
+transformCoords ::
+       (Ellipsoidal a, Ellipsoidal b) => Position a -> b -> TxGraph TxParams7 -> Maybe (Position b)
 transformCoords p1 m2 g = transformCoordsF p1 m2 g id
 
 -- | @transformCoords' p1 m2 tx@ transforms the coordinates of the position @p1@ from its coordinate system
@@ -255,7 +250,12 @@ transformCoords' = transformPosCoords
 -- >>> Just 48°41'31.561"N,6°11'3.865"E 188.0178m (ETRF2000)
 --
 transformCoordsAt ::
-       (EllipsoidalT0 a, EllipsoidalT0 b) => Position a -> Epoch -> b -> TxGraph TxParams15 -> Maybe (Position b)
+       (EllipsoidalT0 a, EllipsoidalT0 b)
+    => Position a
+    -> Epoch
+    -> b
+    -> TxGraph TxParams15
+    -> Maybe (Position b)
 transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
 
 -- | @transformCoordsAt' p1 e m2 tx@ transforms the coordinates of the position @p1@ observed at epoch @e@
@@ -273,23 +273,26 @@ transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
 -- >>> pETRF2000 = transformCoordsAt' pITRF2014 (Epoch 2019.0) ETRF2000 tx
 -- >>> 48°41'31.561"N,6°11'3.865"E 188.0178m (ETRF2000)
 --
-transformCoordsAt' :: (EllipsoidalT0 a, EllipsoidalT0 b) => Position a -> Epoch -> b -> TxParams15 -> Position b
+transformCoordsAt' ::
+       (EllipsoidalT0 a, EllipsoidalT0 b) => Position a -> Epoch -> b -> TxParams15 -> Position b
 transformCoordsAt' p1 e m2 ps = transformPosCoords p1 m2 (txParamsAt e ps)
 
 transformCoordsF ::
-       (Ellipsoidal a, Ellipsoidal b) => Position a -> b -> TxGraph p -> (p -> TxParams7) -> Maybe (Position b)
-transformCoordsF p1 m2 g f
-    | mi1 == mi2 = Just (geocentricMetresPos v1x v1y v1z m2)
-    | otherwise =
-        case ps of
-            [] -> Nothing
-            _ -> Just (geocentricMetresPos v2x v2y v2z m2)
+       (Ellipsoidal a, Ellipsoidal b, TxParams p)
+    => Position a
+    -> b
+    -> TxGraph p
+    -> (p -> TxParams7)
+    -> Maybe (Position b)
+transformCoordsF p1 m2 g f =
+    case ps of
+        [] -> Nothing
+        _ -> Just (geocentricMetresPos v2x v2y v2z m2)
   where
     mi1 = modelId . model $ p1
     mi2 = modelId m2
-    gc1@(Vector3d v1x v1y v1z) = gcvec p1
     ps = txParamsBetween mi1 mi2 g
-    (Vector3d v2x v2y v2z) = foldl (\gc p -> transformGeoc gc (f p)) gc1 ps
+    (Vector3d v2x v2y v2z) = foldl (\gc p -> transformGeoc gc (f p)) (gcvec p1) ps
 
 transformPosCoords :: (Model a, Model b) => Position a -> b -> TxParams7 -> Position b
 transformPosCoords p1 m2 ps = geocentricMetresPos v2x v2y v2z m2
@@ -302,7 +305,8 @@ transformGeoc gc (TxParams7 c s r) = vadd c (vscale (vmultm gc (rotation r)) (1.
 
 -- | tx parameters at epoch.
 txParamsAt :: Epoch -> TxParams15 -> TxParams7
-txParamsAt (Epoch e) (TxParams15 (Epoch pe) (TxParams7 c s r) (TxRates rc rs rr)) = TxParams7 c' s' r'
+txParamsAt (Epoch e) (TxParams15 (Epoch pe) (TxParams7 c s r) (TxRates rc rs rr)) =
+    TxParams7 c' s' r'
   where
     de = e - pe
     c' = vadd c (vscale rc de)

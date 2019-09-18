@@ -26,18 +26,16 @@ import Data.Geo.Jord.Model
 import Data.Geo.Jord.Transformation
 
 -- | WGS84 to NAD83 transformation parameters.
-from_WGS84_to_NAD83 :: StaticTx
+from_WGS84_to_NAD83 :: Tx TxParams7
 from_WGS84_to_NAD83 =
-    staticTx
-        (ModelId "WGS84")
+    Tx (ModelId "WGS84")
         (ModelId "WGS84")
         (txParams7 (995.6, -1910.3, -521.5) (-0.62) (25.915, 9.426, 11.599))
 
 -- | ITRF2014 to ITRF2008 transformation parameters.
-from_ITRF2014_to_ITRF2008 :: DynamicTx
+from_ITRF2014_to_ITRF2008 :: Tx TxParams15
 from_ITRF2014_to_ITRF2008 =
-    dynamicTx
-        (ModelId "ITRF2014")
+    Tx (ModelId "ITRF2014")
         (ModelId "ITRF2008")
         (TxParams15
              (Epoch 2010.0)
@@ -45,10 +43,9 @@ from_ITRF2014_to_ITRF2008 =
              (txRates (0.0, 0.0, -0.1) 3.0e-2 (0.0, 0.0, 0.0)))
 
 -- | ITRF2014 to ITRF2005 transformation parameters.
-from_ITRF2014_to_ITRF2005 :: DynamicTx
+from_ITRF2014_to_ITRF2005 :: Tx TxParams15
 from_ITRF2014_to_ITRF2005 =
-    dynamicTx
-        (ModelId "ITRF2014")
+    Tx (ModelId "ITRF2014")
         (ModelId "ITRF2005")
         (TxParams15
              (Epoch 2010.0)
@@ -56,10 +53,9 @@ from_ITRF2014_to_ITRF2005 =
              (txRates (0.3, 0.0, -0.1) 3.0e-2 (0.0, 0.0, 0.0)))
 
 -- | ITRF2014 to ITRF2000 transformation parameters.
-from_ITRF2014_to_ITRF2000 :: DynamicTx
+from_ITRF2014_to_ITRF2000 :: Tx TxParams15
 from_ITRF2014_to_ITRF2000 =
-    dynamicTx
-        (ModelId "ITRF2014")
+    Tx (ModelId "ITRF2014")
         (ModelId "ITRF2000")
         (TxParams15
              (Epoch 2010.0)
@@ -67,10 +63,9 @@ from_ITRF2014_to_ITRF2000 =
              (txRates (0.1, 0.1, -1.9) 0.11 (0.0, 0.0, 0.0)))
 
 -- | ITRF2014 to ETRF2000 transformation parameters.
-from_ITRF2014_to_ETRF2000 :: DynamicTx
+from_ITRF2014_to_ETRF2000 :: Tx TxParams15
 from_ITRF2014_to_ETRF2000 =
-    dynamicTx
-        (ModelId "ITRF2014")
+    Tx (ModelId "ITRF2014")
         (ModelId "ETRF2000")
         (TxParams15
              (Epoch 2000.0)
@@ -78,10 +73,9 @@ from_ITRF2014_to_ETRF2000 =
              (txRates (0.1, 0.1, -1.9) 0.11 (8.1e-2, 0.49, -0.792)))
 
 -- | ITRF2000 to NAD83 (CORS96) transformation parameters.
-from_ITRF2000_to_NAD83_CORS96 :: DynamicTx
+from_ITRF2000_to_NAD83_CORS96 :: Tx TxParams15
 from_ITRF2000_to_NAD83_CORS96 =
-    dynamicTx
-        (ModelId "ITRF2000")
+    Tx (ModelId "ITRF2000")
         (ModelId "NAD83_CORS96")
         (TxParams15
              (Epoch 1997.0)

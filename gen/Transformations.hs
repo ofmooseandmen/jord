@@ -79,10 +79,9 @@ dynamicTx :: Transformation -> String
 dynamicTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: DynamicTx\n" ++
+    " :: Tx TxParams15\n" ++
     func t ++
-    " =\n    dynamicTx\n" ++
-    "        " ++
+    " =\n    Tx " ++
     idToString (from t) ++
     "\n        " ++
     idToString (to t) ++
@@ -90,25 +89,29 @@ dynamicTx t =
     "(TxParams15" ++
     "\n             " ++
     epochToString (epoch t) ++
-    "\n             " ++ tx7ToString (params t) ++ "\n             " ++ ratesToString (rates t) ++ ")"
+    "\n             " ++
+    tx7ToString (params t) ++ "\n             " ++ ratesToString (rates t) ++ ")"
 
 staticTx :: Transformation -> String
 staticTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: StaticTx\n" ++
+    " :: Tx TxParams7\n" ++
     func t ++
-    " =\n    staticTx\n" ++
-    "        " ++ idToString (from t) ++ "\n        " ++ idToString (from t) ++ "\n        " ++ tx7ToString (params t)
+    " =\n    Tx " ++
+    idToString (from t) ++
+    "\n        " ++ idToString (from t) ++ "\n        " ++ tx7ToString (params t)
 
 idToString :: String -> String
 idToString s = "(ModelId \"" ++ s ++ "\")"
 
 tx7ToString :: Params -> String
-tx7ToString (Params t s r) = "(txParams7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+tx7ToString (Params t s r) =
+    "(txParams7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 ratesToString :: Params -> String
-ratesToString (Params t s r) = "(txRates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+ratesToString (Params t s r) =
+    "(txRates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 dsToString :: [Double] -> String
 dsToString ds = "(" ++ intercalate ", " (map show ds) ++ ")"

@@ -53,7 +53,7 @@ import Data.Geo.Jord.Quantity
 
 -- | An angle with a resolution of a microarcsecond.
 -- When used as a latitude/longitude this roughly translate to a precision
--- of TODO millimetres at the equator.
+-- of 0.03 millimetres at the equator.
 newtype Angle =
     Angle
         { microarcseconds :: Int

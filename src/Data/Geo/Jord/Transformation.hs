@@ -12,6 +12,7 @@ module Data.Geo.Jord.Transformation
     (
     -- * transformation parameters.
       Tx(..)
+    , inverseTx
     , TxParams(..)
     , TxParams7
     , TxRates
@@ -44,9 +45,13 @@ data Tx a =
         , txParams :: a -- ^ transformation parameters - i.e. 'modelA'-> 'modelB'
         }
 
+-- | inverse transformation.
+inverseTx :: (TxParams a) => Tx a -> Tx a
+inverseTx t = Tx (modelB t) (modelA t) (inverseTxParams (txParams t))
+
 -- | class for transformation parameters.
 class TxParams a where
-    idTxParams :: a -- ^ identity transformation, i.e. @p T idTxParams = p@.
+    idTxParams :: a -- ^ identity transformation parameters, i.e. @p T idTxParams = p@.
     inverseTxParams :: a -> a -- ^ inverse transformation parameters.
 
 -- | 7-parameter transformation (Helmert); use 'txParams7' to construct.

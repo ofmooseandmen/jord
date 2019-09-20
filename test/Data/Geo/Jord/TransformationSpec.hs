@@ -41,7 +41,7 @@ spec = do
             let pITRF2014 = geocentricMetresPos 4027894.006 307045.600 4919474.910 ITRF2014
             let tx = txParams from_ITRF2014_to_ETRF2000
             let pETRF2000 = transformCoordsAt' pITRF2014 (Epoch 2012.0) ETRF2000 tx
-            pETRF2000 `shouldBe` geocentricMetresPos 4027894.0452 307045.876 4919474.8735 ETRF2000
+            pETRF2000 `shouldBe` geocentricMetresPos 4027894.366234 307045.252967 4919474.626307 ETRF2000
         it "returns the initial coordinates when doing round-trip (direct -> inverse)" $ do
             let tx = txParams from_ITRF2014_to_ETRF2000
             let itx = inverseTxParams tx

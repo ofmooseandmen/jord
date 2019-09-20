@@ -26,7 +26,7 @@ spec = do
     describe "Geodetic <=> Geocentric (Ellipsoidal)" $ do
         it "n-vector <=> Geocentric" $ do
             let p = nvectorPos 0.5 0.5 0.7071 WGS84
-            let g = geocentricMetresPos 3194434.411 3194434.411 4487326.8195 WGS84
+            let g = geocentricMetresPos 3194434.410968 3194434.410968 4487326.819509 WGS84
             p `shouldBe` g
         it "latitude, longitude and height <=> Geocentric" $ do
             let refLlh =
@@ -38,20 +38,20 @@ spec = do
                     ]
             let refGeocentrics =
                     [ geocentricMetresPos 6378137 0 0 WGS84
-                    , geocentricMetresPos 0 0 6356752.3142 WGS84
-                    , geocentricMetresPos 0 0 (-6356752.3142) WGS84
-                    , geocentricMetresPos 3194669.1450999997 3194669.1450999997 4487701.9622 WGS84
+                    , geocentricMetresPos 0 0 6356752.314245 WGS84
+                    , geocentricMetresPos 0 0 (-6356752.314245) WGS84
+                    , geocentricMetresPos 3194669.145061 3194669.145061 4487701.962256 WGS84
                     , geocentricMetresPos
-                          3194669.1450999997
-                          (-3194669.1450999997)
-                          (-4487701.9622)
+                          3194669.145061
+                          (-3194669.145061)
+                          (-4487701.962256)
                           WGS84
                     ]
             refLlh `shouldBe` refGeocentrics
     describe "Geodetic <=> Geocentric (Spherical)" $ do
         it "n-vector <=> Geocentric" $ do
             let p = nvectorPos 0.5 0.5 0.7071 S84
-            let g = geocentricMetresPos 3185519.6603 3185519.6603 4504961.9036 S84
+            let g = geocentricMetresPos 3185519.660311 3185519.660311 4504961.903612 S84
             p `shouldBe` g
         it "latitude, longitude and height <=> Geocentric" $ do
             let refLlh =
@@ -62,10 +62,10 @@ spec = do
                     , latLongHeightPos (-45) (-45) (metres 500) S84
                     ]
             let refGeocentrics =
-                    [ geocentricMetresPos 6371008.7714 0 0 S84
-                    , geocentricMetresPos 0 0 6371008.7714 S84
-                    , geocentricMetresPos 0 0 (-6371008.7714) S84
-                    , geocentricMetresPos 3185754.3857 3185754.3857 4505337.0586 S84
-                    , geocentricMetresPos 3185754.3857 (-3185754.3857) (-4505337.0586) S84
+                    [ geocentricMetresPos 6371008.771415 0 0 S84
+                    , geocentricMetresPos 0 0 6371008.771415 S84
+                    , geocentricMetresPos 0 0 (-6371008.771415) S84
+                    , geocentricMetresPos 3185754.385708 3185754.385708 4505337.058657 S84
+                    , geocentricMetresPos 3185754.385708 (-3185754.385708) (-4505337.058657) S84
                     ]
             refLlh `shouldBe` refGeocentrics

@@ -10,7 +10,7 @@ spec :: Spec
 spec =
     describe "Showing positions" $ do
         it "shows the N/E position formatted in DMS with symbols" $
-            show (wgs84Pos 55.60583333 13.00055556 (metres 5)) `shouldBe`
+            show (wgs84Pos 55.6058333333 13.00055556 (metres 5)) `shouldBe`
             "55°36'21.000\"N,13°0'2.000\"E 5.0m (WGS84)"
         it "shows the S/E position formatted in DMS with symbols" $
             show (latLongPos (-1.28305556) 36.81666 GRS80) `shouldBe`

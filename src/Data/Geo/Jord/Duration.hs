@@ -123,7 +123,6 @@ minutesP = do
 
 secondsP :: ReadP Double
 secondsP = do
-    s <- integer
-    ms <- option 0 (char '.' >> natural)
+    s <- number
     _ <- char 'S'
-    return (fromIntegral s + fromIntegral ms / 10.0)
+    return s

@@ -82,8 +82,8 @@ meridian = char 'E' <|> char 'W'
 ms :: ReadP (Int, Double)
 ms = do
     m' <- digits 2
-    s' <- number
-    return (m', s')
+    s' <- digits 2
+    return (m', fromIntegral s')
 
 -- | reads minutes.
 mi :: ReadP (Int, Double)

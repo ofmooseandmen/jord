@@ -13,11 +13,11 @@ spec = do
             antipode (wgs84Pos 45 154 (metres 15000)) `shouldBe` wgs84Pos (-45) (-26) (metres 15000)
             antipode (s84Pos 45 154 (metres 15000)) `shouldBe` s84Pos (-45) (-26) (metres 15000)
         it "returns the south pole when called with the north pole" $ do
-            antipode (northPole WGS84) `shouldBe` southPole WGS84
-            antipode (northPole S84) `shouldBe` southPole S84
+            latitude (antipode (northPole WGS84)) `shouldBe` latitude (southPole WGS84)
+            latitude (antipode (northPole S84)) `shouldBe` latitude (southPole S84)
         it "returns the north pole when called with the south pole" $ do
-            antipode (southPole WGS84) `shouldBe` northPole WGS84
-            antipode (southPole S84) `shouldBe` northPole S84
+            latitude (antipode (southPole WGS84)) `shouldBe` latitude (northPole WGS84)
+            latitude (antipode (southPole S84)) `shouldBe` latitude (northPole S84)
     describe "wrapping latitude/longitude" $ do
         it "wraps a Earth position to [-90°, 90°] and [-180°, 180°]" $
             latLong (s84Pos 91 54 zero) `shouldBe` (89, -126)

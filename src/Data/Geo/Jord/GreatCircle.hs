@@ -37,12 +37,6 @@ module Data.Geo.Jord.GreatCircle
     , mean
     ) where
 
--- TODO: add the following
--- see: https://github.com/chrisveness/geodesy/blob/master/latlon-nvector-spherical.js
--- intermediatePointOnChordTo
--- nearestPointOnSegment
--- triangulate
--- trilaterate
 import Data.Fixed (Nano)
 import Data.List (subsequences)
 
@@ -199,7 +193,14 @@ crossTrackDistance' p s b = crossTrackDistance p (greatCircleHeadingOn s b)
 -- | @greatCircleDestination p b d@ computes the position along the great circle, reached from
 -- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@.
 -- Note that the  bearing will normally vary before destination is reached.
--- TODO examples + mention great circle vs geodesic?
+--
+-- This is the equivalent of 'Data.Geo.Jord.Geodesic.geodesicDestination' for spherical models.
+--
+-- ==== __Examples__
+--
+-- >>> greatCircleDestination (s84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
+-- 61°10'44.188"N,164°10'19.254"E 15.0km (S84)
+--
 greatCircleDestination :: (Spherical a) => Position a -> Angle -> Length -> Position a
 greatCircleDestination p b d
     | d == zero = p
@@ -215,7 +216,14 @@ greatCircleDestination p b d
 
 -- | @greatCircleDistance p1 p2@ computes the surface distance on the great circle between the
 -- positions @p1@ and @p2@.
--- TODO examples + mention great circle vs geodesic?
+--
+-- This is the equivalent of 'Data.Geo.Jord.Geodesic.geodesicDistance' for spherical models.
+--
+-- ==== __Examples__
+--
+-- >>> greatCircleDistance (northPole S84) (southPole S84)
+-- 20015.114352233km
+--
 greatCircleDistance :: (Spherical a) => Position a -> Position a -> Length
 greatCircleDistance p1 p2 = arcLength a (radius p1)
   where
@@ -261,6 +269,7 @@ interpolate p0 p1 f
 --
 -- >>> let a1 = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
 -- >>> let a2 = minorArcBetween (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
+-- >>> pure intersection <*> a1 <*> a2
 -- Right (Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84))
 --
 intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Position a)
@@ -340,11 +349,7 @@ isInsideSurface p ps
     | llEq (head ps) (last ps) = isInsideSurface p (init ps)
     | length ps < 3 = False
     | otherwise =
-        let aSum =
-                foldl
-                    (\a v' -> add a (uncurry signedAngle v' (Just v)))
-                    (decimalDegrees 0)
-                    (egdes (map (vsub v) vs))
+        let aSum = foldl (\a v' -> add a (uncurry signedAngle v' (Just v))) (decimalDegrees 0) (egdes (map (vsub v) vs))
          in abs (toDecimalDegrees aSum) > 180.0
   where
     v = nvec p
@@ -373,8 +378,7 @@ mean ps =
   where
     vs = fmap nvec ps
     ts = filter (\l -> length l == 2) (subsequences vs)
-    antipodals =
-        filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
+    antipodals = filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
     nv = vunit $ foldl vadd vzero vs
 
 -- private

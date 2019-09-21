@@ -9,8 +9,8 @@
 -- TODO
 --
 module Data.Geo.Jord.Geodesic
-    ( direct
-    , inverse
+    ( directGeodesic
+    , inverseGeodesic
     , geodesicDistance
     , geodesicDestination
     ) where
@@ -20,11 +20,11 @@ import Data.Geo.Jord.Length
 import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 
-direct :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a, Angle)
-direct _ _ _ = Nothing
+directGeodesic :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a, Angle)
+directGeodesic _ _ _ = Nothing
 
-inverse :: (Ellipsoidal a) => Position a -> Position a -> Maybe (Length, Angle, Angle)
-inverse _ _ = Nothing
+inverseGeodesic :: (Ellipsoidal a) => Position a -> Position a -> Maybe (Length, Angle, Angle)
+inverseGeodesic _ _ = Nothing
 
 geodesicDistance :: (Ellipsoidal a) => Position a -> Position a -> Maybe Length
 geodesicDistance _ _ = Nothing

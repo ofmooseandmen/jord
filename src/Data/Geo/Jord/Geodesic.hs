@@ -10,7 +10,13 @@
 -- <http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf T Vincenty, "Direct and Inverse Solutions of Geodesics on the Ellipsoid with application of nested equations", Survey Review, vol XXIII no 176, 1975.>
 --
 module Data.Geo.Jord.Geodesic
-    ( directGeodesic
+    ( Geodesic
+    , geodesicStart
+    , geodesicEnd
+    , geodesicLength
+    , geodesicInitialBearing
+    , geodesicFinalBearing
+    , directGeodesic
     , inverseGeodesic
     , geodesicDistance
     , geodesicDestination
@@ -22,11 +28,22 @@ import Data.Geo.Jord.Length
 import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 
-directGeodesic :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a, Angle)
+data Geodesic a =
+    Geodesic
+        { geodesicStart :: Position a
+        , geodesicEnd :: Position a
+        , geodesicLength :: Length
+        , geodesicInitialBearing :: Angle
+        , geodesicFinalBearing :: Angle
+        , iterations :: Int
+        }
+    deriving (Eq, Show)
+
+directGeodesic :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Geodesic a)
 directGeodesic p1 b1 d =
     case rec of
         Nothing -> Nothing
-        (Just (s, cosS, sinS, cos2S')) -> Just (p2, fb)
+        (Just (s, cosS, sinS, cos2S', i)) -> Just (Geodesic p1 p2 d b1 fb i)
             where x = sinU1 * sinS - cosU1 * cosS * cosAlpha1
                   lat2 =
                       atan2 (sinU1 * cosS + cosU1 * sinS * cosAlpha1) ((1.0 - f) * sqrt (sinAlpha * sinAlpha + x * x))
@@ -49,7 +66,7 @@ directGeodesic p1 b1 d =
     br1 = toRadians b1
     cosAlpha1 = cos br1
     sinAlpha1 = sin br1
-    (tanU1, cosU1, sinU1) = reduceLat lat1 f
+    (tanU1, cosU1, sinU1) = reducedLat lat1 f
     sigma1 = atan2 tanU1 cosAlpha1 -- angular distance on the sphere from the equator to p1
     sinAlpha = cosU1 * sinAlpha1 -- alpha = azimuth of the geodesic at the equator
     cosSqAlpha = 1.0 - sinAlpha * sinAlpha
@@ -60,7 +77,7 @@ directGeodesic p1 b1 d =
     sigma = dm / (b * _A)
     rec = directRec sigma1 dm _A _B b sigma 0
 
-inverseGeodesic :: (Ellipsoidal a) => Position a -> Position a -> Maybe (Length, Angle, Angle)
+inverseGeodesic :: (Ellipsoidal a) => Position a -> Position a -> Maybe (Geodesic a)
 inverseGeodesic p1 p2 = Nothing
   where
     lat1 = toRadians . latitude $ p1
@@ -72,23 +89,21 @@ inverseGeodesic p1 p2 = Nothing
     b = toMetres . polarRadius $ ell
     f = flattening ell
     _L = lon2 - lon1 -- difference in longitude
-    (tanU1, cosU1, sinU1) = reduceLat lat1 f
-    (tanU2, cosU2, sinU2) = reduceLat lat2 f
+    (tanU1, cosU1, sinU1) = reducedLat lat1 f
+    (tanU2, cosU2, sinU2) = reducedLat lat2 f
     antipodal = abs _L > pi / 2.0 || abs (lat2 - lat1) > pi / 2.0
 
 geodesicDistance :: (Ellipsoidal a) => Position a -> Position a -> Maybe Length
-geodesicDistance p1 p2 =
-    case inverseGeodesic p1 p2 of
-        Nothing -> Nothing
-        (Just (d, _, _)) -> Just d
+geodesicDistance p1 p2 = fmap geodesicLength (inverseGeodesic p1 p2)
 
 geodesicDestination :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a)
-geodesicDestination p b d = fmap fst (directGeodesic p b d)
+geodesicDestination p b d = fmap geodesicEnd (directGeodesic p b d)
 
-directRec :: Double -> Double -> Double -> Double -> Double -> Double -> Int -> Maybe (Double, Double, Double, Double)
+directRec ::
+       Double -> Double -> Double -> Double -> Double -> Double -> Int -> Maybe (Double, Double, Double, Double, Int)
 directRec sigma1 dist _A _B b sigma i
     | i == 100 = Nothing
-    | abs (sigma - newSigma) <= 1e-12 = Just (newSigma, cosSigma, sinSigma, cos2Sigma')
+    | abs (sigma - newSigma) <= 1e-12 = Just (newSigma, cosSigma, sinSigma, cos2Sigma', i)
     | otherwise = directRec sigma1 dist _A _B b newSigma (i + 1)
   where
     cos2Sigma' = cos (2 * sigma1 + sigma)
@@ -102,8 +117,8 @@ directRec sigma1 dist _A _B b sigma i
           _B / 6.0 * cos2Sigma' * (-3.0 + 4.0 * sinSigma * sinSigma) * (-3.0 + 4.0 * cos2Sigma' * cos2Sigma')))
     newSigma = dist / (b * _A) + deltaSigma
 
-reduceLat :: Double -> Double -> (Double, Double, Double)
-reduceLat lat f = (tanU, cosU, sinU)
+reducedLat :: Double -> Double -> (Double, Double, Double)
+reducedLat lat f = (tanU, cosU, sinU)
   where
     tanU = (1.0 - f) * tan lat
     cosU = 1.0 / sqrt (1 + tanU * tanU)

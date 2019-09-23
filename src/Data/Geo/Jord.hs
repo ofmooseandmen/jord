@@ -45,7 +45,7 @@ import Data.Geo.Jord.Bearing
 import Data.Geo.Jord.Duration
 import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Ellipsoids
-import Data.Geo.Jord.Geodesic
+import Data.Geo.Jord.Geodesic hiding (azimuths)
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Kinematics
 import Data.Geo.Jord.LatLong

@@ -15,6 +15,7 @@ module Data.Geo.Jord.Bearing
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Ellipsoid
+import Data.Geo.Jord.Geodesic
 import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
@@ -33,7 +34,7 @@ finalBearing p1 p2
     | otherwise =
         if isSphere' p1
             then Just (sFinalBearing p1 p2)
-            else Nothing -- TODO ellispoidal
+            else fmap snd (azimuths p1 p2 (surface . model $ p1))
 
 -- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 --
@@ -46,7 +47,7 @@ initialBearing p1 p2
     | otherwise =
         if isSphere' p1
             then Just (sInitialBearing p1 p2)
-            else Nothing --  "TODO ellispoidal"
+            else fmap fst (azimuths p1 p2 (surface . model $ p1))
 
 sFinalBearing :: Position a -> Position a -> Angle
 sFinalBearing p1 p2 = normalise (sInitialBearing p2 p1) (decimalDegrees 180)

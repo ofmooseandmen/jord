@@ -27,14 +27,16 @@ module Data.Geo.Jord.GreatCircle
     , angularDistance
     , crossTrackDistance
     , crossTrackDistance'
-    , greatCircleDistance
-    , greatCircleDestination
+    , destinationS
+    , finalBearingS
+    , initialBearingS
     , interpolate
     , intersection
     , intersections
     , isBetween
     , isInsideSurface
     , mean
+    , surfaceDistanceS
     ) where
 
 import Data.Fixed (Nano)
@@ -65,18 +67,19 @@ instance (Model a) => Show (GreatCircle a) where
 
 -- | @greatCircleThrough p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@.
 -- If positions are antipodal, any great circle passing through those positions will be returned.
--- A 'Left' indicates that given positions are equal.
+-- Return 'Nothing' if given positions are equal.
 --
 -- ==== __Examples__
 --
 -- >>> let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
 -- >>> let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
 -- >>> greatCircleThrough p1 p2 -- heights are ignored, great circle is always at surface.
+-- TODO
 --
-greatCircleThrough :: (Spherical a) => Position a -> Position a -> Either String (GreatCircle a)
+greatCircleThrough :: (Spherical a) => Position a -> Position a -> Maybe (GreatCircle a)
 greatCircleThrough p1 p2
-    | llEq p1 p2 = Left "Invalid Great Circle: positions are equal"
-    | otherwise = Right (GreatCircle (normal' p1 p2) (model p1) dscr)
+    | llEq p1 p2 = Nothing
+    | otherwise = Just (GreatCircle (normal' p1 p2) (model p1) dscr)
   where
     dscr = "Great Circle { through " ++ show p1 ++ " & " ++ show p2 ++ " }"
 
@@ -88,6 +91,7 @@ greatCircleThrough p1 p2
 -- >>> let p = latLongPos 45.0 (-143.5) S84
 -- >>> let b = decimalDegrees 33.0
 -- >>> greatCircleHeadingOn p b
+-- TODO
 --
 greatCircleHeadingOn :: (Spherical a) => Position a -> Angle -> GreatCircle a
 greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) dscr
@@ -109,10 +113,14 @@ instance (Model a) => Show (MinorArc a) where
     show (MinorArc _ s e) = "Minor Arc { from: " ++ show s ++ ", to: " ++ show e ++ "}"
 
 -- | @minorArcBetween p1 p2@ return the 'MinorArc' from @p1@ to @p2@.
-minorArcBetween :: (Spherical a) => Position a -> Position a -> Either String (MinorArc a)
+-- Return 'Nothing' if given positions are equal.
+--
+-- ==== __Examples__
+-- TODO
+minorArcBetween :: (Spherical a) => Position a -> Position a -> Maybe (MinorArc a)
 minorArcBetween p1 p2
-    | llEq p1 p2 = Left "Invalid Minor Arc: positions are equal"
-    | otherwise = Right (MinorArc (normal' p1 p2) p1 p2)
+    | llEq p1 p2 = Nothing
+    | otherwise = Just (MinorArc (normal' p1 p2) p1 p2)
 
 -- | @alongTrackDistance p a@ computes how far Position @p@ is along a path described
 -- by the minor arc @a@: if a perpendicular is drawn from @p@  to the path, the
@@ -191,18 +199,17 @@ crossTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Len
 crossTrackDistance' p s b = crossTrackDistance p (greatCircleHeadingOn s b)
 
 -- | @greatCircleDestination p b d@ computes the position along the great circle, reached from
--- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@.
+-- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@
+-- at __constant__ height.
 -- Note that the  bearing will normally vary before destination is reached.
---
--- This is the equivalent of 'Data.Geo.Jord.Geodesic.geodesicDestination' for spherical models.
 --
 -- ==== __Examples__
 --
--- >>> greatCircleDestination (s84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
+-- >>> destinationS (s84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
 -- 61°10'44.188"N,164°10'19.254"E 15.0km (S84)
 --
-greatCircleDestination :: (Spherical a) => Position a -> Angle -> Length -> Position a
-greatCircleDestination p b d
+destinationS :: (Spherical a) => Position a -> Angle -> Length -> Position a
+destinationS p b d
     | d == zero = p
     | otherwise = nvh nvd (height p) (model p)
   where
@@ -214,20 +221,43 @@ greatCircleDestination p b d
     de = vadd (vscale nd (cos' b)) (vscale ed (sin' b)) -- vunit vector in the direction of the azimuth
     nvd = vadd (vscale nv (cos' ta)) (vscale de (sin' ta))
 
--- | @greatCircleDistance p1 p2@ computes the surface distance on the great circle between the
+-- | @surfaceDistanceS p1 p2@ computes the surface distance on the great circle between the
 -- positions @p1@ and @p2@.
---
--- This is the equivalent of 'Data.Geo.Jord.Geodesic.geodesicDistance' for spherical models.
 --
 -- ==== __Examples__
 --
--- >>> greatCircleDistance (northPole S84) (southPole S84)
+-- >>> surfaceDistanceS (northPole S84) (southPole S84)
 -- 20015.114352233km
 --
-greatCircleDistance :: (Spherical a) => Position a -> Position a -> Length
-greatCircleDistance p1 p2 = arcLength a (radius p1)
+surfaceDistanceS :: (Spherical a) => Position a -> Position a -> Length
+surfaceDistanceS p1 p2 = arcLength a (radius p1)
   where
     a = radians (angleRadians (nvec p1) (nvec p2))
+
+-- | @finalBearingS p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
+-- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
+-- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
+-- Returns 'Nothing' if both positions are equals.
+--
+-- ==== __Examples__
+-- TODO
+--
+finalBearingS :: (Spherical a) => Position a -> Position a -> Maybe Angle
+finalBearingS p1 p2
+    | llEq p1 p2 = Nothing
+    | otherwise = Just (normalise (initialBearing' p2 p1) (decimalDegrees 180))
+
+-- | @initialBearingS p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
+-- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
+-- Returns 'Nothing' if both positions are equals.
+--
+-- ==== __Examples__
+-- TODO
+--
+initialBearingS :: (Spherical a) => Position a -> Position a -> Maybe Angle
+initialBearingS p1 p2
+    | llEq p1 p2 = Nothing
+    | otherwise = Just (initialBearing' p1 p2)
 
 -- | @interpolate p0 p1 f# computes the position at fraction @f@ between the @p0@ and @p1@.
 --
@@ -269,8 +299,8 @@ interpolate p0 p1 f
 --
 -- >>> let a1 = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
 -- >>> let a2 = minorArcBetween (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
--- >>> pure intersection <*> a1 <*> a2
--- Right (Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84))
+-- >>> join (intersection <$> a1 <*> a2)
+-- Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84)
 --
 intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Position a)
 intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
@@ -405,6 +435,15 @@ intersections' n1 n2 s
     , let ni = nvh (vunit i) zero s = Just (ni, antipode ni)
   where
     i = vcross n1 n2
+
+initialBearing' :: Position a -> Position a -> Angle
+initialBearing' p1 p2 = normalise a (decimalDegrees 360)
+  where
+    v1 = nvec p1
+    v2 = nvec p2
+    gc1 = vcross v1 v2 -- great circle through p1 & p2
+    gc2 = vcross v1 nvNorthPole -- great circle through p1 & north pole
+    a = radians (signedAngleRadians gc1 gc2 (Just v1))
 
 -- | reference sphere radius.
 radius :: (Spherical a) => Position a -> Length

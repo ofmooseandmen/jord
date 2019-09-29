@@ -25,7 +25,6 @@ library:
   exposed-modules:
     - Data.Geo.Jord
     - Data.Geo.Jord.Angle
-    - Data.Geo.Jord.Bearing
     - Data.Geo.Jord.Duration
     - Data.Geo.Jord.Ellipsoid
     - Data.Geo.Jord.Ellipsoids
@@ -71,7 +70,6 @@ executables:
   jord-benchmarks:
     main:                Main.hs
     other-modules:
-      - BearingBG
       - GreatCircleBG
       - KinematicsBG
       - PositionBG

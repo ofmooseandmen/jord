@@ -59,7 +59,8 @@ class (Model a) =>
 
 -- | Models that represent the surface of the celestial body with an ellispoid.
 -- Compare to 'Spherical' models, less calculations are available and they are more CPU
--- intensive: see "Data.Geo.Jord.Geodesic" and "Data.Geo.Jord.LocalFrames".
+-- intensive: see "Data.Geo.Jord.Geodesic" and "Data.Geo.Jord.LocalFrames", however those
+-- calculations are more \"correct\".
 -- Coordinates transformation between different ellispoidal models is possible
 -- provided that the 7-parameter transformation (Helmert) is known: see "Data.Geo.Jord.Transformation".
 class (Model a) =>

@@ -32,7 +32,6 @@ library
   exposed-modules:
       Data.Geo.Jord
       Data.Geo.Jord.Angle
-      Data.Geo.Jord.Bearing
       Data.Geo.Jord.Duration
       Data.Geo.Jord.Ellipsoid
       Data.Geo.Jord.Ellipsoids
@@ -64,7 +63,6 @@ library
 executable jord-benchmarks
   main-is: Main.hs
   other-modules:
-      BearingBG
       GreatCircleBG
       KinematicsBG
       PositionBG
@@ -97,7 +95,6 @@ test-suite jord-test
   main-is: Spec.hs
   other-modules:
       Data.Geo.Jord.AngleSpec
-      Data.Geo.Jord.BearingSphericalSpec
       Data.Geo.Jord.DurationSpec
       Data.Geo.Jord.EllipsoidSpec
       Data.Geo.Jord.GreatCircleSpec

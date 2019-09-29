@@ -6,7 +6,7 @@ import Data.Maybe (mapMaybe)
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.Position
 
 spec :: Spec
 spec = do

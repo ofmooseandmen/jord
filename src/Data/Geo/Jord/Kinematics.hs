@@ -39,22 +39,19 @@ module Data.Geo.Jord.Kinematics
     , intercept
     , interceptBySpeed
     , interceptByTime
+    -- * re-exported for convenience
+    , module Data.Geo.Jord.Duration
+    , module Data.Geo.Jord.Speed
     ) where
 
 import Control.Applicative ((<|>))
 import Data.Maybe (fromJust, isNothing)
 
-import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Duration
-import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.GreatCircle
 import Data.Geo.Jord.Internal
-import Data.Geo.Jord.Length
-import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
-import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Speed
-import Data.Geo.Jord.Vector3d
 
 -- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
 data Track a =
@@ -107,6 +104,9 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Kinematics
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p = s84Pos 53.321 (-1.729) (metres 15000)
 -- >>> let b = decimalDegrees 96.0217
 -- >>> let s = kilometresPerHour 124.8
@@ -129,6 +129,9 @@ positionAfter' p c s d = position' p c s (toSeconds d)
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Kinematics
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p = s84Pos 53.321 (-1.729) (metres 15000)
 -- >>> let b = decimalDegrees 96.0217
 -- >>> let s = kilometresPerHour 124.8
@@ -145,6 +148,9 @@ trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Kinematics
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p1 = s84Pos 20 (-60) zero
 -- >>> let b1 = decimalDegrees 10
 -- >>> let s1 = knots 15
@@ -170,7 +176,7 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
     t = timeToCpa p1 c1 s1 p2 c2 s2
     cp1 = position' p1 c1 s1 t
     cp2 = position' p2 c2 s2 t
-    d = surfaceDistanceS cp1 cp2
+    d = surfaceDistance cp1 cp2
 
 -- | @intercept t p@ computes the __minimum__ speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place.
@@ -186,6 +192,9 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Kinematics
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
 -- >>> let ip = s84Pos 20 (-60) zero
 -- >>> let i = intercept t ip
@@ -229,18 +238,25 @@ interceptBySpeed t p s
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Kinematics
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
 -- >>> let ip = s84Pos 20 (-60) zero
 -- >>> let d = seconds 2700
 -- >>> let i = interceptByTime t ip d
 -- >>> fmap (toKnots . interceptorSpeed) i
 -- Just 730.959238
+-- >>>
 -- >>> fmap interceptorBearing i
--- >>> Just 26°7'11.649"
+-- Just 26°7'11.649"
+-- >>>
 -- >>> fmap interceptPosition i
 -- Just 28°8'12.047"N,55°27'21.411"W 0.0m (S84)
+-- >>>
 -- >>> fmap interceptDistance i
 -- Just 1015.3023506km
+-- >>>
 -- >>> fmap (toSeconds . interceptTime) i
 -- Just 2700
 --
@@ -254,8 +270,8 @@ interceptByTime t p d
          in Just (Intercept d idist ipos (fromJust ib) is)
   where
     ipos = trackPositionAfter t d
-    idist = surfaceDistanceS p ipos
-    ib = initialBearingS p ipos <|> initialBearingS p (trackPosition t)
+    idist = surfaceDistance p ipos
+    ib = initialBearing p ipos <|> initialBearing p (trackPosition t)
 
 -- private
 -- | position from speed course and seconds.

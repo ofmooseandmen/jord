@@ -3,7 +3,7 @@ module PositionBG
     ) where
 
 import Criterion.Types
-import Data.Geo.Jord
+import Data.Geo.Jord.Position
 
 benchmark :: Benchmark
 benchmark =

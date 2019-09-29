@@ -6,7 +6,9 @@ import Data.Maybe (fromJust)
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Kinematics
+import Data.Geo.Jord.Position
 
 spec :: Spec
 spec =
@@ -25,7 +27,7 @@ spec =
                 let p0 = s84Pos 0 1 zero
                 let t = Track p0 (decimalDegrees 90) (kilometresPerHour 20015.114352233)
                 let p1 = trackPositionAfter t (hours 1)
-                surfaceDistanceS p1 (s84Pos 0 (-179) zero) < metres 0.001 `shouldBe` True
+                surfaceDistance p1 (s84Pos 0 (-179) zero) < metres 0.001 `shouldBe` True
             it "handles poles" $
                 -- distance between poles assuming a spherical earth (from WGS84) = 20015.114352233km
                 -- track at north pole travelling at 20015.114352233km/h and true north reaches the
@@ -33,7 +35,7 @@ spec =
              do
                 let t = Track (northPole S84) zero (kilometresPerHour 20015.114352233)
                 let p1 = trackPositionAfter t (hours 1)
-                surfaceDistanceS p1 (southPole S84) < metres 0.001 `shouldBe` True
+                surfaceDistance p1 (southPole S84) < metres 0.001 `shouldBe` True
             it "return p0 if speed is 0" $ do
                 let p0 = s84Pos 53.320556 (-1.729722) (metres 15000)
                 let t = Track p0 (decimalDegrees 96.0217) zero
@@ -45,28 +47,28 @@ spec =
         describe "cpa" $ do
             it "returns nothing for trailing tracks at same speed" $ do
                 let p1 = s84Pos 20 30 zero
-                let px = destinationS p1 (decimalDegrees 20) (kilometres 1)
+                let px = destination p1 (decimalDegrees 20) (kilometres 1)
                 let p2 = interpolate p1 px 0.25
-                let b1 = fromJust (initialBearingS p1 px)
-                let b2 = fromJust (initialBearingS p2 px)
+                let b1 = fromJust (initialBearing p1 px)
+                let b2 = fromJust (initialBearing p2 px)
                 let t1 = Track p1 b1 (knots 400)
                 let t2 = Track p2 b2 (knots 400)
                 cpa t1 t2 `shouldBe` Nothing
             it "returns nothing for trailing tracks with track ahead escaping" $ do
                 let p1 = s84Pos 20 30 zero
-                let px = destinationS p1 (decimalDegrees 20) (kilometres 1)
+                let px = destination p1 (decimalDegrees 20) (kilometres 1)
                 let p2 = interpolate p1 px 0.25
-                let b1 = fromJust (initialBearingS p1 px)
-                let b2 = fromJust (initialBearingS p2 px)
+                let b1 = fromJust (initialBearing p1 px)
+                let b2 = fromJust (initialBearing p2 px)
                 let t1 = Track p1 b1 (knots 400)
                 let t2 = Track p2 b2 (knots 401)
                 cpa t1 t2 `shouldBe` Nothing
             it "handles trailing tracks with track behind catching up" $ do
                 let p1 = s84Pos 20 30 zero
-                let px = destinationS p1 (decimalDegrees 20) (kilometres 1)
+                let px = destination p1 (decimalDegrees 20) (kilometres 1)
                 let p2 = interpolate p1 px 0.25
-                let b1 = fromJust (initialBearingS p1 px)
-                let b2 = fromJust (initialBearingS p2 px)
+                let b1 = fromJust (initialBearing p1 px)
+                let b2 = fromJust (initialBearing p2 px)
                 let t1 = Track p1 b1 (knots 401)
                 let t2 = Track p2 b2 (knots 400)
                 let c = cpa t1 t2
@@ -75,8 +77,8 @@ spec =
             it "handles heading tracks" $ do
                 let p1 = s84Pos 20 30 zero
                 let p2 = s84Pos 21 31 zero
-                let b1 = fromJust (initialBearingS p1 p2)
-                let b2 = fromJust (initialBearingS p2 p1)
+                let b1 = fromJust (initialBearing p1 p2)
+                let b2 = fromJust (initialBearing p2 p1)
                 let t1 = Track p1 b1 (knots 400)
                 let t2 = Track p2 b2 (knots 400)
                 let c = cpa t1 t2
@@ -135,7 +137,7 @@ spec =
                 let interceptor = Track ip (fromJust (fmap interceptorBearing i)) (fromJust (fmap interceptorSpeed i))
                 let ep = trackPositionAfter interceptor (fromJust (fmap interceptTime i))
                 let ap = fmap interceptPosition i
-                let d = fmap (surfaceDistanceS ep) ap
+                let d = fmap (surfaceDistance ep) ap
                 fmap (<= metres 0.001) d `shouldBe` Just True
         describe "interceptBySpeed" $ do
             it "returns Nothing if target and interceptor are at the same position" $
@@ -204,4 +206,4 @@ spec =
                 let ip = trackPositionAfter t d
                 let i = interceptByTime t ip d
                 fmap interceptorSpeed i `shouldBe` Just zero
-                fmap interceptorBearing i `shouldBe` initialBearingS ip tp
+                fmap interceptorBearing i `shouldBe` initialBearing ip tp

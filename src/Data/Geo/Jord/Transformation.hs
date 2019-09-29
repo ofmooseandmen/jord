@@ -33,9 +33,7 @@ module Data.Geo.Jord.Transformation
 import Data.List (find, foldl', sortOn)
 import Data.Maybe (mapMaybe)
 
-import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
-import Data.Geo.Jord.Vector3d
 
 -- | Coordinate transformation between 2 models (A & B).
 data Tx a =

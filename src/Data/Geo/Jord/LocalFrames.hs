@@ -60,14 +60,12 @@ module Data.Geo.Jord.LocalFrames
     , nedBetween
     , target
     , targetN
+    -- * re-exported for convenience
+    , module Data.Geo.Jord.Rotation
     ) where
 
-import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Length
-import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
 import Data.Geo.Jord.Rotation
-import Data.Geo.Jord.Vector3d
 
 -- | class for local reference frames: a reference frame which is location dependant.
 --
@@ -258,6 +256,9 @@ slantRange (Ned v) = metres (vnorm v)
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.LocalFrames
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p1 = wgs84Pos 1 2 (metres (-3))
 -- >>> let p2 = wgs84Pos 4 5 (metres (-6))
 -- >>> let w = decimalDegrees 5 -- wander azimuth
@@ -287,6 +288,9 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.LocalFrames
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p1 = wgs84Pos 1 2 (metres (-3))
 -- >>> let p2 = wgs84Pos 4 5 (metres (-6))
 -- >>> nedBetween p1 p2
@@ -301,6 +305,9 @@ nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.LocalFrames
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p0 = wgs84Pos 49.66618 3.45063 zero
 -- >>> let y = decimalDegrees 10 -- yaw
 -- >>> let r = decimalDegrees 20 -- roll
@@ -323,6 +330,9 @@ target p0 f (Delta d) = geocentricMetresPos x y z (model p0)
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.LocalFrames
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p0 = wgs84Pos 49.66618 3.45063 zero
 -- >>> targetN p0 (nedMeters 100 200 300)
 -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)

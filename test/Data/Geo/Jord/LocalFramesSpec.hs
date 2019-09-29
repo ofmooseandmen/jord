@@ -4,7 +4,8 @@ module Data.Geo.Jord.LocalFramesSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.LocalFrames
+import Data.Geo.Jord.Position
 
 spec :: Spec
 spec = do

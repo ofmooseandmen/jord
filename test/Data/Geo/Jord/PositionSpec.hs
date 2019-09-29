@@ -4,7 +4,7 @@ module Data.Geo.Jord.PositionSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.Position
 
 spec :: Spec
 spec = do

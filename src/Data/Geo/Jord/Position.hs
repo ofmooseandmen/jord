@@ -7,7 +7,7 @@
 -- Portability: portable
 --
 -- Position of points in specified models (e.g. WGS84) and conversion functions between
--- coordinate system (geodetic <-> geocentric).
+-- coordinate system (geodetic to/from geocentric).
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
@@ -66,16 +66,27 @@ module Data.Geo.Jord.Position
     , southPole
     , nvNorthPole
     , nvSouthPole
+    -- * re-exported for convenience
+    , module Data.Geo.Jord.Angle
+    , module Data.Geo.Jord.Ellipsoid
+    , module Data.Geo.Jord.Ellipsoids
+    , module Data.Geo.Jord.LatLong
+    , module Data.Geo.Jord.Length
+    , module Data.Geo.Jord.Model
+    , module Data.Geo.Jord.Models
+    , module Data.Geo.Jord.Quantity
+    , module Data.Geo.Jord.Vector3d
     ) where
 
 import Text.ParserCombinators.ReadP (ReadP, option, readP_to_S, skipSpaces)
 
 import Data.Geo.Jord.Angle
 import Data.Geo.Jord.Ellipsoid
+import Data.Geo.Jord.Ellipsoids
 import Data.Geo.Jord.LatLong
 import Data.Geo.Jord.Length
 import Data.Geo.Jord.Model
-import Data.Geo.Jord.Models (S84(..), WGS84(..))
+import Data.Geo.Jord.Models
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
@@ -104,10 +115,10 @@ data Position a =
 instance (Model a) => Show (Position a) where
     show p = showLatLong (latitude p, longitude p) ++ " " ++ (show . height $ p) ++ " (" ++ (show . model $ p) ++ ")"
 
-instance (Model a) => Eq (Position a) where
+instance (Model a) => Eq (Position a)
     -- model equality is ensure by @a@
-    p1 == p2 =
-        latitude p1 == latitude p2 && longitude p1 == longitude p2 && height p1 == height p2
+                                       where
+    p1 == p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2 && height p1 == height p2
 
 -- | normal vector to the surface of a celestial body.
 --
@@ -176,6 +187,7 @@ nvector p = NVector x y z
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Position
 -- >>> let p = wgs84Pos 54 154 (metres 1000)
 -- >>> geocentric p
 -- geocentric {-3377.4908375km, 1647.312349km, 5137.5528484km}
@@ -220,6 +232,7 @@ readPosition s m =
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Position
 -- >>> readPosition "55°36'21''N 013°00'02''E" WGS84
 -- Just 55°36'21.000"N,13°0'2.000"E 0.0m (WGS84)
 -- >>> readPosition "55°36'21''N 013°00'02''E 1500m" WGS84
@@ -361,9 +374,9 @@ latLong p = (toDecimalDegrees . latitude $ p, toDecimalDegrees . longitude $ p)
 -- | (latitude, longitude) pair from given position.
 latLong' :: (Model a) => Position a -> (Angle, Angle)
 latLong' p = (latitude p, longitude p)
+ -- given 'Vector3d' is a /n/-vector.
 
 -- | position from /n/-vector, height and model; this method is to be used only if
- -- given 'Vector3d' is a /n/-vector.
 nvh :: (Model a) => Vector3d -> Length -> a -> Position a
 nvh nv h m = Position lat lon h nv g m
   where

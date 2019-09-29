@@ -3,7 +3,8 @@ module GreatCircleBG
     ) where
 
 import Criterion.Types
-import Data.Geo.Jord
+import Data.Geo.Jord.Position
+import Data.Geo.Jord.GreatCircle
 
 benchmark :: Benchmark
 benchmark =
@@ -12,11 +13,11 @@ benchmark =
         [ bench "alongTrackDistance" $ whnf (alongTrackDistance' p1 p2) a
         , bench "angularDistance" $ whnf (angularDistance p1 p2) (Just p3)
         , bench "crossTrackDistance" $ whnf (crossTrackDistance' p1 p2) a
-        , bench "destinationS" $ whnf (destinationS p1 a) l
+        , bench "destinationS" $ whnf (destination p1 a) l
         , bench "interpolate" $ whnf (interpolate p1 p2) 0.5
-        , bench "surfaceDistanceS" $ whnf (surfaceDistanceS p1) p2
-        , bench "finalBearingS" $ whnf (finalBearingS p1) p2
-        , bench "initialBearingS" $ whnf (initialBearingS p1) p2
+        , bench "surfaceDistanceS" $ whnf (surfaceDistance p1) p2
+        , bench "finalBearingS" $ whnf (finalBearing p1) p2
+        , bench "initialBearingS" $ whnf (initialBearing p1) p2
         ]
 
 p1 :: Position S84

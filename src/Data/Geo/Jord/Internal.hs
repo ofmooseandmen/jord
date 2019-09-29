@@ -15,7 +15,6 @@ module Data.Geo.Jord.Internal
     ) where
 
 import Data.Geo.Jord.Position
-import Data.Geo.Jord.Vector3d
 
 -- | angle in __radians__ between 2 vectors.
 angleRadians :: Vector3d -> Vector3d -> Double

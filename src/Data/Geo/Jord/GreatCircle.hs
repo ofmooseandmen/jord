@@ -27,29 +27,23 @@ module Data.Geo.Jord.GreatCircle
     , angularDistance
     , crossTrackDistance
     , crossTrackDistance'
-    , destinationS
-    , finalBearingS
-    , initialBearingS
+    , destination
+    , finalBearing
+    , initialBearing
     , interpolate
     , intersection
     , intersections
     , isBetween
     , isInsideSurface
     , mean
-    , surfaceDistanceS
+    , surfaceDistance
     ) where
 
 import Data.Fixed (Nano)
 import Data.List (subsequences)
 
-import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Internal
-import Data.Geo.Jord.Length
-import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
-import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Vector3d
 
 -- | A circle on the __surface__ of a __sphere__ which lies in a plane
 -- passing through the sphere centre. Every two distinct and non-antipodal points
@@ -71,10 +65,13 @@ instance (Model a) => Show (GreatCircle a) where
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
 -- >>> let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
 -- >>> greatCircleThrough p1 p2 -- heights are ignored, great circle is always at surface.
--- TODO
+-- >>> TODO
 --
 greatCircleThrough :: (Spherical a) => Position a -> Position a -> Maybe (GreatCircle a)
 greatCircleThrough p1 p2
@@ -88,10 +85,13 @@ greatCircleThrough p1 p2
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p = latLongPos 45.0 (-143.5) S84
 -- >>> let b = decimalDegrees 33.0
 -- >>> greatCircleHeadingOn p b
--- TODO
+-- >>> TODO
 --
 greatCircleHeadingOn :: (Spherical a) => Position a -> Angle -> GreatCircle a
 greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) dscr
@@ -116,7 +116,11 @@ instance (Model a) => Show (MinorArc a) where
 -- Return 'Nothing' if given positions are equal.
 --
 -- ==== __Examples__
--- TODO
+--
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>> TODO
+--
 minorArcBetween :: (Spherical a) => Position a -> Position a -> Maybe (MinorArc a)
 minorArcBetween p1 p2
     | llEq p1 p2 = Nothing
@@ -129,6 +133,9 @@ minorArcBetween p1 p2
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p = s84Pos 53.2611 (-0.7972) zero
 -- >>> let g = minorArcBetween (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
 -- >>> fmap (alongTrackDistance p) a
@@ -144,6 +151,9 @@ alongTrackDistance p (MinorArc n s _) = alongTrackDistance'' p s n
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p = s84Pos 53.2611 (-0.7972) zero
 -- >>> let s = s84Pos 53.3206 (-1.7297) zero
 -- >>> let b = decimalDegrees 96.0017325
@@ -172,14 +182,17 @@ angularDistance p1 p2 n = signedAngle v1 v2 vn
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let gc1 = greatCircleThrough (s84Pos 51 0 zero) (s84Pos 52 1 zero)
 -- >>> fmap (crossTrackDistance p) gc1
 -- Right -176.7568725km
---
+-- >>>
 -- >>> let gc2 = greatCircleThrough (s84Pos 52 1 zero) (s84Pos 51 0 zero)
 -- >>> fmap (crossTrackDistance p) gc2
 -- Right 176.7568725km
---
+-- >>>
 -- >>> let p = s84Pos 53.2611 (-0.7972) zero
 -- >>> let gc = greatCircleHeadingOn (s84Pos 53.3206 (-1.7297) zero) (decimalDegrees 96.0)
 -- >>> crossTrackDistance p gc
@@ -198,18 +211,21 @@ crossTrackDistance p (GreatCircle n _ _) = arcLength (sub a (decimalDegrees 90))
 crossTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
 crossTrackDistance' p s b = crossTrackDistance p (greatCircleHeadingOn s b)
 
--- | @greatCircleDestination p b d@ computes the position along the great circle, reached from
+-- | @destination p b d@ computes the position along the great circle, reached from
 -- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@
 -- at __constant__ height.
 -- Note that the  bearing will normally vary before destination is reached.
 --
 -- ==== __Examples__
 --
--- >>> destinationS (s84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> destination (s84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
 -- 61°10'44.188"N,164°10'19.254"E 15.0km (S84)
 --
-destinationS :: (Spherical a) => Position a -> Angle -> Length -> Position a
-destinationS p b d
+destination :: (Spherical a) => Position a -> Angle -> Length -> Position a
+destination p b d
     | d == zero = p
     | otherwise = nvh nvd (height p) (model p)
   where
@@ -221,41 +237,53 @@ destinationS p b d
     de = vadd (vscale nd (cos' b)) (vscale ed (sin' b)) -- vunit vector in the direction of the azimuth
     nvd = vadd (vscale nv (cos' ta)) (vscale de (sin' ta))
 
--- | @surfaceDistanceS p1 p2@ computes the surface distance on the great circle between the
+-- | @surfaceDistance p1 p2@ computes the surface distance on the great circle between the
 -- positions @p1@ and @p2@.
 --
 -- ==== __Examples__
 --
--- >>> surfaceDistanceS (northPole S84) (southPole S84)
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> surfaceDistance (northPole S84) (southPole S84)
 -- 20015.114352233km
 --
-surfaceDistanceS :: (Spherical a) => Position a -> Position a -> Length
-surfaceDistanceS p1 p2 = arcLength a (radius p1)
+surfaceDistance :: (Spherical a) => Position a -> Position a -> Length
+surfaceDistance p1 p2 = arcLength a (radius p1)
   where
     a = radians (angleRadians (nvec p1) (nvec p2))
 
--- | @finalBearingS p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
+-- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
 -- Returns 'Nothing' if both positions are equals.
 --
 -- ==== __Examples__
+--
+--
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- TODO
 --
-finalBearingS :: (Spherical a) => Position a -> Position a -> Maybe Angle
-finalBearingS p1 p2
+finalBearing :: (Spherical a) => Position a -> Position a -> Maybe Angle
+finalBearing p1 p2
     | llEq p1 p2 = Nothing
     | otherwise = Just (normalise (initialBearing' p2 p1) (decimalDegrees 180))
 
--- | @initialBearingS p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
+-- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- Returns 'Nothing' if both positions are equals.
 --
 -- ==== __Examples__
+--
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- TODO
 --
-initialBearingS :: (Spherical a) => Position a -> Position a -> Maybe Angle
-initialBearingS p1 p2
+initialBearing :: (Spherical a) => Position a -> Position a -> Maybe Angle
+initialBearing p1 p2
     | llEq p1 p2 = Nothing
     | otherwise = Just (initialBearing' p1 p2)
 
@@ -272,6 +300,9 @@ initialBearingS p1 p2
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let p1 = s84Pos 53.479444 (-2.245278) (metres 10000)
 -- >>> let p2 = s84Pos 55.605833 13.035833 (metres 20000)
 -- >>> interpolate p1 p2 0.5
@@ -297,6 +328,9 @@ interpolate p0 p1 f
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let a1 = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
 -- >>> let a2 = minorArcBetween (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
 -- >>> join (intersection <$> a1 <*> a2)
@@ -317,6 +351,9 @@ intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let gc1 = greatCircleHeadingOn (s84Pos 51.885 0.235 zero) (decimalDegrees 108.63)
 -- >>> let gc2 = greatCircleHeadingOn (s84Pos 49.008 2.549 zero) (decimalDegrees 32.72)
 -- >>> intersections gc1 gc2
@@ -360,6 +397,9 @@ isBetween p (MinorArc _ s e) = between && hemisphere
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.GreatCircle
+-- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> let malmo = s84Pos 55.6050 13.0038 zero
 -- >>> let ystad = s84Pos 55.4295 13.82 zero
 -- >>> let lund = s84Pos 55.7047 13.1910 zero

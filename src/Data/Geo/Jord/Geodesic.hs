@@ -8,18 +8,10 @@
 --
 -- Solutions to the direct and inverse geodesic problems on ellipsoidal models using Vincenty formulaes.
 -- A geodesic is the shortest path between two points on a curved surface - here an ellispoid. Using these
--- functions improves on the accuarcy avail­able using "Data.Geo.Jord.GreatCircle" at the expense of higher
+-- functions improves on the accuracy available using "Data.Geo.Jord.GreatCircle" at the expense of higher
 -- CPU usage.
 --
 -- <http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf T Vincenty, "Direct and Inverse Solutions of Geodesics on the Ellipsoid with application of nested equations", Survey Review, vol XXIII no 176, 1975.>
---
--- TODO: inverseGeodesic what about p1 = p2 ?
---
--- GreatCircle: destinationS initialBearingS finalBearingS surfaceDistanceS
--- Geodesic: destinationE initialBearingE finalBearingE surfaceDistanceE
---
---  Geodesic: geodesicPos1, geodesicPos2, Maybe geodesicBearing1, Maybe geodesicBearing2, geodesicLength
--- inverseGeodesic with p1 = p2 -> Geodesic p1 p2 Nothing Nothing zero
 --
 module Data.Geo.Jord.Geodesic
     ( Geodesic
@@ -30,19 +22,14 @@ module Data.Geo.Jord.Geodesic
     , geodesicLength
     , directGeodesic
     , inverseGeodesic
-    , destinationE
-    , finalBearingE
-    , initialBearingE
-    , surfaceDistanceE
+    , destination
+    , finalBearing
+    , initialBearing
+    , surfaceDistance
     ) where
 
-import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Ellipsoid
 import Data.Geo.Jord.Internal
-import Data.Geo.Jord.Length
-import Data.Geo.Jord.Model
 import Data.Geo.Jord.Position
-import Data.Geo.Jord.Quantity
 
 data Geodesic a =
     Geodesic
@@ -63,6 +50,10 @@ data Geodesic a =
 --
 -- ==== __Examples__
 --
+-- >>> import Data.Geo.Jord.Geodesic
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> TODO
 --
 directGeodesic :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Geodesic a)
 directGeodesic p1 b1 d
@@ -110,7 +101,11 @@ directGeodesic p1 b1 d
 -- case this function returns 'Nothing'.
 --
 -- ==== __Examples__
--- TODO
+--
+-- >>> import Data.Geo.Jord.Geodesic
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> TODO
 --
 inverseGeodesic :: (Ellipsoidal a) => Position a -> Position a -> Maybe (Geodesic a)
 inverseGeodesic p1 p2
@@ -148,7 +143,7 @@ inverseGeodesic p1 p2
     lon1 = toRadians . longitude $ p1
     lat2 = toRadians . latitude $ p2
     lon2 = toRadians . longitude $ p2
-    ell = (surface . model $ p1)
+    ell = surface . model $ p1
     (a, b, f) = abf ell
     _L = lon2 - lon1 -- difference in longitude
     (_, cosU1, sinU1) = reducedLat lat1 f
@@ -156,60 +151,74 @@ inverseGeodesic p1 p2
     antipodal = abs _L > pi / 2.0 || abs (lat2 - lat1) > pi / 2.0
     rec = inverseRec _L cosU1 sinU1 cosU2 sinU2 _L f antipodal 0
 
--- | @finalBearingE p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
+-- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
 -- Returns 'Nothing' if both positions are equals or if 'inverseGeodesic' fails to converge.
 --
--- @finalBearingE p1 p2@ is a shortcut for @('inverseGeodesic' p1 p2) >>= 'geodesicBearing2'@.
+-- @finalBearing p1 p2@ is a shortcut for @('inverseGeodesic' p1 p2) >>= 'geodesicBearing2'@.
 --
 -- ==== __Examples__
--- TODO
 --
-finalBearingE :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
-finalBearingE p1 p2 = (inverseGeodesic p1 p2) >>= geodesicBearing2
+-- >>> import Data.Geo.Jord.Geodesic
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> TODO
+--
+finalBearing :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
+finalBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing2
 
--- | @initialBearingE p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
+-- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- Returns 'Nothing' if both positions are equals or if 'inverseGeodesic' fails to converge.
 --
--- @initialBearingE p1 p2@ is a shortcut for @('inverseGeodesic' p1 p2) >>= 'geodesicBearing1'@.
+-- @initialBearing p1 p2@ is a shortcut for @('inverseGeodesic' p1 p2) >>= 'geodesicBearing1'@.
 --
 -- ==== __Examples__
--- TODO
 --
-initialBearingE :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
-initialBearingE p1 p2 = (inverseGeodesic p1 p2) >>= geodesicBearing1
+-- >>> import Data.Geo.Jord.Geodesic
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> TODO
+--
+initialBearing :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
+initialBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing1
 
--- | @surfaceDistanceE p1 p2@ computes the surface distance on the geodesic between the
+-- | @surfaceDistance p1 p2@ computes the surface distance on the geodesic between the
 -- positions @p1@ and @p2@.
 -- This function relies on 'inverseGeodesic' and can therefore fail to compute the distance
 -- for nearly antipodal positions.
 --
--- @surfaceDistanceE p1 p2@ is a shortcut for @fmap 'geodesicLength' ('inverseGeodesic' p1 p2)@.
+-- @surfaceDistance p1 p2@ is a shortcut for @fmap 'geodesicLength' ('inverseGeodesic' p1 p2)@.
 --
 -- ==== __Examples__
 --
--- >>> surfaceDistanceE (northPole WGS84) (southPole WGS84)
+-- >>> import Data.Geo.Jord.Geodesic
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> surfaceDistance (northPole WGS84) (southPole WGS84)
 -- Just 20003.931458623km
 --
-surfaceDistanceE :: (Ellipsoidal a) => Position a -> Position a -> Maybe Length
-surfaceDistanceE p1 p2 = fmap geodesicLength (inverseGeodesic p1 p2)
+surfaceDistance :: (Ellipsoidal a) => Position a -> Position a -> Maybe Length
+surfaceDistance p1 p2 = fmap geodesicLength (inverseGeodesic p1 p2)
 
--- | @destinationE p b d@ computes the position along the geodesic, reached from
+-- | @destination p b d@ computes the position along the geodesic, reached from
 -- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@
 -- at __constant__ height.
 -- Note that the  bearing will normally vary before destination is reached.
 --
--- @destinationE p b d@ is a shortcut for @fmap 'geodesicPos2' ('directGeodesic' p b d)@.
+-- @destination p b d@ is a shortcut for @fmap 'geodesicPos2' ('directGeodesic' p b d)@.
 --
 -- ==== __Examples__
 --
--- >>> destinationE (wgs84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
+-- >>> import Data.Geo.Jord.Geodesic
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> destination (wgs84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
 -- Just 61°10'8.983"N,164°7'52.258"E 15.0km (WGS84)
 --
-destinationE :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a)
-destinationE p b d = fmap geodesicPos2 (directGeodesic p b d)
+destination :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a)
+destination p b d = fmap geodesicPos2 (directGeodesic p b d)
 
 directRec ::
        Double

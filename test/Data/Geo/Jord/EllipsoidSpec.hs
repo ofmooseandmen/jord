@@ -4,7 +4,9 @@ module Data.Geo.Jord.EllipsoidSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.Ellipsoid
+import Data.Geo.Jord.Ellipsoids
+import Data.Geo.Jord.Length
 
 spec :: Spec
 spec = do

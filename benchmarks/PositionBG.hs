@@ -20,14 +20,14 @@ benchmark =
 ll :: (Angle, Angle)
 ll = (decimalDegrees 55.6050, decimalDegrees 13.0038)
 
-nv :: NVector
+nv :: Vector3d
 nv = nvectorFromLatLong ll
 
-gce :: Geocentric
-gce = geocentric (geocentricMetresPos 5733855.7748 (-6370998.3802) 7008137.5108 WGS84)
+gce :: Vector3d
+gce = nvectorToGeocentric (nv, h) s
 
-gcs :: Geocentric
-gcs = geocentric (geocentricMetresPos 5733855.7748 (-6370998.3802) 7008137.5108 S84)
+gcs :: Vector3d
+gcs = nvectorToGeocentric (nv, h) e
 
 h :: Length
 h = metres 15000

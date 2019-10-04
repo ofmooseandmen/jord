@@ -6,7 +6,9 @@ import System.IO (hSetEncoding, stderr, stdin, stdout, utf8)
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Length
+import Data.Geo.Jord.Quantity
 
 spec :: Spec
 spec = do

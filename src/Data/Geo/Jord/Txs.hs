@@ -1,12 +1,12 @@
 -- | 
--- Module:      Data.Geo.Jord.Transformations 
+-- Module:      Data.Geo.Jord.Txs 
 -- Copyright:   (c) 2019 Cedric Liegeois 
 -- License:     BSD3 
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr> 
 -- Stability:   experimental 
 -- Portability: portable 
 --
--- Coordinates transformations.
+-- Coordinates transformation parameters between various models.
 --
 --    * params: tx ty tz s rx ry rz
 --
@@ -20,10 +20,10 @@
 --
 -- This module has been generated.
 --
-module Data.Geo.Jord.Transformations where
+module Data.Geo.Jord.Txs where
 
 import Data.Geo.Jord.Model
-import Data.Geo.Jord.Transformation
+import Data.Geo.Jord.Tx
 
 -- | WGS84 to NAD83 transformation parameters.
 from_WGS84_to_NAD83 :: Tx TxParams7

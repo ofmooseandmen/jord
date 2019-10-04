@@ -7,16 +7,23 @@
 -- Portability: portable
 --
 -- Type and functions for working with delta vectors in different local reference frames: all frames are location dependent.
--- 
+--
+-- In order to use this module you should start with the following imports:
+--
+-- @
+--     import Data.Geo.Jord.LocalFrames
+--     import Data.Geo.Jord.Position
+-- @
+--
+-- All functions are implemented using the vector-based approached described in
+-- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
+--
 -- Notes:
 --
 --     * The term Earth is used to be consistent with the paper. However any celestial body reference frame can be used.
 --
 --     * Though the API accept spherical models, doing so defeats the purpose of this module
 --       which is to find exact solutions. Prefer using ellipsoidal models.
---
--- All functions are implemented using the vector-based approached described in
--- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
 module Data.Geo.Jord.LocalFrames
     (
@@ -284,7 +291,11 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
 --
 -- Position @p1@ must be outside the poles for the north and east directions to be defined.
 --
--- @nedBetween p1 p2@ is a shortcut for @'deltaBetween' p1 p2 'frameN'@.
+-- This is equivalent to:
+--
+-- @
+--     'deltaBetween' p1 p2 'frameN'
+-- @
 --
 -- ==== __Examples__
 --
@@ -326,7 +337,11 @@ target p0 f (Delta d) = geocentricMetresPos x y z (model p0)
 
 -- | @targetN p0 d@ computes the target position from position @p0@ and north, east, down @d@.
 --
--- @targetN p0 d@ is a shortcut for @'target' p0 'frameN' ('Delta' d)@.
+-- This is equivalent to:
+--
+-- @
+--     'target' p0 'frameN' ('Delta' d)
+-- @
 --
 -- ==== __Examples__
 --
@@ -336,9 +351,6 @@ target p0 f (Delta d) = geocentricMetresPos x y z (model p0)
 -- >>> let p0 = wgs84Pos 49.66618 3.45063 zero
 -- >>> targetN p0 (nedMeters 100 200 300)
 -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
---     -- equivalent to:
---     target p0 frameN (deltaMetres 100 200 300) wgs84
---     -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
--- @
+--
 targetN :: (Model a) => Position a -> Ned -> Position a
 targetN p0 (Ned d) = target p0 frameN (Delta d)

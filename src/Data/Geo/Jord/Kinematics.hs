@@ -8,6 +8,13 @@
 --
 -- Types and functions for working with kinematics calculations assuming a __spherical__ celestial body.
 --
+-- In order to use this module you should start with the following imports:
+--
+-- @
+--     import Data.Geo.Jord.Kinematics
+--     import Data.Geo.Jord.Position
+-- @
+--
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 -- and in <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry>
@@ -98,7 +105,7 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
 
 -- | @positionAfter p b s d@ computes the position of a vehicle currently at position @p@
 -- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed assuming
--- that the vehicle does not change altitude.
+-- the vehicle maintains a __constant__ altitude.
 --
 -- @positionAfter p b s d@ is a shortcut for @positionAfter' ('course' p b) s d@.
 --
@@ -118,12 +125,12 @@ positionAfter p b s d = position' p (course p b) s (toSeconds d)
 
 -- | @positionAfter p c s d@ computes the position of a vehicle currently at position @p@
 -- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed assuming
--- that the vehicle does not change altitude.
+-- the vehicle maintains a __constant__ altitude.
 positionAfter' :: (Spherical a) => Position a -> Course -> Speed -> Duration -> Position a
 positionAfter' p c s d = position' p c s (toSeconds d)
 
 -- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed
--- assuming that the vehicle does not change altitude.
+-- assuming the vehicle maintains a __constant__ altitude.
 --
 -- @trackPositionAfter ('Track' p b s) d@ is a equivalent to @positionAfter' p ('course' p b) s d@.
 --
@@ -144,7 +151,7 @@ trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 -- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@ disregarding
 -- their respective altitude.
 -- If a closest point of approach is found, height of 'cpaPosition1' - respectively 'cpaPosition2',
--- will be the height of the first - respectively second, track.
+-- will be the altitude of the first - respectively second, track.
 --
 -- ==== __Examples__
 --
@@ -187,8 +194,7 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 --
 --     * interceptor is "behind" the target
 --
--- The computation disregards the altitude of both the track and the interceptor. If an intercept
--- is found 'interceptPosition' will be at the altitude of the track.
+-- If found, 'interceptPosition' is at the altitude of the track.
 --
 -- ==== __Examples__
 --
@@ -214,8 +220,7 @@ intercept t p = interceptByTime t p (seconds (timeToIntercept t p))
 --
 --     * interceptor speed is below minimum speed returned by 'intercept'
 --
--- The computation disregards the altitude of both the track and the interceptor. If an intercept
--- is found 'interceptPosition' will be at the altitude of the track.
+-- If found, 'interceptPosition' is at the altitude of the track.
 --
 interceptBySpeed :: (Spherical a) => Track a -> Position a -> Speed -> Maybe (Intercept a)
 interceptBySpeed t p s
@@ -230,8 +235,7 @@ interceptBySpeed t p s
 -- after duration @d@. Returns 'Nothing' if given duration is <= 0 or
 -- interceptor and target are at the same position.
 --
--- The computation disregards the altitude of both the track and the interceptor. If an intercept
--- is found 'interceptPosition' will be at the altitude of the track.
+-- If found, 'interceptPosition' is at the altitude of the track.
 --
 -- Note: contrary to 'intercept' and 'interceptBySpeed' this function handles
 -- cases where the interceptor has to catch up the target.

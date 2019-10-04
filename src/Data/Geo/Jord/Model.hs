@@ -61,16 +61,16 @@ class (Model a) =>
 -- Compare to 'Spherical' models, less calculations are available and they are more CPU
 -- intensive: see "Data.Geo.Jord.Geodesic" and "Data.Geo.Jord.LocalFrames", however those
 -- calculations are more \"correct\".
--- Coordinates transformation between different ellispoidal models is possible
--- provided that the 7-parameter transformation (Helmert) is known: see "Data.Geo.Jord.Transformation".
+-- Supports coordinates transformation between different ellispoidal models using 7-parameter
+-- transformation (Helmert): see "Data.Geo.Jord.Transformation".
 class (Model a) =>
       Ellipsoidal a
 
 
 -- | Time-dependent 'Ellipsoidal' models, such as International Terrestrial Reference Frames (ITRF).
--- The epoch allows to account for unmodelled measurement biases and tectonic processes: coordinates
--- transformation between different time-dependent ellispoidal models at a known epoch is possible
--- provided that the 14-parameter transformation (Helmert) is known: see "Data.Geo.Jord.Transformation".
+-- The epoch allows to account for unmodelled measurement biases and tectonic processes: supports
+-- coordinates transformation between different time-dependent ellispoidal models at given epoch using
+-- 15-parameter transformation (Helmert): see "Data.Geo.Jord.Transformation".
 class (Ellipsoidal a) =>
       EllipsoidalT0 a
     where

@@ -29,12 +29,14 @@ module Data.Geo.Jord.Position
     , nx
     , ny
     , nz
+    , nvector
     -- * Geocentric coordinates
     , Geocentric
     , gx
     , gy
     , gz
-    -- * smart constructors
+    , geocentric
+    -- * Smart constructors
     , latLongPos
     , latLongHeightPos
     , latLongPos'
@@ -48,18 +50,16 @@ module Data.Geo.Jord.Position
     , geocentricPos
     , geocentricMetresPos
     , nvh
-    -- * Conversions/Transformations
-    , nvectorToLatLong
-    , nvectorFromLatLong
-    , nvectorToGeocentric
-    , nvectorFromGeocentric
     -- * Read/Show points
     , readPosition
     , positionP
+    -- * Vector3d conversions
+    , nvectorFromLatLong
+    , nvectorToLatLong
+    , nvectorFromGeocentric
+    , nvectorToGeocentric
     -- * Misc.
     , antipode
-    , nvector
-    , geocentric
     , latLong
     , latLong'
     , northPole
@@ -177,7 +177,18 @@ antipode p = nvh nv h (model p)
     h = height p
     nv = vscale (nvec p) (-1.0)
 
--- | @nvector p@ returns the horizontal position of position @p@ as a /n/-vector.
+-- | @nvector p@ returns the horizontal position of @p@ as a /n/-vector.
+--
+-- ==== __Examples__
+--
+-- >>> import Data.Geo.Jord.Position
+-- >>>
+-- >>> nvector (northPole S84)
+-- n-vector {0.0, 0.0, 1.0}
+--
+-- >>> nvector (wgs84Pos 54 154 (metres 1000))
+-- n-vector {-0.5282978852629286, 0.2576680951131586, 0.8090169943749475}
+--
 nvector :: (Model a) => Position a -> NVector
 nvector p = NVector x y z
   where
@@ -188,8 +199,8 @@ nvector p = NVector x y z
 -- ==== __Examples__
 --
 -- >>> import Data.Geo.Jord.Position
--- >>> let p = wgs84Pos 54 154 (metres 1000)
--- >>> geocentric p
+-- >>>
+-- >>> geocentric (wgs84Pos 54 154 (metres 1000))
 -- geocentric {-3377.4908375km, 1647.312349km, 5137.5528484km}
 --
 geocentric :: (Model a) => Position a -> Geocentric
@@ -197,11 +208,11 @@ geocentric p = Geocentric (metres x) (metres y) (metres z)
   where
     (Vector3d x y z) = gcvec p
 
--- | surface position of the North Pole in the given model.
+-- | Horizontal position of the North Pole in the given model.
 northPole :: (Model a) => a -> Position a
 northPole = nvh nvNorthPole zero
 
--- | surface position of the South Pole in the given model.
+-- | Horizontal position of the South Pole in the given model.
 southPole :: (Model a) => a -> Position a
 southPole = nvh nvSouthPole zero
 
@@ -233,8 +244,10 @@ readPosition s m =
 -- ==== __Examples__
 --
 -- >>> import Data.Geo.Jord.Position
+-- >>>
 -- >>> readPosition "55°36'21''N 013°00'02''E" WGS84
 -- Just 55°36'21.000"N,13°0'2.000"E 0.0m (WGS84)
+-- >>>
 -- >>> readPosition "55°36'21''N 013°00'02''E 1500m" WGS84
 -- Just 55°36'21.000"N,13°0'2.000"E 1500.0m (WGS84)
 --
@@ -247,17 +260,25 @@ positionP m = do
 
 -- | Ground 'Position' from given geodetic latitude & longitude in __decimal degrees__ in
 -- the given model.
--- Latitude & longitude values are converted to 'Angle' (ensuring thus consistent
--- resolution with the rest of the API) and wrapped to their respective range.
 --
--- @latLongPos lat lon model@ is a shortcut for @'latLongHeightPos' lat lon zero model@.
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
+-- with the rest of the API, then wrapped to their respective range.
+--
+-- This is equivalent to:
+--
+-- @
+--     'latLongHeightPos' lat lon zero model
+-- @
 --
 latLongPos :: (Model a) => Double -> Double -> a -> Position a
 latLongPos lat lon = latLongHeightPos lat lon zero
 
 -- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height
--- in the given model. Latitude & longitude values are converted to 'Angle' (ensuring
--- thus consistent resolution with the rest of the API) and wrapped to their respective range.
+-- in the given model
+--
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
+-- with the rest of the API, then wrapped to their respective range.
+--
 latLongHeightPos :: (Model a) => Double -> Double -> Length -> a -> Position a
 latLongHeightPos lat lon = latLongHeightPos' (decimalDegrees lat) (decimalDegrees lon)
 
@@ -265,7 +286,11 @@ latLongHeightPos lat lon = latLongHeightPos' (decimalDegrees lat) (decimalDegree
 -- the given model.
 -- Latitude & longitude values are wrapped to their respective range.
 --
--- @latLongPos' lat lon datum@ is a shortcut for @'latLongHeightPos'' lat lon zero model@.
+-- This is equivalent to:
+--
+-- @
+--     'latLongHeightPos'' lat lon zero model
+-- @
 --
 latLongPos' :: (Model a) => Angle -> Angle -> a -> Position a
 latLongPos' lat lon = latLongHeightPos' lat lon zero
@@ -275,15 +300,21 @@ latLongPos' lat lon = latLongHeightPos' lat lon zero
 latLongHeightPos' :: (Model a) => Angle -> Angle -> Length -> a -> Position a
 latLongHeightPos' lat lon h m = Position lat' lon' h nv g m
   where
-    nv = nvectorFromLatLong' (lat, lon)
-    g = nvectorToGeocentric' (nv, h) (surface m)
+    nv = nvectorFromLatLong (lat, lon)
+    g = nvectorToGeocentric (nv, h) (surface m)
     (lat', lon') = wrap lat lon nv m
 
 -- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height in
--- the WGS84 datum. Latitude & longitude values are converted to 'Angle' (ensuring
--- thus consistent resolution with the rest of the API) and wrapped to their respective range.
+-- the WGS84 datum.
 --
--- @wgs84Pos lat lon h@ is a shortcut for @'latLongHeightPos' lat lon h WGS84@.
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
+-- with the rest of the API, then wrapped to their respective range.
+--
+-- This is equivalent to:
+--
+-- @
+--     'latLongHeightPos' lat lon h 'WGS84'
+-- @
 --
 wgs84Pos :: Double -> Double -> Length -> Position WGS84
 wgs84Pos lat lon h = latLongHeightPos lat lon h WGS84
@@ -291,17 +322,26 @@ wgs84Pos lat lon h = latLongHeightPos lat lon h WGS84
 -- | 'Position' from given geodetic latitude & longitude and height in the WGS84 datum.
 -- Latitude & longitude values are wrapped to their respective range.
 --
--- @wgs84Pos' lat lon h@ is a shortcut for @latLongHeightPos'' lat lon h WGS84@.
+-- This is equivalent to:
+--
+-- @
+--     'latLongHeightPos'' lat lon h 'WGS84'
+-- @
 --
 wgs84Pos' :: Angle -> Angle -> Length -> Position WGS84
 wgs84Pos' lat lon h = latLongHeightPos' lat lon h WGS84
 
 -- | 'Position' from given latitude & longitude in __decimal degrees__ and height in the
--- spherical datum derived from WGS84. Latitude & longitude values are converted to 'Angle'
--- (ensuring thus consistent resolution with the rest of the API) and wrapped to their respective
--- range.
+-- spherical datum derived from WGS84.
 --
--- @s84Pos lat lon h@ is a shortcut for @latLongHeightPos' lat lon h S84@.
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
+-- with the rest of the API, then wrapped to their respective range.
+--
+-- This is equivalent to:
+--
+-- @
+--     'latLongHeightPos' lat lon h 'S84'
+-- @
 --
 s84Pos :: Double -> Double -> Length -> Position S84
 s84Pos lat lon h = latLongHeightPos lat lon h S84
@@ -309,27 +349,40 @@ s84Pos lat lon h = latLongHeightPos lat lon h S84
 -- | 'Position' from given latitude & longitude and height in the spherical datum derived
 -- from WGS84. Latitude & longitude values are wrapped to their respective range.
 --
--- @s84Pos' lat lon h@ is a shortcut for @latLongHeightPos'' lat lon h S84@.
+-- This is equivalent to:
+--
+-- @
+--     'latLongHeightPos'' lat lon h 'S84'
+-- @
 --
 s84Pos' :: Angle -> Angle -> Length -> Position S84
 s84Pos' lat lon h = latLongHeightPos' lat lon h S84
 
 -- | 'Position' from given geocentric coordinates x, y and z in the given model.
 geocentricPos :: (Model a) => Length -> Length -> Length -> a -> Position a
-geocentricPos x y z = geocentricMetresPos (toMetres x) (toMetres y) (toMetres z)
+geocentricPos x y z = geocentricMetresPos' (toMetres x) (toMetres y) (toMetres z)
 
 -- | 'Position' from given geocentric coordinates x, y and z in __metres__ in the given model.
+--
+-- x, y, z lengths are first converted to 'Length' to ensure a consistent resolution with the rest of the API.
 geocentricMetresPos :: (Model a) => Double -> Double -> Double -> a -> Position a
-geocentricMetresPos x y z m = Position lat lon h nv ev m
+geocentricMetresPos x y z = geocentricMetresPos' (toMetres . metres $ x) (toMetres . metres $ y) (toMetres . metres $ z)
+
+geocentricMetresPos' :: (Model a) => Double -> Double -> Double -> a -> Position a
+geocentricMetresPos' x y z m = Position lat lon h nv ev m
   where
     ev = Vector3d x y z
-    (nv, h) = nvectorFromGeocentric' ev (surface m)
-    (lat, lon) = nvectorToLatLong' nv
+    (nv, h) = nvectorFromGeocentric ev (surface m)
+    (lat, lon) = nvectorToLatLong nv
 
 -- | 'Position' from given /n/-vector x, y, z coordinates in the given model.
 -- Vector (x, y, z) will be normalised to a unit vector to get a valid /n/-vector.
 --
--- @nvectorPos x y z model@ is a shortcut for @nvectorHeightPos x y z zero model@.
+-- This is equivalent to:
+--
+-- @
+--     'nvectorHeightPos' lat lon zero model
+-- @
 --
 nvectorPos :: (Model a) => Double -> Double -> Double -> a -> Position a
 nvectorPos x y z = nvectorHeightPos x y z zero
@@ -338,34 +391,6 @@ nvectorPos x y z = nvectorHeightPos x y z zero
 -- Vector (x, y, z) will be normalised to a unit vector to get a valid /n/-vector.
 nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Position a
 nvectorHeightPos x y z = nvh (vunit (Vector3d x y z))
-
--- | @nvectorToLatLong nv@ returns (latitude, longitude) pair equivalent to the given /n/-vector @nv@.
---
--- Latitude is always in [-90°, 90°] and longitude in [-180°, 180°].
-nvectorToLatLong :: NVector -> (Angle, Angle)
-nvectorToLatLong nv = nvectorToLatLong' (Vector3d (nx nv) (ny nv) (nz nv))
-
--- | @nvectorToLatLong ll@ returns /n/-vector equivalent to the given (latitude, longitude) pair @ll@.
-nvectorFromLatLong :: (Angle, Angle) -> NVector
-nvectorFromLatLong ll = NVector x y z
-  where
-    (Vector3d x y z) = nvectorFromLatLong' ll
-
--- | @nvectorToGeocentric (nv, h) e@ returns the geocentric coordinates equivalent to the given
--- /n/-vector @nv@ and height @h@ using the ellispoid @e@.
-nvectorToGeocentric :: (NVector, Length) -> Ellipsoid -> Geocentric
-nvectorToGeocentric (nv, h) e = Geocentric (metres x) (metres y) (metres z)
-  where
-    v = Vector3d (nx nv) (ny nv) (nz nv)
-    (Vector3d x y z) = nvectorToGeocentric' (v, h) e
-
--- | @nvectorFromGeocentric g e@ returns the /n/-vector equivalent to the geocentric
--- coordinates @g@ using the ellispoid @e@.
-nvectorFromGeocentric :: Geocentric -> Ellipsoid -> (NVector, Length)
-nvectorFromGeocentric g s = (NVector x y z, h)
-  where
-    v = Vector3d (toMetres . gx $ g) (toMetres . gy $ g) (toMetres . gz $ g)
-    (Vector3d x y z, h) = nvectorFromGeocentric' v s
 
 -- | (latitude, longitude) pair in __decimal degrees__ from given position.
 latLong :: (Model a) => Position a -> (Double, Double)
@@ -381,24 +406,49 @@ nvh :: (Model a) => Vector3d -> Length -> a -> Position a
 nvh nv h m = Position lat lon h nv g m
   where
     (lat, lon) = llWrapped nv (longitudeRange m)
-    g = nvectorToGeocentric' (nv, h) (surface m)
+    g = nvectorToGeocentric (nv, h) (surface m)
 
-nvectorToLatLong' :: Vector3d -> (Angle, Angle)
-nvectorToLatLong' nv = (lat, lon)
+-- | @nvectorToLatLong nv@ returns (latitude, longitude) pair equivalent to the given /n/-vector @nv@.
+--
+-- You should prefer using:
+--
+-- @
+--     'latLong' ('nvectorPos' x y z model)
+-- @
+--
+-- Latitude is always in [-90°, 90°] and longitude in [-180°, 180°].
+nvectorToLatLong :: Vector3d -> (Angle, Angle)
+nvectorToLatLong nv = (lat, lon)
   where
     lat = atan2' (vz nv) (sqrt (vx nv * vx nv + vy nv * vy nv))
     lon = atan2' (vy nv) (vx nv)
 
-nvectorFromLatLong' :: (Angle, Angle) -> Vector3d
-nvectorFromLatLong' (lat, lon) = Vector3d x y z
+-- | @nvectorFromLatLong ll@ returns /n/-vector equivalent to the given (latitude, longitude) pair @ll@.
+--
+-- You should prefer using:
+--
+-- @
+--     'nvector' ('latLongPos' lat lon model)
+-- @
+nvectorFromLatLong :: (Angle, Angle) -> Vector3d
+nvectorFromLatLong (lat, lon) = Vector3d x y z
   where
     cl = cos' lat
     x = cl * cos' lon
     y = cl * sin' lon
     z = sin' lat
 
-nvectorToGeocentric' :: (Vector3d, Length) -> Ellipsoid -> Vector3d
-nvectorToGeocentric' (nv, h) e
+-- | @nvectorToGeocentric (nv, h) e@ returns the geocentric coordinates equivalent to the given
+-- /n/-vector @nv@ and height @h@ using the ellispoid @e@.
+--
+-- You should prefer using:
+--
+-- @
+--     'geocentric' ('nvectorHeightPos' x y z h model)
+-- @
+--
+nvectorToGeocentric :: (Vector3d, Length) -> Ellipsoid -> Vector3d
+nvectorToGeocentric (nv, h) e
     | isSphere e = nvectorToGeocentricS (nv, h) (equatorialRadius e)
     | otherwise = nvectorToGeocentricE (nv, h) e
 
@@ -422,8 +472,17 @@ nvectorToGeocentricE (nv, h) e = Vector3d gx' gy' gz'
     gy' = n * m * ny' + h' * ny'
     gz' = n * nz' + h' * nz'
 
-nvectorFromGeocentric' :: Vector3d -> Ellipsoid -> (Vector3d, Length)
-nvectorFromGeocentric' g e
+-- | @nvectorFromGeocentric g e@ returns the /n/-vector equivalent to the geocentric
+-- coordinates @g@ using the ellispoid @e@.
+--
+-- You should prefer using:
+--
+-- @
+--     'nvector' ('geocentricMetresPos' x y z model)
+-- @
+--
+nvectorFromGeocentric :: Vector3d -> Ellipsoid -> (Vector3d, Length)
+nvectorFromGeocentric g e
     | isSphere e = nvectorFromGeocentricS g (equatorialRadius e)
     | otherwise = nvectorFromGeocentricE g e
 
@@ -473,7 +532,7 @@ wrap lat lon nv m =
 llWrapped :: Vector3d -> LongitudeRange -> (Angle, Angle)
 llWrapped nv lr = (lat, lon')
   where
-    (lat, lon) = nvectorToLatLong' nv
+    (lat, lon) = nvectorToLatLong nv
     lon' =
         case lr of
             L180 -> lon

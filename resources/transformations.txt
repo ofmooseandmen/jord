@@ -1,4 +1,4 @@
-# Coordinates transformations.
+# Coordinates transformation parameters between various models.
 #
 #    * params: tx ty tz s rx ry rz
 #
@@ -9,7 +9,7 @@
 #    * scale factors in parts per billion, rates in parts per billion per year
 #
 #    * rotations in milliarcseconds, rates in milliarcseconds per year
-module Data.Geo.Jord.Transformations
+module Data.Geo.Jord.Txs
 
 # WGS84 to NAD83 transformation parameters.
 WGS84 -> NAD83

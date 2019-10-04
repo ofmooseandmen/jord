@@ -4,7 +4,8 @@ module Data.Geo.Jord.SpeedSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.Quantity
+import Data.Geo.Jord.Speed
 
 spec :: Spec
 spec = do

@@ -16,15 +16,15 @@ spec = do
     describe "alongTrackDistance" $ do
         it "returns a positive length when position is ahead start of great arc" $ do
             let p = s84Pos 53.2611 (-0.7972) zero
-            let g = minorArcBetween (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
+            let g = minorArc (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
             fmap (alongTrackDistance p) g `shouldBe` Just (kilometres 62.3315791)
         it "returns a negative length when position is ahead start of great arc" $ do
             let p = s84Pos 53.3206 (-1.7297) zero
-            let g = minorArcBetween (s84Pos 53.2611 (-0.7972) zero) (s84Pos 53.1887 0.1334 zero)
+            let g = minorArc (s84Pos 53.2611 (-0.7972) zero) (s84Pos 53.1887 0.1334 zero)
             fmap (alongTrackDistance p) g `shouldBe` Just (kilometres (-62.329309979))
         it "returns 0 when position is start of great arc" $ do
             let p = s84Pos 53.2611 (-0.7972) zero
-            let g = minorArcBetween p (s84Pos 53.1887 0.1334 zero)
+            let g = minorArc p (s84Pos 53.1887 0.1334 zero)
             fmap (alongTrackDistance p) g `shouldBe` Just zero
     describe "crossTrackDistance" $ do
         it "returns a negative length when position is left of great circle (bearing)" $ do
@@ -205,23 +205,23 @@ spec = do
             isInsideSurface hassleholm polygon `shouldBe` False
     describe "intersection" $ do
         it "returns nothing if both great arc are equals" $ do
-            let a = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero)
+            let a = minorArc (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero)
             join (intersection <$> a <*> a) `shouldBe` Nothing
         it "returns nothing if both great arc are equals (opposite orientation)" $ do
-            let a1 = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero)
-            let a2 = minorArcBetween (s84Pos 52.885 1.235 zero) (s84Pos 51.885 0.235 zero)
+            let a1 = minorArc (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero)
+            let a2 = minorArc (s84Pos 52.885 1.235 zero) (s84Pos 51.885 0.235 zero)
             join (intersection <$> a1 <*> a2) `shouldBe` Nothing
         it "returns nothing if great circle intersection is outside either great arc" $ do
-            let a1 = minorArcBetween (s84Pos 0 0 zero) (s84Pos 0 10 zero)
-            let a2 = minorArcBetween (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero)
+            let a1 = minorArc (s84Pos 0 0 zero) (s84Pos 0 10 zero)
+            let a2 = minorArc (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero)
             join (intersection <$> a1 <*> a2) `shouldBe` Nothing
         it "returns nothing if great circle intersection is outside both great arcs" $ do
-            let a1 = minorArcBetween (s84Pos 0 (-10) zero) (s84Pos 0 (-1) zero)
-            let a2 = minorArcBetween (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero)
+            let a1 = minorArc (s84Pos 0 (-10) zero) (s84Pos 0 (-1) zero)
+            let a2 = minorArc (s84Pos (-5) 5 zero) (s84Pos (-1) 5 zero)
             join (intersection <$> a1 <*> a2) `shouldBe` Nothing
         it "returns the point where the two great arcs intersect" $ do
-            let a1 = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
-            let a2 = minorArcBetween (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
+            let a1 = minorArc (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
+            let a2 = minorArc (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
             join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos 50.901738961111114 4.49418117 zero)
     describe "intersections" $ do
         it "returns nothing if both great circle are equals" $ do

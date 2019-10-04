@@ -4,7 +4,9 @@ module Data.Geo.Jord.RotationSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Rotation
+import Data.Geo.Jord.Vector3d
 
 spec :: Spec
 spec = do

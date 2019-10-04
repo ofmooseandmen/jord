@@ -9,6 +9,15 @@
 -- Geographical Position calculations on great circles, i.e. using a __sphere__ to represent
 -- the celestial body that positions refer to.
 --
+-- In order to use this module you should start with the following imports:
+--
+-- @
+--     import Data.Geo.Jord.GreatCircle
+--     import Data.Geo.Jord.Position
+-- @
+--
+-- If you wish to use both this module and the "Data.Geo.Jord.Geodesic" module you must qualify both imports.
+--
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 --
@@ -20,7 +29,7 @@ module Data.Geo.Jord.GreatCircle
     , greatCircleHeadingOn
     -- * The 'MinorArc' type
     , MinorArc
-    , minorArcBetween
+    , minorArc
     -- * Calculations
     , alongTrackDistance
     , alongTrackDistance'
@@ -61,7 +70,7 @@ instance (Model a) => Show (GreatCircle a) where
 
 -- | @greatCircleThrough p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@.
 -- If positions are antipodal, any great circle passing through those positions will be returned.
--- Return 'Nothing' if given positions are equal.
+-- Returns 'Nothing' if given positions are equal.
 --
 -- ==== __Examples__
 --
@@ -71,7 +80,7 @@ instance (Model a) => Show (GreatCircle a) where
 -- >>> let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
 -- >>> let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
 -- >>> greatCircleThrough p1 p2 -- heights are ignored, great circle is always at surface.
--- >>> TODO
+-- Just Great Circle { through 45°0'0.000"N,143°30'0.000"W 1500.0m (S84) & 46°0'0.000"N,14°30'0.000"E 3000.0m (S84) }
 --
 greatCircleThrough :: (Spherical a) => Position a -> Position a -> Maybe (GreatCircle a)
 greatCircleThrough p1 p2
@@ -91,7 +100,7 @@ greatCircleThrough p1 p2
 -- >>> let p = latLongPos 45.0 (-143.5) S84
 -- >>> let b = decimalDegrees 33.0
 -- >>> greatCircleHeadingOn p b
--- >>> TODO
+-- Great Circle { by 45°0'0.000"N,143°30'0.000"W 0.0m (S84) & heading on 33°0'0.000" }
 --
 greatCircleHeadingOn :: (Spherical a) => Position a -> Angle -> GreatCircle a
 greatCircleHeadingOn p b = GreatCircle (vsub n' e') (model p) dscr
@@ -110,19 +119,22 @@ data MinorArc a =
     deriving (Eq)
 
 instance (Model a) => Show (MinorArc a) where
-    show (MinorArc _ s e) = "Minor Arc { from: " ++ show s ++ ", to: " ++ show e ++ "}"
+    show (MinorArc _ s e) = "Minor Arc { from: " ++ show s ++ ", to: " ++ show e ++ " }"
 
--- | @minorArcBetween p1 p2@ return the 'MinorArc' from @p1@ to @p2@.
--- Return 'Nothing' if given positions are equal.
+-- | @minorArc p1 p2@ returns the 'MinorArc' from @p1@ to @p2@.
+-- Returns 'Nothing' if given positions are equal.
 --
 -- ==== __Examples__
 --
 -- >>> import Data.Geo.Jord.GreatCircle
 -- >>> import Data.Geo.Jord.Position
--- >>> TODO
+-- >>>
+-- >>> let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
+-- >>> let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
+-- Just Minor Arc { from: 45°0'0.000"N,143°30'0.000"W 1500.0m (S84), to: 46°0'0.000"N,14°30'0.000"E 3000.0m (S84) }
 --
-minorArcBetween :: (Spherical a) => Position a -> Position a -> Maybe (MinorArc a)
-minorArcBetween p1 p2
+minorArc :: (Spherical a) => Position a -> Position a -> Maybe (MinorArc a)
+minorArc p1 p2
     | llEq p1 p2 = Nothing
     | otherwise = Just (MinorArc (normal' p1 p2) p1 p2)
 
@@ -206,7 +218,11 @@ crossTrackDistance p (GreatCircle n _ _) = arcLength (sub a (decimalDegrees 90))
 -- | @crossTrackDistance' p s b@ computes the signed distance from horizontal Position @p@ to the
 -- great circle passing by @s@ and heading on bearing @b@.
 --
--- @crossTrackDistance' p s b@ is a shortcut for @'crossTrackDistance' p (greatCircleHeadingOn s b)@.
+-- This is equivalent to:
+--
+-- @
+--     'crossTrackDistance' p ('greatCircleHeadingOn' s b)
+-- @
 --
 crossTrackDistance' :: (Spherical a) => Position a -> Position a -> Angle -> Length
 crossTrackDistance' p s b = crossTrackDistance p (greatCircleHeadingOn s b)
@@ -247,6 +263,9 @@ destination p b d
 -- >>>
 -- >>> surfaceDistance (northPole S84) (southPole S84)
 -- 20015.114352233km
+-- >>>
+-- >>> surfaceDistance (northPole S84) (northPole S84)
+-- 0.0m
 --
 surfaceDistance :: (Spherical a) => Position a -> Position a -> Length
 surfaceDistance p1 p2 = arcLength a (radius p1)
@@ -264,7 +283,13 @@ surfaceDistance p1 p2 = arcLength a (radius p1)
 -- >>> import Data.Geo.Jord.GreatCircle
 -- >>> import Data.Geo.Jord.Position
 -- >>>
--- TODO
+-- >>> let p1 = s84Pos 0 1 (metres 12000)
+-- >>> let p2 = s84Pos 0 0 (metres 5000)
+-- >>> finalBearing p1 p2
+-- Just 270°0'0.000"
+-- >>>
+-- >>> finalBearing p1 p1
+-- Nothing
 --
 finalBearing :: (Spherical a) => Position a -> Position a -> Maybe Angle
 finalBearing p1 p2
@@ -280,7 +305,13 @@ finalBearing p1 p2
 -- >>> import Data.Geo.Jord.GreatCircle
 -- >>> import Data.Geo.Jord.Position
 -- >>>
--- TODO
+-- >>> let p1 = s84Pos 58.643889 (-5.714722) (metres 12000)
+-- >>> let p2 = s84Pos 50.066389 (-5.714722) (metres 12000)
+-- >>> initialBearing p1 p2
+-- Just 180°0'0.000"
+-- >>>
+-- >>> initialBearing p1 p1
+-- Nothing
 --
 initialBearing :: (Spherical a) => Position a -> Position a -> Maybe Angle
 initialBearing p1 p2

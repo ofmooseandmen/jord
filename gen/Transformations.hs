@@ -68,7 +68,7 @@ params' n = do
     return (Params [tx, ty, tz] s [rx, ry, rz])
 
 generator :: G.Generator Transformation
-generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Transformation"] genTx genAll
+generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Tx"] genTx genAll
 
 genTx :: Transformation -> String
 genTx t

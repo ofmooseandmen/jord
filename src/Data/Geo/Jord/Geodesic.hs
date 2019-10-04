@@ -11,6 +11,15 @@
 -- functions improves on the accuracy available using "Data.Geo.Jord.GreatCircle" at the expense of higher
 -- CPU usage.
 --
+-- In order to use this module you should start with the following imports:
+--
+-- @
+--     import Data.Geo.Jord.Geodesic
+--     import Data.Geo.Jord.Position
+-- @
+--
+-- If you wish to use both this module and the "Data.Geo.Jord.GreatCircle" module you must qualify both imports.
+--
 -- <http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf T Vincenty, "Direct and Inverse Solutions of Geodesics on the Ellipsoid with application of nested equations", Survey Review, vol XXIII no 176, 1975.>
 --
 module Data.Geo.Jord.Geodesic
@@ -31,13 +40,14 @@ module Data.Geo.Jord.Geodesic
 import Data.Geo.Jord.Internal
 import Data.Geo.Jord.Position
 
+-- | Geodesic line: shortest route between two positions on the surface of a model.
 data Geodesic a =
     Geodesic
-        { geodesicPos1 :: Position a
-        , geodesicPos2 :: Position a
-        , geodesicBearing1 :: Maybe Angle
-        , geodesicBearing2 :: Maybe Angle
-        , geodesicLength :: Length
+        { geodesicPos1 :: Position a -- ^ geodesic start position, p1.
+        , geodesicPos2 :: Position a -- ^ geodesic end position, p2.
+        , geodesicBearing1 :: Maybe Angle -- ^ initial bearing from p1 to p2, if p1 and p2 are different.
+        , geodesicBearing2 :: Maybe Angle -- ^ final bearing from p1 to p2, if p1 and p2 are different
+        , geodesicLength :: Length -- ^ length of the geodesic: the surface distance between p1 and p2.
         }
     deriving (Eq, Show)
 
@@ -53,7 +63,12 @@ data Geodesic a =
 -- >>> import Data.Geo.Jord.Geodesic
 -- >>> import Data.Geo.Jord.Position
 -- >>>
--- >>> TODO
+-- >>> directGeodesic (northPole WGS84) zero (kilometres 20003.931458623)
+-- Just (Geodesic {geodesicPos1 = 90°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
+--               , geodesicPos2 = 90°0'0.000"S,180°0'0.000"E 0.0m (WGS84)
+--               , geodesicBearing1 = Just 0°0'0.000"
+--               , geodesicBearing2 = Just 180°0'0.000"
+--               , geodesicLength = 20003.931458623km})
 --
 directGeodesic :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Geodesic a)
 directGeodesic p1 b1 d
@@ -105,7 +120,15 @@ directGeodesic p1 b1 d
 -- >>> import Data.Geo.Jord.Geodesic
 -- >>> import Data.Geo.Jord.Position
 -- >>>
--- >>> TODO
+-- >>> inverseGeodesic (latLongPos 0 0 WGS84) (latLongPos 0.5 179.5 WGS84)
+-- Just (Geodesic {geodesicPos1 = 0°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
+--               , geodesicPos2 = 0°30'0.000"N,179°30'0.000"E 0.0m (WGS84)
+--               , geodesicBearing1 = Just 25°40'18.742"
+--               , geodesicBearing2 = Just 154°19'37.507"
+--               , geodesicLength = 19936.288578981km})
+-- >>>
+-- >>> inverseGeodesic (latLongPos 0 0 WGS84) (latLongPos 0.5 179.7 WGS84)
+-- Nothing
 --
 inverseGeodesic :: (Ellipsoidal a) => Position a -> Position a -> Maybe (Geodesic a)
 inverseGeodesic p1 p2
@@ -113,7 +136,7 @@ inverseGeodesic p1 p2
     | otherwise =
         case rec of
             Nothing -> Nothing
-            (Just (s, cosS, sinS, sinSqS, cos2S', cosSqA)) ->
+            (Just (cosL, sinL, s, cosS, sinS, sinSqS, cos2S', cosSqA)) ->
                 Just (Geodesic p1 p2 (Just b1) (Just b2) d)
                 where uSq = cosSqA * (a * a - b * b) / (b * b)
                       _A =
@@ -131,11 +154,11 @@ inverseGeodesic p1 p2
                       a1R =
                           if abs sinSqS < epsilon
                               then 0.0
-                              else atan2 (cosU2 * sinS) (cosU1 * sinU2 - sinU1 * cosU2 * cosS)
+                              else atan2 (cosU2 * sinL) (cosU1 * sinU2 - sinU1 * cosU2 * cosL)
                       a2R =
                           if abs sinSqS < epsilon
                               then pi
-                              else atan2 (cosU1 * sinS) (-sinU1 * cosU2 + cosU1 * sinU2 * cosS)
+                              else atan2 (cosU1 * sinL) (-sinU1 * cosU2 + cosU1 * sinU2 * cosL)
                       b1 = normalise (radians a1R) (decimalDegrees 360.0)
                       b2 = normalise (radians a2R) (decimalDegrees 360.0)
   where
@@ -156,14 +179,21 @@ inverseGeodesic p1 p2
 -- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
 -- Returns 'Nothing' if both positions are equals or if 'inverseGeodesic' fails to converge.
 --
--- @finalBearing p1 p2@ is a shortcut for @('inverseGeodesic' p1 p2) >>= 'geodesicBearing2'@.
+-- This is equivalent to:
+--
+-- @
+--     ('inverseGeodesic' p1 p2) >>= 'geodesicBearing2'
+-- @
 --
 -- ==== __Examples__
 --
 -- >>> import Data.Geo.Jord.Geodesic
 -- >>> import Data.Geo.Jord.Position
 -- >>>
--- >>> TODO
+-- >>> p1 = latLongPos (-37.95103341666667) 144.42486788888888 WGS84
+-- >>> p2 = latLongPos (-37.65282113888889) 143.92649552777777 WGS84
+-- >>> initialBearing p1 p2
+-- Just 307°10'25.070"
 --
 finalBearing :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
 finalBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing2
@@ -172,14 +202,19 @@ finalBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing2
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- Returns 'Nothing' if both positions are equals or if 'inverseGeodesic' fails to converge.
 --
--- @initialBearing p1 p2@ is a shortcut for @('inverseGeodesic' p1 p2) >>= 'geodesicBearing1'@.
+-- @
+--     ('inverseGeodesic' p1 p2) >>= 'geodesicBearing1'
+-- @
 --
 -- ==== __Examples__
 --
 -- >>> import Data.Geo.Jord.Geodesic
 -- >>> import Data.Geo.Jord.Position
 -- >>>
--- >>> TODO
+-- >>> p1 = latLongPos (-37.95103341666667) 144.42486788888888 WGS84
+-- >>> p2 = latLongPos (-37.65282113888889) 143.92649552777777 WGS84
+-- >>> initialBearing p1 p2
+-- Just 306°52'5.373"
 --
 initialBearing :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
 initialBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing1
@@ -189,7 +224,9 @@ initialBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing1
 -- This function relies on 'inverseGeodesic' and can therefore fail to compute the distance
 -- for nearly antipodal positions.
 --
--- @surfaceDistance p1 p2@ is a shortcut for @fmap 'geodesicLength' ('inverseGeodesic' p1 p2)@.
+-- @
+--     fmap 'geodesicLength' ('inverseGeodesic' p1 p2)
+-- @
 --
 -- ==== __Examples__
 --
@@ -207,7 +244,9 @@ surfaceDistance p1 p2 = fmap geodesicLength (inverseGeodesic p1 p2)
 -- at __constant__ height.
 -- Note that the  bearing will normally vary before destination is reached.
 --
--- @destination p b d@ is a shortcut for @fmap 'geodesicPos2' ('directGeodesic' p b d)@.
+-- @
+--     fmap 'geodesicPos2' ('directGeodesic' p b d)
+-- @
 --
 -- ==== __Examples__
 --
@@ -256,13 +295,14 @@ inverseRec ::
     -> Double
     -> Bool
     -> Int
-    -> Maybe (Double, Double, Double, Double, Double, Double)
+    -> Maybe (Double, Double, Double, Double, Double, Double, Double, Double)
 inverseRec lambda cosU1 sinU1 cosU2 sinU2 _L f antipodal i
     | i == 1000 = Nothing
-    | sinSqSigma < epsilon = Just (sigma, cosSigma, sinSigma, sinSqSigma, cos2Sigma', cosSqAlpha)
+    -- co-incident/antipodal points (falls back on λ/σ = L)
+    | sinSqSigma < epsilon = Just (inverseFallback cosL sinL sinSqSigma antipodal)
     | iterationCheck > pi = Nothing
     | abs (lambda - newLambda) <= 1e-12 =
-        Just (sigma, cosSigma, sinSigma, sinSqSigma, cos2Sigma', cosSqAlpha)
+        Just (cosL, sinL, sigma, cosSigma, sinSigma, sinSqSigma, cos2Sigma', cosSqAlpha)
     | otherwise = inverseRec newLambda cosU1 sinU1 cosU2 sinU2 _L f antipodal (i + 1)
   where
     sinL = sin lambda
@@ -289,6 +329,27 @@ inverseRec lambda cosU1 sinU1 cosU2 sinU2 _L f antipodal i
         if antipodal
             then abs newLambda - pi
             else abs newLambda
+
+inverseFallback ::
+       Double
+    -> Double
+    -> Double
+    -> Bool
+    -> (Double, Double, Double, Double, Double, Double, Double, Double)
+inverseFallback cosL sinL sinSqSigma antipodal =
+    (cosL, sinL, sigma, cosSigma, sinSigma, sinSqSigma, cos2Sigma', cosSqAlpha)
+  where
+    sigma =
+        if antipodal
+            then pi
+            else 0
+    cosSigma =
+        if antipodal
+            then (-1)
+            else 1
+    sinSigma = 0
+    cos2Sigma' = 1
+    cosSqAlpha = 1
 
 -- | see Numeric.Limits
 epsilon :: Double

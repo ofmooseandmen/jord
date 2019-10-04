@@ -4,7 +4,8 @@ module Data.Geo.Jord.DurationSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord
+import Data.Geo.Jord.Duration
+import Data.Geo.Jord.Quantity
 
 spec :: Spec
 spec = do

@@ -23,12 +23,15 @@
 -- <http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf T Vincenty, "Direct and Inverse Solutions of Geodesics on the Ellipsoid with application of nested equations", Survey Review, vol XXIII no 176, 1975.>
 --
 module Data.Geo.Jord.Geodesic
-    ( Geodesic
+    (
+    -- * The 'Geodesic' type
+      Geodesic
     , geodesicPos1
     , geodesicPos2
     , geodesicBearing1
     , geodesicBearing2
     , geodesicLength
+    -- * Calculations
     , directGeodesic
     , inverseGeodesic
     , destination

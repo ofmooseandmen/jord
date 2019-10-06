@@ -98,7 +98,7 @@ spec =
                 let p1 = s84Pos 20 (-60) zero
                 let b1 = decimalDegrees 10
                 let s1 = knots 15
-                let p2 = s84Pos 34 (-50) zero
+                let p2 = s84Pos 34 (-50) (metres 10000)
                 let b2 = decimalDegrees 220
                 let s2 = knots 300
                 let t1 = Track p1 b1 s1
@@ -106,6 +106,8 @@ spec =
                 let c = cpa t1 t2
                 fmap cpaTime c `shouldBe` Just (milliseconds 11396155)
                 fmap cpaDistance c `shouldBe` Just (kilometres 124.231730834)
+                fmap cpaPosition1 c `shouldBe` Just (s84Pos 20.778789303333333 (-59.85311827861111) zero)
+                fmap cpaPosition2 c `shouldBe` Just (s84Pos 21.402367759166665 (-60.846710862222224) (metres 10000))
             it "returns Nothing if time to CPA is in the past" $ do
                 let t1 = Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400)
                 let t2 = Track (s84Pos 30.01 30 zero) (decimalDegrees 315) (knots 400)

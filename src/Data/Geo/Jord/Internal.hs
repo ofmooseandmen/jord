@@ -31,6 +31,5 @@ signedAngleRadians v1 v2 n = atan2 sinO cosO
     cosO = vdot v1 v2
 
 -- | both position have same latitude and longitude irrespective of model ?
--- TODO add test where height is ignored (cpa, intercept, ...)
 llEq :: Position a -> Position a -> Bool
 llEq p1 p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2

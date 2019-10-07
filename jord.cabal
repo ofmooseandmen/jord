@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c1d95d189d594db2a8e7309b3415b18ca5bce98881da796dbc9b1102ff8809a0
+-- hash: b9967447599c30135a4d07689a4acf4b4ff002ad1e4d3983336c1d0fa2d9473b
 
 name:           jord
 version:        1.0.0.0
@@ -64,6 +64,7 @@ library
 executable jord-benchmarks
   main-is: Main.hs
   other-modules:
+      GeodesicBG
       GreatCircleBG
       KinematicsBG
       PositionBG

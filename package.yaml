@@ -71,6 +71,7 @@ executables:
   jord-benchmarks:
     main:                Main.hs
     other-modules:
+      - GeodesicBG
       - GreatCircleBG
       - KinematicsBG
       - PositionBG

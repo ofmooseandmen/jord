@@ -3,8 +3,8 @@ module KinematicsBG
     ) where
 
 import Criterion.Types
-import Data.Geo.Jord.Position
 import Data.Geo.Jord.Kinematics
+import Data.Geo.Jord.Position
 
 benchmark :: Benchmark
 benchmark =

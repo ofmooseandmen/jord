@@ -26,6 +26,41 @@ ellipsoidal NAD83
   surface: GRS80
   longitudeRange: L180
 
+# European Datum 1950.
+ellipsoidal ED50
+  surface: Intl1924
+  longitudeRange: L180
+
+# Irland.
+ellipsoidal Irl1975
+  surface: AiryModified
+  longitudeRange: L180
+
+# North American Datum of 1927.
+ellipsoidal NAD27
+  surface: Clarke1866
+  longitudeRange: L180
+
+# NTF (Paris) / France I.
+ellipsoidal NTF
+  surface: Clarke1880IGN
+  longitudeRange: L180
+
+# Ordnance Survey Great Britain 1936.
+ellipsoidal OSGB36
+  surface: Airy1830
+  longitudeRange: L180
+
+# Geodetic Datum for Germany.
+ellipsoidal Potsdam
+  surface: Bessel1841
+  longitudeRange: L180
+
+# Tokyo Japan.
+ellipsoidal TokyoJapan
+  surface: Bessel1841
+  longitudeRange: L180
+
 # Mars Orbiter Laser Altimeter.
 ellipsoidal Mars2000
   surface: Mars2000

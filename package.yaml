@@ -4,7 +4,7 @@ github:              ofmooseandmen/jord
 license:             BSD3
 author:              Cedric Liegeois
 maintainer:          Cedric Liegeois <ofmooseandmen@yahoo.com>
-copyright:           2019 Cedric Liegeois
+copyright:           2020 Cedric Liegeois
 category:            Geography
 stability:           experimental
 homepage:            https://github.com/ofmooseandmen/jord
@@ -49,16 +49,6 @@ library:
     - Data.Geo.Jord.Internal
 
 executables:
-#  jord-repl:
-#    main:                Main.hs
-#    other-modules:
-#      - Eval
-#      - Show
-#      - State
-#    source-dirs:         app
-#    dependencies:
-#    - jord
-#   - haskeline >= 0.7 && < 0.8
   jord-gen:
     main:                Main.hs
     other-modules:

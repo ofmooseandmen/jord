@@ -28,7 +28,7 @@ header h =
     \-- Module:      " ++
     module' h ++
     " \n" ++
-    "-- Copyright:   (c) 2019 Cedric Liegeois \n\
+    "-- Copyright:   (c) 2020 Cedric Liegeois \n\
     \-- License:     BSD3 \n\
     \-- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr> \n\
     \-- Stability:   experimental \n\

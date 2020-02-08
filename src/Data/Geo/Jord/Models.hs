@@ -101,6 +101,125 @@ instance Show NAD83 where
 
 instance Ellipsoidal NAD83
 
+-- | European Datum 1950.
+data ED50 = 
+    ED50
+
+instance Model ED50 where
+    modelId _ = ModelId "ED50"
+    surface _ = eIntl1924
+    longitudeRange _ = L180
+
+instance Eq ED50 where
+    _ == _ = True
+
+instance Show ED50 where
+    show m = show (modelId m)
+
+instance Ellipsoidal ED50
+
+-- | Irland.
+data Irl1975 = 
+    Irl1975
+
+instance Model Irl1975 where
+    modelId _ = ModelId "Irl1975"
+    surface _ = eAiryModified
+    longitudeRange _ = L180
+
+instance Eq Irl1975 where
+    _ == _ = True
+
+instance Show Irl1975 where
+    show m = show (modelId m)
+
+instance Ellipsoidal Irl1975
+
+-- | North American Datum of 1927.
+data NAD27 = 
+    NAD27
+
+instance Model NAD27 where
+    modelId _ = ModelId "NAD27"
+    surface _ = eClarke1866
+    longitudeRange _ = L180
+
+instance Eq NAD27 where
+    _ == _ = True
+
+instance Show NAD27 where
+    show m = show (modelId m)
+
+instance Ellipsoidal NAD27
+
+-- | NTF (Paris) / France I.
+data NTF = 
+    NTF
+
+instance Model NTF where
+    modelId _ = ModelId "NTF"
+    surface _ = eClarke1880IGN
+    longitudeRange _ = L180
+
+instance Eq NTF where
+    _ == _ = True
+
+instance Show NTF where
+    show m = show (modelId m)
+
+instance Ellipsoidal NTF
+
+-- | Ordnance Survey Great Britain 1936.
+data OSGB36 = 
+    OSGB36
+
+instance Model OSGB36 where
+    modelId _ = ModelId "OSGB36"
+    surface _ = eAiry1830
+    longitudeRange _ = L180
+
+instance Eq OSGB36 where
+    _ == _ = True
+
+instance Show OSGB36 where
+    show m = show (modelId m)
+
+instance Ellipsoidal OSGB36
+
+-- | Geodetic Datum for Germany.
+data Potsdam = 
+    Potsdam
+
+instance Model Potsdam where
+    modelId _ = ModelId "Potsdam"
+    surface _ = eBessel1841
+    longitudeRange _ = L180
+
+instance Eq Potsdam where
+    _ == _ = True
+
+instance Show Potsdam where
+    show m = show (modelId m)
+
+instance Ellipsoidal Potsdam
+
+-- | Tokyo Japan.
+data TokyoJapan = 
+    TokyoJapan
+
+instance Model TokyoJapan where
+    modelId _ = ModelId "TokyoJapan"
+    surface _ = eBessel1841
+    longitudeRange _ = L180
+
+instance Eq TokyoJapan where
+    _ == _ = True
+
+instance Show TokyoJapan where
+    show m = show (modelId m)
+
+instance Ellipsoidal TokyoJapan
+
 -- | Mars Orbiter Laser Altimeter.
 data Mars2000 = 
     Mars2000

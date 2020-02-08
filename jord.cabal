@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b9967447599c30135a4d07689a4acf4b4ff002ad1e4d3983336c1d0fa2d9473b
+-- hash: cc409401d6b89737876c63a8e5e48fe917e301badede3ca5f9a2a7406b815276
 
 name:           jord
 version:        1.0.0.0
@@ -16,7 +16,7 @@ homepage:       https://github.com/ofmooseandmen/jord
 bug-reports:    https://github.com/ofmooseandmen/jord/issues
 author:         Cedric Liegeois
 maintainer:     Cedric Liegeois <ofmooseandmen@yahoo.com>
-copyright:      2019 Cedric Liegeois
+copyright:      2020 Cedric Liegeois
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple

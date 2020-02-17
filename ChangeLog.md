@@ -1,6 +1,8 @@
 ### 1.0.0.0
 
-- TODO
+- New API (does not allow mixing position in different coordinate systems)
+- Exact solution for both direct and inverse geodetic problems (Vincenty)
+- Conversion between different coordinate systems
 
 ### 0.6.0.0
 

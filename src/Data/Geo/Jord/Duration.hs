@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Duration
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -24,29 +24,29 @@ module Data.Geo.Jord.Duration
     , toMinutes
     , toSeconds
     -- * Read
+    , durationP
     , readDuration
-    , readDurationE
-    , readDurationF
     ) where
 
-import Control.Monad.Fail
+import Text.ParserCombinators.ReadP (ReadP, char, option, readP_to_S)
+import Text.Printf (printf)
+import Text.Read (readMaybe)
+
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Prelude hiding (fail)
-import Text.ParserCombinators.ReadP
-import Text.Printf
-import Text.Read hiding (pfail)
 
--- | A durartion with a resolution of 1 millisecond.
-newtype Duration = Duration
-    { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
-    } deriving (Eq)
+-- | A duration with a resolution of 1 millisecond.
+newtype Duration =
+    Duration
+        { toMilliseconds :: Int -- ^ the number of milliseconds in duration.
+        }
+    deriving (Eq)
 
--- | See 'readDuration'.
+-- | See 'durationP'.
 instance Read Duration where
-    readsPrec _ = readP_to_S duration
+    readsPrec _ = readP_to_S durationP
 
--- | show Duration as @(-)nHnMn.nS@.
+-- | Show 'Duration' as @(-)nHnMn.nS@.
 instance Show Duration where
     show d@(Duration millis) =
         show h ++ "H" ++ show m ++ "M" ++ show s ++ "." ++ printf "%03d" ms ++ "S"
@@ -55,6 +55,9 @@ instance Show Duration where
         m = truncate (fromIntegral (millis `mod` 3600000) / 60000.0 :: Double) :: Int
         s = truncate (fromIntegral (millis `mod` 60000) / 1000.0 :: Double) :: Int
         ms = mod (abs millis) 1000
+
+instance Ord Duration where
+    (<=) (Duration d1) (Duration d2) = d1 <= d2
 
 -- | Add/Subtract Durations.
 instance Quantity Duration where
@@ -94,31 +97,13 @@ toMinutes (Duration ms) = fromIntegral ms / 60000.0 :: Double
 toSeconds :: Duration -> Double
 toSeconds (Duration ms) = fromIntegral ms / 1000.0 :: Double
 
--- | Obtains a 'Duration' from the given string formatted @(-)nHnMn.nS@.
---
--- This simply calls @read s :: Duration@ so 'error' should be handled at the call site.
---
-readDuration :: String -> Duration
-readDuration s = read s :: Duration
+-- | Reads an a 'Duration' from the given string using 'durationP'.
+readDuration :: String -> Maybe Duration
+readDuration s = readMaybe s :: (Maybe Duration)
 
--- | Same as 'readDuration' but returns a 'Either'.
-readDurationE :: String -> Either String Duration
-readDurationE s =
-    case readMaybe s of
-        Nothing -> Left ("couldn't read duration " ++ s)
-        Just l -> Right l
-
--- | Same as 'readDuration' but returns a 'MonadFail'.
-readDurationF :: (MonadFail m) => String -> m Duration
-readDurationF s =
-    let p = readEither s
-     in case p of
-            Left e -> fail e
-            Right l -> return l
-
--- | Parses and returns an 'Duration'.
-duration :: ReadP Duration
-duration = do
+-- | Parses and returns an 'Duration' formatted @(-)nHnMn.nS@.
+durationP :: ReadP Duration
+durationP = do
     h <- option 0 hoursP
     m <- option 0 minutesP
     s <- option 0.0 secondsP
@@ -138,7 +123,6 @@ minutesP = do
 
 secondsP :: ReadP Double
 secondsP = do
-    s <- integer
-    ms <- option 0 (char '.' >> natural)
+    s <- number
     _ <- char 'S'
-    return (fromIntegral s + fromIntegral ms / 10.0)
+    return s

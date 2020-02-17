@@ -1,58 +1,82 @@
 -- |
 -- Module:      Data.Geo.Jord
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
 -- Portability: portable
 --
--- Geographic position calculations (distance, bearing, intersection, etc...) on great circles using
--- the algorithms described in <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>.
--- and in <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry>
+-- Convience module re-exporting all of Jord API while resolving function name clashes.
+-- You'll probably rather want to import "Data.Geo.Jord.Position" and only the core module(s)
+-- that suit your problem:
 --
--- See <http://www.navlab.net/nvector Position calculations - simple and exact solutions>
+--    * "Data.Geo.Jord.LocalFrames"
 --
--- See <http://www.movable-type.co.uk/scripts/latlong-vectors.html Vector-based geodesy>
+--    * "Data.Geo.Jord.Geodesic"
 --
--- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
+--    * "Data.Geo.Jord.GreatCircle"
+--
+--    * "Data.Geo.Jord.Kinematics"
+--
+--    * "Data.Geo.Jord.Transformation"
 --
 module Data.Geo.Jord
-    ( module Data.Geo.Jord.Angle
-    , module Data.Geo.Jord.AngularPosition
-    , module Data.Geo.Jord.Duration
-    , module Data.Geo.Jord.Earth
-    , module Data.Geo.Jord.EcefPosition
-    , module Data.Geo.Jord.Frames
-    , module Data.Geo.Jord.Geodetics
+    (
+    -- * Core modules
+      module Data.Geo.Jord.LocalFrames
+    , module Data.Geo.Jord.Geodesic
+    , module Data.Geo.Jord.GreatCircle
     , module Data.Geo.Jord.Kinematics
-    , module Data.Geo.Jord.LatLong
-    , module Data.Geo.Jord.Length
-    , module Data.Geo.Jord.NVector
-    , module Data.Geo.Jord.Quantity
-    , module Data.Geo.Jord.Rotation
-    , module Data.Geo.Jord.Speed
+    , module Data.Geo.Jord.Position
     , module Data.Geo.Jord.Transformation
-    , module Data.Geo.Jord.Vector3d
-    , jordVersion
+    -- * Aliases for name-clashing functions
+    , destinationE
+    , finalBearingE
+    , initialBearingE
+    , surfaceDistanceE
+    , destinationS
+    , finalBearingS
+    , initialBearingS
+    , surfaceDistanceS
     ) where
 
-import Data.Geo.Jord.Angle
-import Data.Geo.Jord.AngularPosition
-import Data.Geo.Jord.Duration
-import Data.Geo.Jord.Earth
-import Data.Geo.Jord.EcefPosition
-import Data.Geo.Jord.Frames
-import Data.Geo.Jord.Geodetics
+import Data.Geo.Jord.Geodesic hiding (destination, finalBearing, initialBearing, surfaceDistance)
+import qualified Data.Geo.Jord.Geodesic as Geodesic
+import Data.Geo.Jord.GreatCircle hiding (destination, finalBearing, initialBearing, surfaceDistance)
+import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import Data.Geo.Jord.Kinematics
-import Data.Geo.Jord.LatLong
-import Data.Geo.Jord.Length
-import Data.Geo.Jord.NVector
-import Data.Geo.Jord.Quantity
-import Data.Geo.Jord.Rotation
-import Data.Geo.Jord.Speed
+import Data.Geo.Jord.LocalFrames
+import Data.Geo.Jord.Position
 import Data.Geo.Jord.Transformation
-import Data.Geo.Jord.Vector3d
 
--- | version.
-jordVersion :: String
-jordVersion = "0.6.0.0"
+-- | alias for 'Geodesic.destination'.
+destinationE :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a)
+destinationE = Geodesic.destination
+
+-- | alias for 'Geodesic.finalBearing'.
+finalBearingE :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
+finalBearingE = Geodesic.finalBearing
+
+-- | alias for 'Geodesic.initialBearing'.
+initialBearingE :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
+initialBearingE = Geodesic.initialBearing
+
+-- | alias for 'Geodesic.surfaceDistance'.
+surfaceDistanceE :: (Ellipsoidal a) => Position a -> Position a -> Maybe Length
+surfaceDistanceE = Geodesic.surfaceDistance
+
+-- | alias for 'GreatCircle.destination'.
+destinationS :: (Spherical a) => Position a -> Angle -> Length -> Position a
+destinationS = GreatCircle.destination
+
+-- | alias for 'GreatCircle.finalBearing'.
+finalBearingS :: (Spherical a) => Position a -> Position a -> Maybe Angle
+finalBearingS = GreatCircle.finalBearing
+
+-- | alias for 'GreatCircle.initialBearing'.
+initialBearingS :: (Spherical a) => Position a -> Position a -> Maybe Angle
+initialBearingS = GreatCircle.initialBearing
+
+-- | alias for 'GreatCircle.surfaceDistance'.
+surfaceDistanceS :: (Spherical a) => Position a -> Position a -> Length
+surfaceDistanceS = GreatCircle.surfaceDistance

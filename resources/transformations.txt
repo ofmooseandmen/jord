@@ -1,0 +1,82 @@
+# Coordinates transformation parameters between various models.
+#
+#    * params: tx ty tz s rx ry rz
+#
+#    * rates:  tx ty tz s rx ry rz
+#
+#    * translations in millimetres, rates in millimetres per year
+#
+#    * scale factors in parts per billion, rates in parts per billion per year
+#
+#    * rotations in milliarcseconds, rates in milliarcseconds per year
+module Data.Geo.Jord.Txs
+
+# WGS84 to NAD83 transformation parameters.
+WGS84 -> NAD83
+    params: 995.6  -1910.3  -521.5  -0.62  25.915  9.426  11.599
+
+# WGS84 to ED50 transformation parameters.
+WGS84 -> ED50
+    params: 89500  93800  123100  -1200  0.0  0.0  156
+
+# WGS84 to ETRS89 transformation parameters.
+WGS84 -> ETRS89
+    params: 0.0  0.0  0.0  0.0  0.0  0.0  0.0
+
+# WGS84 to Irl1975 transformation parameters.
+WGS84 -> Irl1975
+    params: -48253.0  13059.6  -56455.7  -815.0  104.2  214.0  631.0
+
+#WGS84 to NAD27 transformation parameters.
+WGS84 -> NAD27
+    params: 8000  -160000  -176000  0.0  0.0  0.0  0.0
+
+#WGS84 to NTF transformation parameters.
+WGS84 -> NTF
+    params: 168000  60000  -320000  0.0  0.0  0.0  0.0
+
+#WGS84 to OSGB36 transformation parameters.
+WGS84 -> OSGB36
+    params: -44644.8  12515.7  -54206.0  20489.4  -150.2  -247.0  -842.1
+
+#WGS84 to Potsdam transformation parameters.
+WGS84 -> Potsdam
+    params: -582000  -105000  -414000  -8300  1040  350  -3080
+
+#WGS84 to TokyoJapan transformation parameters.
+WGS84 -> TokyoJapan
+    params: 148000  -507000 -685000  0.0  0.0  0.0  0.0
+
+#WGS84 to WGS72 transformation parameters.
+WGS84 -> WGS72
+    params:  0.0  0.0  -4500  -220 0.0  0.0  554
+
+# ITRF2014 to ITRF2008 transformation parameters.
+ITRF2014 -> ITRF2008
+    epoch: 2010.0
+    params: 1.6    1.9    2.4   -0.02    0.00    0.00    0.00
+    rates:  0.0    0.0   -0.1    0.03    0.00    0.00    0.00
+
+# ITRF2014 to ITRF2005 transformation parameters.
+ITRF2014 -> ITRF2005
+    epoch: 2010.0
+    params: 2.6    1.0   -2.3    0.92    0.00    0.00    0.00
+    rates:  0.3    0.0   -0.1    0.03    0.00    0.00    0.00
+
+# ITRF2014 to ITRF2000 transformation parameters.
+ITRF2014 -> ITRF2000
+    epoch: 2010.0
+    params: 0.7    1.2   -26.1   2.12    0.00    0.00    0.00
+    rates:  0.1    0.1    -1.9   0.11    0.00    0.00    0.00
+
+# ITRF2014 to ETRF2000 transformation parameters.
+ITRF2014 -> ETRF2000
+    epoch: 2000.0
+    params: 53.7   51.2  -55.1   1.02    0.891   5.390  -8.712
+    rates:  0.1     0.1  -1.9    0.11    0.081   0.490  -0.792
+
+# ITRF2000 to NAD83 (CORS96) transformation parameters.
+ITRF2000 -> NAD83_CORS96
+    epoch: 1997.0
+    params: 995.6  -1901.3  -521.5   0.62  25.915   9.426   11.599
+    rates:    0.7     -0.7     0.5  -0.18   0.067  -0.757  -0.051

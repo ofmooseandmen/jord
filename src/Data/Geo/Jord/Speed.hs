@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Speed
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -13,15 +13,15 @@ module Data.Geo.Jord.Speed
     -- * The 'Speed' type
       Speed
     -- * Smart constructors
+    , averageSpeed
     , metresPerSecond
     , kilometresPerHour
     , milesPerHour
     , knots
     , feetPerSecond
     -- * Read
+    , speedP
     , readSpeed
-    , readSpeedE
-    , readSpeedF
     -- * Conversions
     , toMetresPerSecond
     , toKilometresPerHour
@@ -30,32 +30,45 @@ module Data.Geo.Jord.Speed
     , toFeetPerSecond
     ) where
 
-import Control.Applicative
-import Control.Monad.Fail
+import Control.Applicative ((<|>))
+import Text.ParserCombinators.ReadP (ReadP, pfail, readP_to_S, skipSpaces, string)
+import Text.Read (readMaybe)
+
+import Data.Geo.Jord.Duration
+import Data.Geo.Jord.Length
 import Data.Geo.Jord.Parser
 import Data.Geo.Jord.Quantity
-import Prelude hiding (fail)
-import Text.ParserCombinators.ReadP
-import Text.Read hiding (pfail)
 
 -- | A speed with a resolution of 1 millimetre per hour.
-newtype Speed = Speed
-    { mmPerHour :: Int
-    } deriving (Eq)
+newtype Speed =
+    Speed
+        { mmPerHour :: Int
+        }
+    deriving (Eq)
 
--- | See 'readSpeed'.
+-- | See 'speedP'.
 instance Read Speed where
-    readsPrec _ = readP_to_S speed
+    readsPrec _ = readP_to_S speedP
 
 -- | Speed is shown in kilometres per hour.
 instance Show Speed where
     show s = show (toKilometresPerHour s) ++ "km/h"
+
+instance Ord Speed where
+    (<=) (Speed s1) (Speed s2) = s1 <= s2
 
 -- | Add/Subtract Speed.
 instance Quantity Speed where
     add a b = Speed (mmPerHour a + mmPerHour b)
     sub a b = Speed (mmPerHour a - mmPerHour b)
     zero = Speed 0
+
+-- | 'Speed' from covered distance and duration.
+averageSpeed :: Length -> Duration -> Speed
+averageSpeed d t = Speed (round (mm / h))
+  where
+    mm = toMillimetres d
+    h = toHours t
 
 -- | 'Speed' from given amount of metres per second.
 metresPerSecond :: Double -> Speed
@@ -77,27 +90,9 @@ knots kt = Speed (round (kt * 1852000.0))
 feetPerSecond :: Double -> Speed
 feetPerSecond fps = Speed (round (fps * 1097280.0))
 
--- | Obtains a 'Speed' from the given string formatted as (-)float[m/s|km/h|mph|kt] - e.g. 300m/s, 250km/h, -154mph, 400kt or 100ft/s.
---
--- This simply calls @read s :: Speed@ so 'error' should be handled at the call site.
---
-readSpeed :: String -> Speed
-readSpeed s = read s :: Speed
-
--- | Same as 'readSpeed' but returns a 'Either'.
-readSpeedE :: String -> Either String Speed
-readSpeedE s =
-    case readMaybe s of
-        Nothing -> Left ("couldn't read speed " ++ s)
-        Just l -> Right l
-
--- | Same as 'readSpeed' but returns a 'MonadFail'.
-readSpeedF :: (MonadFail m) => String -> m Speed
-readSpeedF s =
-    let p = readEither s
-     in case p of
-            Left e -> fail e
-            Right l -> return l
+-- | Reads an a 'Speed' from the given string using 'speedP'.
+readSpeed :: String -> Maybe Speed
+readSpeed s = readMaybe s :: (Maybe Speed)
 
 -- | @toMetresPerSecond s@ converts @s@ to metres per second.
 toMetresPerSecond :: Speed -> Double
@@ -119,9 +114,10 @@ toKnots (Speed s) = fromIntegral s / 1852000.0
 toFeetPerSecond :: Speed -> Double
 toFeetPerSecond (Speed s) = fromIntegral s / 1097280.0
 
--- | Parses and returns a 'Speed'.
-speed :: ReadP Speed
-speed = do
+-- | Parses and returns a 'Speed' formatted as (-)float[m/s|km/h|mph|kt].
+-- e.g. 300m/s, 250km/h, -154mph, 400kt or 100ft/s.
+speedP :: ReadP Speed
+speedP = do
     s <- number
     skipSpaces
     u <- string "m/s" <|> string "km/h" <|> string "mph" <|> string "kt" <|> string "ft/s"

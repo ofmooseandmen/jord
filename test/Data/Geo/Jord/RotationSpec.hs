@@ -2,8 +2,11 @@ module Data.Geo.Jord.RotationSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
 import Test.Hspec
+
+import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Rotation
+import Data.Geo.Jord.Vector3d
 
 spec :: Spec
 spec = do

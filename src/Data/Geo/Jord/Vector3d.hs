@@ -1,22 +1,21 @@
 -- |
 -- Module:      Data.Geo.Jord.Vector3d
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
 -- Portability: portable
 --
--- 3-element vectors.
+-- 3-element vector.
 --
 module Data.Geo.Jord.Vector3d
     ( Vector3d(..)
-    , IsVector3d(..)
     , vadd
     , vsub
     , vdot
     , vnorm
     , vcross
-    , vrotate
+    , vmultm
     , vscale
     , vunit
     , vzero
@@ -25,15 +24,13 @@ module Data.Geo.Jord.Vector3d
     ) where
 
 -- | 3-element vector.
-data Vector3d = Vector3d
-    { vx :: Double
-    , vy :: Double
-    , vz :: Double
-    } deriving (Eq, Show)
-
--- | class for data types assimilated to 'Vector3d'.
-class IsVector3d a where
-    vec :: a -> Vector3d
+data Vector3d =
+    Vector3d
+        { vx :: Double
+        , vy :: Double
+        , vz :: Double
+        }
+    deriving (Eq, Show)
 
 -- | Adds 2 vectors.
 vadd :: Vector3d -> Vector3d -> Vector3d
@@ -71,10 +68,10 @@ vnorm v = sqrt (x * x + y * y + z * z)
     y = vy v
     z = vz v
 
--- | @vrotate v rm@ applies rotation matrix @rm@ to @v@.
-vrotate :: Vector3d -> [Vector3d] -> Vector3d
-vrotate v rm
-    | length rm /= 3 = error ("Invalid rotation matrix" ++ show rm)
+-- | @vmultm v rm@ multiplies vector @v@ by __3x3__ matrix @m@ (rows).
+vmultm :: Vector3d -> [Vector3d] -> Vector3d
+vmultm v rm
+    | length rm /= 3 = error ("Invalid matrix" ++ show rm)
     | otherwise = Vector3d x y z
   where
     [x, y, z] = map (vdot v) rm
@@ -110,7 +107,7 @@ transpose' :: [[Double]] -> [[Double]]
 transpose' ([]:_) = []
 transpose' x = map head x : transpose' (map tail x)
 
--- | multiplies 2 __square (3x3)__ matrices of 'Vector3d'.
+-- | multiplies 2 __3x3__ matrices.
 mdot :: [Vector3d] -> [Vector3d] -> [Vector3d]
 mdot a b = fmap ds2v [[vdot ar bc | bc <- transpose b] | ar <- a]
 

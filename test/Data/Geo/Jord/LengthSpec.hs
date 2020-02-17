@@ -2,19 +2,21 @@ module Data.Geo.Jord.LengthSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
 import Test.Hspec
+
+import Data.Geo.Jord.Length
+import Data.Geo.Jord.Quantity
 
 spec :: Spec
 spec = do
     describe "Reading valid lengths" $ do
-        it "reads -15.2m" $ readLength "-15.2m" `shouldBe` metres (-15.2)
-        it "reads 154km" $ readLength "154km" `shouldBe` kilometres 154
-        it "reads 1000nm" $ readLength "1000nm" `shouldBe` nauticalMiles 1000
-        it "reads 25000ft" $ readLength "25000ft" `shouldBe` feet 25000
+        it "reads -15.2m" $ readLength "-15.2m" `shouldBe` Just (metres (-15.2))
+        it "reads 154km" $ readLength "154km" `shouldBe` Just (kilometres 154)
+        it "reads 1000nm" $ readLength "1000nm" `shouldBe` Just (nauticalMiles 1000)
+        it "reads 25000ft" $ readLength "25000ft" `shouldBe` Just (feet 25000)
     describe "Reading invalid lengths" $ do
-        it "fails to read 5" $ readLengthE "5" `shouldBe` Left "couldn't read length 5"
-        it "fails to read 5nmi" $ readLengthE "5nmi" `shouldBe` Left "couldn't read length 5nmi"
+        it "fails to read 5" $ readLength "5" `shouldBe` Nothing
+        it "fails to read 5nmi" $ readLength "5nmi" `shouldBe` Nothing
     describe "Showing lengths" $ do
         it "shows length in metres when <= 10000 m" $ show (metres 5) `shouldBe` "5.0m"
         it "shows length in kilometres when > 10000 m" $

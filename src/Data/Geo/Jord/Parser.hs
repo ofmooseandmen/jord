@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Geo.Jord.Parser
--- Copyright:   (c) 2018 Cedric Liegeois
+-- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
@@ -16,23 +16,23 @@ module Data.Geo.Jord.Parser
     , number
     ) where
 
-import Control.Applicative
-import Data.Char
-import Text.ParserCombinators.ReadP
+import Control.Applicative ((<|>))
+import Data.Char (isDigit)
+import Text.ParserCombinators.ReadP (ReadP, char, count, munch1, option, satisfy)
 
 -- | Parses the given number of digits and returns the read 'Int'.
 digits :: Int -> ReadP Int
 digits n = fmap read (count n digit)
 
--- | Parses optionally a @-@ followed by a 'positive'.'positive' and returns the read 'Double'.
+-- | Parses optionally a @-@ followed by a 'natural'.'natural' and returns the read 'Double'.
 double :: ReadP Double
 double = do
     s <- option 1.0 (fmap (\_ -> -1.0) (char '-'))
     i <- natural
-    f <- char '.' >> natural
-    return (s * (read (show i ++ "." ++ show f) :: Double))
+    f <- char '.' >> munch1 isDigit
+    return (s * (read (show i ++ "." ++ f) :: Double))
 
--- | Parses optionally a @-@ followed by a 'positive' and returns the read 'Int'.
+-- | Parses optionally a @-@ followed by a 'natural' and returns the read 'Int'.
 integer :: ReadP Int
 integer = do
     s <- option 1 (fmap (\_ -> -1) (char '-'))

@@ -1,4 +1,7 @@
 .stack-work/
+stack.yaml.lock
+.idea
+jord.iml
 *~
 dist
 *.tix

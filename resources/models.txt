@@ -1,0 +1,154 @@
+# Common ellipsoidal and spherical models.
+module Data.Geo.Jord.Models
+
+# World Geodetic System 1984.
+ellipsoidal WGS84
+  surface: WGS84
+  longitudeRange: L180
+
+# Geodetic Reference System 1980.
+ellipsoidal GRS80
+  surface: GRS80
+  longitudeRange: L180
+
+# World Geodetic System 1972.
+ellipsoidal WGS72
+  surface: WGS72
+  longitudeRange: L180
+
+# European Terrestrial Reference System 1989.
+ellipsoidal ETRS89
+  surface: GRS80
+  longitudeRange: L180
+
+# North American Datum of 1983.
+ellipsoidal NAD83
+  surface: GRS80
+  longitudeRange: L180
+
+# European Datum 1950.
+ellipsoidal ED50
+  surface: Intl1924
+  longitudeRange: L180
+
+# Irland.
+ellipsoidal Irl1975
+  surface: AiryModified
+  longitudeRange: L180
+
+# North American Datum of 1927.
+ellipsoidal NAD27
+  surface: Clarke1866
+  longitudeRange: L180
+
+# NTF (Paris) / France I.
+ellipsoidal NTF
+  surface: Clarke1880IGN
+  longitudeRange: L180
+
+# Ordnance Survey Great Britain 1936.
+ellipsoidal OSGB36
+  surface: Airy1830
+  longitudeRange: L180
+
+# Geodetic Datum for Germany.
+ellipsoidal Potsdam
+  surface: Bessel1841
+  longitudeRange: L180
+
+# Tokyo Japan.
+ellipsoidal TokyoJapan
+  surface: Bessel1841
+  longitudeRange: L180
+
+# Mars Orbiter Laser Altimeter.
+ellipsoidal Mars2000
+  surface: Mars2000
+  longitudeRange: L360
+
+# International Terrestrial Reference System (2014).
+ellipsoidal ITRF2014
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2010.0
+
+# International Terrestrial Reference System (2008).
+ellipsoidal ITRF2008
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2005.0
+
+# International Terrestrial Reference System (2005).
+ellipsoidal ITRF2005
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2000.0
+
+# International Terrestrial Reference System (2000).
+ellipsoidal ITRF2000
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1997.0
+
+# International Terrestrial Reference System (93).
+ellipsoidal ITRF93
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1988.0
+
+# International Terrestrial Reference System (91).
+ellipsoidal ITRF91
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1988.0
+
+# World Geodetic System 1984 (G1762).
+ellipsoidal WGS84_G1762
+  surface: WGS84
+  longitudeRange: L180
+  epoch: 2005.0
+
+# World Geodetic System 1984 (G1674).
+ellipsoidal WGS84_G1674
+  surface: WGS84
+  longitudeRange: L180
+  epoch: 2005.0
+
+# World Geodetic System 1984 (G1150).
+ellipsoidal WGS84_G1150
+  surface: WGS84
+  longitudeRange: L180
+  epoch: 2001.0
+
+# European Terrestrial Reference System (2000).
+ellipsoidal ETRF2000
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 2005.0
+
+# NAD83 (Continuously Operating Reference Station 1996).
+ellipsoidal NAD83_CORS96
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1997.0
+
+# Geocentric Datum Of Australia 1994.
+ellipsoidal GDA94
+  surface: GRS80
+  longitudeRange: L180
+  epoch: 1994.0
+
+# Spherical Earth model derived from WGS84 ellipsoid.
+spherical S84
+  surface: WGS84
+  longitudeRange: L180
+
+# Spherical Mars model derived from Mars2000 ellipsoid.
+spherical SMars2000
+  surface: Mars2000
+  longitudeRange: L360
+
+# Moon IAU/IAG.
+spherical Moon
+  surface: Moon
+  longitudeRange: L180

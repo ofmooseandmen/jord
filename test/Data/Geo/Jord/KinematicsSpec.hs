@@ -2,198 +2,210 @@ module Data.Geo.Jord.KinematicsSpec
     ( spec
     ) where
 
-import Data.Geo.Jord
 import Data.Maybe (fromJust)
+
 import Test.Hspec
+
+import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Kinematics
+import Data.Geo.Jord.Position
 
 spec :: Spec
 spec =
     describe "kinematics" $ do
-        describe "position" $ do
+        describe "trackPositionAfter" $ do
             it "computes position at t from p0, bearing and speed" $ do
-                let p0 = latLongHeight (readLatLong "531914N0014347W") (metres 15000)
-                let p1 = decimalLatLongHeight 53.1882691 0.1332741 (metres 15000)
+                let p0 = s84Pos 53.320556 (-1.729722) (metres 15000)
+                let p1 = s84Pos 53.18826954833333 0.13327449083333334 (metres 15000)
                 let t = Track p0 (decimalDegrees 96.0217) (kilometresPerHour 124.8)
-                position84 t (hours 1) `shouldBe` p1
+                trackPositionAfter t (hours 1) `shouldBe` p1
+            it "handles crossing the date line" $
+                -- distance at equator between 2 positions separated by 180 degrees assuming a spherical
+                -- earth (from WGS84) = 20015.114352233km
+                -- track at 0N1E travelling at 20015.114352233km/h and 90 degrees reaches 0N179W after 1 hour.
+             do
+                let p0 = s84Pos 0 1 zero
+                let t = Track p0 (decimalDegrees 90) (kilometresPerHour 20015.114352233)
+                let p1 = trackPositionAfter t (hours 1)
+                surfaceDistance p1 (s84Pos 0 (-179) zero) < metres 0.001 `shouldBe` True
             it "handles poles" $
-                -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
-                -- track at north pole travelling at 20015.114352200002km/h and true north reaches the
+                -- distance between poles assuming a spherical earth (from WGS84) = 20015.114352233km
+                -- track at north pole travelling at 20015.114352233km/h and true north reaches the
                 -- south pole after 1 hour.
              do
-                let t = Track (decimalLatLong 90 0) zero (kilometresPerHour 20015.114352200002)
-                position84 t (hours 1) `shouldBe` decimalLatLong (-90) 180.0
+                let t = Track (northPole S84) zero (kilometresPerHour 20015.114352233)
+                let p1 = trackPositionAfter t (hours 1)
+                surfaceDistance p1 (southPole S84) < metres 0.001 `shouldBe` True
             it "return p0 if speed is 0" $ do
-                let p0 = latLongHeight (readLatLong "531914N0014347W") (metres 15000)
+                let p0 = s84Pos 53.320556 (-1.729722) (metres 15000)
                 let t = Track p0 (decimalDegrees 96.0217) zero
-                position84 t (hours 1) `shouldBe` p0
+                trackPositionAfter t (hours 1) `shouldBe` p0
             it "return p0 if duration is 0" $ do
-                let p0 = latLongHeight (readLatLong "531914N0014347W") (metres 15000)
+                let p0 = s84Pos 53.320556 (-1.729722) (metres 15000)
                 let t = Track p0 (decimalDegrees 96.0217) (kilometresPerHour 124.8)
-                position84 t zero `shouldBe` p0
+                trackPositionAfter t zero `shouldBe` p0
         describe "cpa" $ do
-            it "handles trailing tracks" $ do
-                let p1 = decimalLatLong 20 30
-                let px = destination84 p1 (decimalDegrees 20) (kilometres 1)
+            it "returns nothing for trailing tracks at same speed" $ do
+                let p1 = s84Pos 20 30 zero
+                let px = destination p1 (decimalDegrees 20) (kilometres 1)
                 let p2 = interpolate p1 px 0.25
                 let b1 = fromJust (initialBearing p1 px)
                 let b2 = fromJust (initialBearing p2 px)
                 let t1 = Track p1 b1 (knots 400)
                 let t2 = Track p2 b2 (knots 400)
-                let c = cpa84 t1 t2
-                -- any time is correct but it should be close to zero since that's
-                -- our initial value
-                fmap (\r -> toMilliseconds (cpaTime r) < 5000) c `shouldBe` Just True
-                fmap cpaDistance c `shouldBe` Just (metres 250.0036)
+                cpa t1 t2 `shouldBe` Nothing
+            it "returns nothing for trailing tracks with track ahead escaping" $ do
+                let p1 = s84Pos 20 30 zero
+                let px = destination p1 (decimalDegrees 20) (kilometres 1)
+                let p2 = interpolate p1 px 0.25
+                let b1 = fromJust (initialBearing p1 px)
+                let b2 = fromJust (initialBearing p2 px)
+                let t1 = Track p1 b1 (knots 400)
+                let t2 = Track p2 b2 (knots 401)
+                cpa t1 t2 `shouldBe` Nothing
+            it "handles trailing tracks with track behind catching up" $ do
+                let p1 = s84Pos 20 30 zero
+                let px = destination p1 (decimalDegrees 20) (kilometres 1)
+                let p2 = interpolate p1 px 0.25
+                let b1 = fromJust (initialBearing p1 px)
+                let b2 = fromJust (initialBearing p2 px)
+                let t1 = Track p1 b1 (knots 401)
+                let t2 = Track p2 b2 (knots 400)
+                let c = cpa t1 t2
+                fmap cpaTime c `shouldBe` Just (seconds 485.953)
+                fmap cpaDistance c `shouldBe` Just (metres 4.293e-3) -- close to 0
             it "handles heading tracks" $ do
-                let p1 = decimalLatLong 20 30
-                let p2 = decimalLatLong 21 31
+                let p1 = s84Pos 20 30 zero
+                let p2 = s84Pos 21 31 zero
                 let b1 = fromJust (initialBearing p1 p2)
                 let b2 = fromJust (initialBearing p2 p1)
                 let t1 = Track p1 b1 (knots 400)
                 let t2 = Track p2 b2 (knots 400)
-                let c = cpa84 t1 t2
+                let c = cpa t1 t2
                 -- distance between p1 and p2 = 152.354309 km
                 -- speed = 740.8 km/h
                 -- time = 152.354309 / 740.8 / 2
                 fmap cpaTime c `shouldBe` Just (milliseconds 370191)
                 fmap cpaDistance c `shouldBe` Just zero
             it "handles tracks at the same position" $ do
-                let p = decimalLatLong 20 30
+                let p = s84Pos 20 30 zero
                 let t1 = Track p (decimalDegrees 45) (knots 300)
                 let t2 = Track p (decimalDegrees 135) (knots 500)
-                let c = cpa84 t1 t2
+                let c = cpa t1 t2
                 fmap cpaTime c `shouldBe` Just zero
                 fmap cpaDistance c `shouldBe` Just zero
             it "computes time to CPA, positions and distance at CPA" $ do
-                let p1 = decimalLatLong 20 (-60)
+                let p1 = s84Pos 20 (-60) zero
                 let b1 = decimalDegrees 10
                 let s1 = knots 15
-                let p2 = decimalLatLong 34 (-50)
+                let p2 = s84Pos 34 (-50) (metres 10000)
                 let b2 = decimalDegrees 220
                 let s2 = knots 300
                 let t1 = Track p1 b1 s1
                 let t2 = Track p2 b2 s2
-                let c = cpa84 t1 t2
+                let c = cpa t1 t2
                 fmap cpaTime c `shouldBe` Just (milliseconds 11396155)
-                fmap cpaDistance c `shouldBe` Just (kilometres 124.2317453)
+                fmap cpaDistance c `shouldBe` Just (kilometres 124.231730834)
+                fmap cpaPosition1 c `shouldBe` Just (s84Pos 20.778789303333333 (-59.85311827861111) zero)
+                fmap cpaPosition2 c `shouldBe` Just (s84Pos 21.402367759166665 (-60.846710862222224) (metres 10000))
             it "returns Nothing if time to CPA is in the past" $ do
-                let t1 = Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400)
-                let t2 = Track (decimalLatLong 30.01 30) (decimalDegrees 315) (knots 400)
-                cpa84 t1 t2 `shouldBe` Nothing
+                let t1 = Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400)
+                let t2 = Track (s84Pos 30.01 30 zero) (decimalDegrees 315) (knots 400)
+                cpa t1 t2 `shouldBe` Nothing
         describe "intercept" $ do
             it "returns Nothing if target and interceptor are at the same position" $
-                intercept84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 30 30) `shouldBe`
+                intercept (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400)) (s84Pos 30 30 zero) `shouldBe`
                 Nothing
-            it "returns Nothing if interceptor is behing target" $ do
-                let t = Track (decimalLatLong 45 67) (decimalDegrees 54) (knots 400)
-                let ip = decimalLatLong 44 66
-                intercept84 t ip `shouldBe` Nothing
+            it "returns Nothing if interceptor is behind target" $ do
+                let t = Track (s84Pos 45 67 zero) (decimalDegrees 54) (knots 400)
+                let ip = s84Pos 44 66 zero
+                intercept t ip `shouldBe` Nothing
             it "handles interceptor on the great circle of target and in front" $ do
-                let tp = decimalLatLong 20 30
-                let px = destination84 tp (decimalDegrees 20) (kilometres 1)
-                let ip = interpolate tp px 0.25
-                let b = fromJust (initialBearing tp px)
+                let tp = s84Pos 20 30 zero
+                let b = decimalDegrees 12
                 let t = Track tp b (knots 400)
-                let i = intercept84 t ip
+                let ip = trackPositionAfter t (minutes 1)
+                let i = intercept t ip
                 fmap interceptorSpeed i `shouldBe` Just zero
+                fmap interceptDistance i `shouldBe` Just zero
                 fmap interceptPosition i `shouldBe` Just ip
-                fmap interceptTime i `shouldBe` Just (seconds 1.215)
-            it "returns Nothing if interceptor is behing target" $ do
-                let t = Track (decimalLatLong 45 67) (decimalDegrees 181) (knots 400)
-                let ip = decimalLatLong 44 66
-                let i = intercept84 t ip
-                fmap interceptorSpeed i `shouldBe` Just (knots 228.5538171521)
-                fmap interceptTime i `shouldBe` Just (seconds 808.770)
-                let interceptor =
-                        Track
-                            ip
-                            (fromJust (fmap interceptorBearing i))
-                            (fromJust (fmap interceptorSpeed i))
-                fmap interceptPosition i `shouldBe`
-                    Just (position84 interceptor (fromJust (fmap interceptTime i)))
+                fmap interceptTime i `shouldBe` Just (minutes 1)
             it "returns the minimum speed required for intercept to take place" $ do
-                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
-                let ip = decimalLatLong 20 (-60)
-                let i = intercept84 t ip
-                fmap interceptorSpeed i `shouldBe` Just (knots 52.633367756059)
+                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
+                let ip = s84Pos 20 (-60) zero
+                let i = intercept t ip
+                fmap interceptorSpeed i `shouldBe` Just (knots 52.63336879049676)
                 fmap interceptTime i `shouldBe` Just (seconds 5993.831)
-                let interceptor =
-                        Track
-                            ip
-                            (fromJust (fmap interceptorBearing i))
-                            (fromJust (fmap interceptorSpeed i))
-                fmap interceptPosition i `shouldBe`
-                    Just (position84 interceptor (fromJust (fmap interceptTime i)))
+                let interceptor = Track ip (fromJust (fmap interceptorBearing i)) (fromJust (fmap interceptorSpeed i))
+                let ep = trackPositionAfter interceptor (fromJust (fmap interceptTime i))
+                let ap = fmap interceptPosition i
+                let d = fmap (surfaceDistance ep) ap
+                fmap (<= metres 0.001) d `shouldBe` Just True
         describe "interceptBySpeed" $ do
             it "returns Nothing if target and interceptor are at the same position" $
-                interceptBySpeed84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 30 30)
+                interceptBySpeed
+                    (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400))
+                    (s84Pos 30 30 zero)
                     (knots 400) `shouldBe`
                 Nothing
             it "returns Nothing if interceptor speed is below minimum speed" $ do
-                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
-                let ip = decimalLatLong 20 (-60)
-                interceptBySpeed84 t ip (knots 50) `shouldBe` Nothing
+                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
+                let ip = s84Pos 20 (-60) zero
+                interceptBySpeed t ip (knots 50) `shouldBe` Nothing
             it "returns the speed needed for intercept to take place" $ do
-                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
-                let ip = decimalLatLong 20 (-60)
-                let i = interceptBySpeed84 t ip (knots 700)
+                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
+                let ip = s84Pos 20 (-60) zero
+                let i = interceptBySpeed t ip (knots 700)
                 fmap interceptTime i `shouldBe` Just (seconds 2764.692)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 25.93541277)
-                fmap interceptDistance i `shouldBe` Just (kilometres 995.5960805999999)
+                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 25.93541248472222)
+                fmap interceptDistance i `shouldBe` Just (kilometres 995.596069189)
             it "returns the same as intercept when called with minimum speed" $ do
-                let t = Track (decimalLatLong 45 50) (decimalDegrees 54) (knots 500)
-                let ip = decimalLatLong 70 30
-                let mi = intercept84 t ip
-                let i = interceptBySpeed84 t ip (fromJust (fmap interceptorSpeed mi))
+                let t = Track (s84Pos 45 50 zero) (decimalDegrees 54) (knots 500)
+                let ip = s84Pos 70 30 zero
+                let mi = intercept t ip
+                let i = interceptBySpeed t ip (fromJust (fmap interceptorSpeed mi))
                 fmap interceptTime i `shouldBe` fmap interceptTime mi
         describe "interceptByTime" $ do
             it "returns Nothing if duration is zero" $
-                interceptByTime84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 34 (-50))
-                    zero `shouldBe`
+                interceptByTime (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400)) (s84Pos 34 (-50) zero) zero `shouldBe`
                 Nothing
             it "returns Nothing if duration is negative" $
-                interceptByTime84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 34 (-50))
+                interceptByTime
+                    (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400))
+                    (s84Pos 34 (-50) zero)
                     (seconds (-1)) `shouldBe`
                 Nothing
             it "returns Nothing if target and interceptor are at the same position" $
-                interceptByTime84
-                    (Track (decimalLatLong 30 30) (decimalDegrees 45) (knots 400))
-                    (decimalLatLong 30 30)
+                interceptByTime
+                    (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400))
+                    (s84Pos 30 30 zero)
                     (seconds 10) `shouldBe`
                 Nothing
             it "returns the speed needed for intercept to take place" $ do
-                let t = Track (decimalLatLong 34 (-50)) (decimalDegrees 220) (knots 600)
-                let ip = decimalLatLong 20 (-60)
+                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
+                let ip = s84Pos 20 (-60) zero
                 let d = seconds 2700
-                let i = interceptByTime84 t ip d
-                fmap interceptorSpeed i `shouldBe` Just (knots 730.959238)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 26.1199030)
-                fmap interceptPosition i `shouldBe` Just (decimalLatLong 28.1366797 (-55.4559475))
-                fmap interceptDistance i `shouldBe` Just (metres 1015302.3815)
+                let i = interceptByTime t ip d
+                fmap interceptorSpeed i `shouldBe` Just (knots 730.9592213822895)
+                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 26.119902564166665)
+                fmap interceptPosition i `shouldBe` Just (s84Pos 28.136679674444444 (-55.455947612222225) zero)
+                fmap interceptDistance i `shouldBe` Just (kilometres 1015.302358852)
                 fmap interceptTime i `shouldBe` Just (seconds 2700)
             it "handles the poles" $
                 -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
                 -- target at north pole travelling at 500km/h and true north can be intercepted from
-                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 180 degrees.
+                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 0 degrees.
              do
-                let t = Track (decimalLatLong 90 0) zero (kilometresPerHour 500)
-                let ip = decimalLatLong (-90) 0
-                let i = interceptByTime84 t ip (seconds 3600)
-                fmap interceptorSpeed i `shouldBe` Just (kilometresPerHour 19515.11434)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 180)
+                let t = Track (northPole S84) zero (kilometresPerHour 500)
+                let ip = southPole S84
+                let i = interceptByTime t ip (seconds 3600)
+                fmap interceptorSpeed i `shouldBe` Just (kilometresPerHour 19515.114352)
+                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 0)
             it "handles the interceptor being at the intercept position at t" $ do
-                let tp = decimalLatLong 34 (-50)
+                let tp = s84Pos 34 (-50) zero
                 let t = Track tp (decimalDegrees 220) (knots 600)
                 let d = seconds 3600
-                let ip = position84 t d
-                let i = interceptByTime84 t ip d
+                let ip = trackPositionAfter t d
+                let i = interceptByTime t ip d
                 fmap interceptorSpeed i `shouldBe` Just zero
                 fmap interceptorBearing i `shouldBe` initialBearing ip tp

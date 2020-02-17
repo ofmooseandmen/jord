@@ -1,0 +1,56 @@
+# Common ellipsoids of different celestial bodies.
+module Data.Geo.Jord.Ellipsoids
+
+# World Geodetic 84 Ellipsoid.
+WGS84
+   a: 6378137.0m
+   1/f: 298.257223563
+
+# Geodetic Reference System 1980 Ellipsoid.
+GRS80
+  a: 6378137.0m
+  1/f: 298.257222101
+
+# World Geodetic 72 Ellipsoid.
+WGS72
+  a: 6378135.0m
+  1/f: 298.26
+
+# IUGG 1924 Ellipsoid.
+Intl1924
+  a: 6378388m
+  1/f: 297
+
+# Original definition Ellipsoid (1796).
+Airy1830
+  a: 6377563.396m
+  1/f: 299.3249646
+
+# Not specified, use only in cases where geodetic datum is unknown.
+AiryModified
+  a: 6377340.189m
+  1/f: 299.3249646
+
+# Bessel 1841 Ellipsoid.
+Bessel1841
+  a: 6377397.155m
+  1/f: 299.1528128
+
+# Clarke (1866) Ellipsoid.
+Clarke1866
+  a: 6378206.4m
+  1/f: 294.978698214
+
+#  Clarke (1880) Ellipsoid.
+Clarke1880IGN
+  a: 6378249.2m
+  1/f: 293.466021294
+
+# Mars Orbiter Laser Altimeter Ellipsoid.
+Mars2000
+  a: 3398627.0m
+  1/f: 169.8
+
+# Moon IAU/IAG Sphere.
+Moon
+  r: 1737400.0m

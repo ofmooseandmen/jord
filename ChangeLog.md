@@ -1,3 +1,8 @@
+### 1.0.0.1
+
+- Fixed typo in doc
+- Bumped stack resolver to latest 
+
 ### 1.0.0.0
 
 - New API (does not allow mixing position in different coordinate systems)

@@ -95,7 +95,7 @@ transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
 -- the 15-parameters transformation @tx@.
 --
 -- Notes: this function does not checks whether both models are equals. It should be used when the
--- 15-parameter transformation is known. Most of the time prefer using 'transformCoords'.
+-- 15-parameter transformation is known. Most of the time prefer using 'transformCoordsAt'.
 --
 -- ==== __Examples__
 --

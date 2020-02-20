@@ -13,7 +13,7 @@ Jord is a [Haskell](https://www.haskell.org) library that implements various geo
 
 - conversion between ECEF (earth-centred, earth-fixed), latitude/longitude and [*n*-vector](https://www.navlab.net/nvector) positions for spherical and ellipsoidal earth model,
 - conversion between latitude/longitude and *n*-vector positions,
-- local, body and north, east, down Frames: delta between positions, target position from reference position and delta,
+- local frames (body; local level, wander azimuth; north, east, down): delta between positions, target position from reference position and delta,
 - great circles: surface distance, initial & final bearing, interpolated position, great circle intersections, cross track distance, ...,
 - geodesic: surface distance, initial & final bearing and destination,
 - kinematics: position from p0, bearing and speed, closest point of approach between tracks, intercept (time, speed, minimum speed),

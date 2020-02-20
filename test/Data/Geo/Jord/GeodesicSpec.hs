@@ -7,7 +7,8 @@ import Test.Hspec
 import Data.Geo.Jord.Geodesic
 import Data.Geo.Jord.Position
 
--- | See Geodesy Test Harness - latlon-ellipsoidal-vincenty  by Chris Veness - TODO link
+-- | See Geodesy Test Harness - latlon-ellipsoidal-vincenty  by Chris Veness.
+-- https://github.com/chrisveness/geodesy/blob/master/test/latlon-ellipsoidal-vincenty-tests.js.
 spec :: Spec
 spec = do
     describe "Geodesic for (near) antipodal positions" $ do

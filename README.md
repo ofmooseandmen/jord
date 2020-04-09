@@ -45,6 +45,7 @@ for the north and east directions to be defined.)*
 
 ```haskell
 import Data.Geo.Jord.LocalFrames
+import Data.Geo.Jord.Position
 
 posA = wgs84Pos 1 2 (metres 3)
 posB = wgs84Pos 4 5 (metres 6)
@@ -71,6 +72,7 @@ axis a and flattening f. For WGS-72, use a = 6 378 135 m and f = 1/298.26.*
 
 ```haskell
 import Data.Geo.Jord.LocalFrames
+import Data.Geo.Jord.Position
 
 f = frameB (decimalDegrees 40) (decimalDegrees 20) (decimalDegrees 30)
 p = nvectorHeightPos 1 2 3 (metres 400) WGS72
@@ -113,6 +115,7 @@ Use Earth radius 6371e3 m. Compare the results with exact calculations for the W
 
 ```haskell
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Position
 
 posA = s84Pos 88 0 zero
 posB = s84Pos 89 (-170) zero
@@ -125,6 +128,7 @@ surfaceDistance posA posB
 
 ```haskell
 import Data.Geo.Jord.Geodesic
+import Data.Geo.Jord.Position
 
 posA = wgs84Pos 88 0 zero
 posB = wgs84Pos 89 (-170) zero
@@ -141,6 +145,7 @@ surfaceDistance posA posB
 
 ```haskell
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Position
 
 posA = s84Pos 89 0 zero
 posB = s84Pos 89 180 zero
@@ -157,6 +162,7 @@ n_EM_E. Note that the calculation is independent of the depths of the positions.
 
 ```haskell
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Position
 
 ps = [s84Pos 90 0 zero, s84Pos 60 10 zero, s84Pos 50 (-20) zero]
 
@@ -176,6 +182,7 @@ that this is similar to Example 2, but now the delta is given as an azimuth and 
 
 ```haskell
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Position
 
 p = s84Pos 80 (-90) zero
 
@@ -187,6 +194,7 @@ destination p (decimalDegrees 200) (metres 1000)
 
 ```haskell
 import Data.Geo.Jord.Geodesic
+import Data.Geo.Jord.Position
 
 p = wgs84Pos 80 (-90) zero
 
@@ -206,6 +214,7 @@ the two points.*
 ```haskell
 import Control.Monad (join)
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Position
 
 a1 = s84Pos 51.885 0.235 zero
 a2 = s84Pos 48.269 13.093 zero
@@ -232,6 +241,7 @@ join (intersection <$> ma <*> mb)
 
 ```haskell
 import Data.Geo.Jord.GreatCircle
+import Data.Geo.Jord.Position
 
 p = s84Pos 1 0.1 zero
 gc = greatCircleThrough (s84Pos 0 0 zero) (s84Pos 10 0 zero)
@@ -249,6 +259,7 @@ closest possible distance.*
 
 ```haskell
 import Data.Geo.Jord.Kinematics
+import Data.Geo.Jord.Position
 
 t1 = Track (s84Pos 20 (-60) zero) (decimalDegrees 10) (knots 15)
 t2 = Track (s84Pos 34 (-50) (metres 10000)) (decimalDegrees 220) (knots 300)
@@ -261,7 +272,7 @@ cpa t1 t2
 -- >     cpaPosition2 = 21°24'8.523"N,60°50'48.159"W 10000.0m (S84)})
 ```
 
-### Time required to intercept target
+### Speed required to intercept target
 
 *Inputs are the initial latitude and longitude of an interceptor and a target, and the target course and speed.
 Also input is the time of the desired intercept. Outputs are the speed required of the interceptor, the course
@@ -269,6 +280,7 @@ of the interceptor, the distance travelled to intercept, and the latitude and lo
 
 ```haskell
 import Data.Geo.Jord.Kinematics
+import Data.Geo.Jord.Position
 
 t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
 ip = s84Pos 20 (-60) zero
@@ -296,6 +308,7 @@ then the time required to intercept is computed.*
 
 ```haskell
 import Data.Geo.Jord.Kinematics
+import Data.Geo.Jord.Position
 
 t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
 ip = s84Pos 20 (-60) zero

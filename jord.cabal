@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 89db63c7df323abf3398639af8d4eb13af79fde4795eff4f7a6e295089f4dd68
+-- hash: 467232463c6c31acede991e08b6ab0550082d89bf7b540c2e608babea671bfca
 
 name:           jord
-version:        1.0.0.1
+version:        2.0.0.0
 synopsis:       Geographical Position Calculations
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 category:       Geography

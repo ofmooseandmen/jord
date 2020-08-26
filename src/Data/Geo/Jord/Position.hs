@@ -90,6 +90,7 @@ import Data.Geo.Jord.Models
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
+-- FIXME: altitude instead of height & replace 'ground' by 'surface' everywhere
 -- | Coordinates of a position in a specified 'Model'.
 -- A position provides both geodetic latitude & longitude, height and
 -- geocentric coordinates. The horizontal position
@@ -115,9 +116,8 @@ data Position a =
 instance (Model a) => Show (Position a) where
     show p = showLatLong (latitude p, longitude p) ++ " " ++ (show . height $ p) ++ " (" ++ (show . model $ p) ++ ")"
 
-instance (Model a) => Eq (Position a)
+instance (Model a) => Eq (Position a) where
     -- model equality is ensure by @a@
-                                       where
     p1 == p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2 && height p1 == height p2
 
 -- | normal vector to the surface of a celestial body.

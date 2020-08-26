@@ -30,6 +30,8 @@ module Data.Geo.Jord.GreatCircle
     -- * The 'MinorArc' type
     , MinorArc
     , minorArc
+    , minorArcStart
+    , minorArcEnd
     -- * Calculations
     , alongTrackDistance
     , alongTrackDistance'
@@ -42,7 +44,6 @@ module Data.Geo.Jord.GreatCircle
     , interpolate
     , intersection
     , intersections
-    , isBetween
     , isInsideSurface
     , mean
     , surfaceDistance
@@ -138,6 +139,14 @@ minorArc p1 p2
     | llEq p1 p2 = Nothing
     | otherwise = Just (MinorArc (normal' p1 p2) p1 p2)
 
+-- | @minorArcStart ma@ returns the start position of minor arc @ma@.
+minorArcStart :: (Spherical a) => MinorArc a -> Position a
+minorArcStart (MinorArc _ s _) = s
+
+-- | @minorArcEnd ma@ returns the end position of minor arc @ma@.
+minorArcEnd :: (Spherical a) => MinorArc a -> Position a
+minorArcEnd (MinorArc _ _ e) = e
+
 -- | @alongTrackDistance p a@ computes how far Position @p@ is along a path described
 -- by the minor arc @a@: if a perpendicular is drawn from @p@  to the path, the
 -- along-track distance is the signed distance from the start point to where the
@@ -149,8 +158,8 @@ minorArc p1 p2
 -- >>> import Data.Geo.Jord.Position
 -- >>>
 -- >>> let p = s84Pos 53.2611 (-0.7972) zero
--- >>> let g = minorArcBetween (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
--- >>> fmap (alongTrackDistance p) a
+-- >>> let ma = minorArcBetween (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
+-- >>> fmap (alongTrackDistance p) ma
 -- Right 62.3315757km
 --
 alongTrackDistance :: (Spherical a) => Position a -> MinorArc a -> Length
@@ -188,9 +197,9 @@ angularDistance p1 p2 n = signedAngle v1 v2 vn
     vn = fmap nvec n
 
 -- | @crossTrackDistance p gc@ computes the signed distance from horizontal Position @p@ to great circle @gc@.
--- Returns a negative 'Length' if Position if left of great circle,
--- positive 'Length' if Position if right of great circle; the orientation of the
--- great circle is therefore important:
+-- Returns a negative 'Length' if Position is left of great circle,
+-- positive 'Length' if Position is right of great circle; the orientation of the
+-- great circle is therefore important.
 --
 -- ==== __Examples__
 --
@@ -369,6 +378,8 @@ interpolate p0 p1 f
 --
 intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Position a)
 intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
+-- FIXME: isBetween is broken (rename isOnMinorArc) and select closest intersection
+-- FIXME: implement projection and add test
     case intersections' n1 n2 (model s1) of
         Nothing -> Nothing
         (Just (i1, i2))
@@ -402,6 +413,7 @@ intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 -- If @p@ is not on the arc, returns whether @p@ is within the area bound
 -- by perpendiculars to the arc at each point (in the same hemisphere).
 --
+-- FIXME: this is broken
 isBetween :: (Spherical a) => Position a -> MinorArc a -> Bool
 isBetween p (MinorArc _ s e) = between && hemisphere
   where
@@ -424,7 +436,7 @@ isBetween p (MinorArc _ s e) = between && hemisphere
 -- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
 -- will sum to less than 360°, and exterior point angles will be small but non-zero.
 --
--- Always returns 'False' if @ps@ does not at least defines a triangle.
+-- Always returns 'False' if @ps@ does not at least defines a triangle or if @p@ is any of the @ps@.
 --
 -- ==== __Examples__
 --
@@ -447,6 +459,7 @@ isBetween p (MinorArc _ s e) = between && hemisphere
 isInsideSurface :: (Spherical a) => Position a -> [Position a] -> Bool
 isInsideSurface p ps
     | null ps = False
+    | any (\p' -> llEq p p') ps = False
     | llEq (head ps) (last ps) = isInsideSurface p (init ps)
     | length ps < 3 = False
     | otherwise =

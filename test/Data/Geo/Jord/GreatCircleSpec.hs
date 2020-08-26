@@ -43,6 +43,12 @@ spec = do
             let p = antipode (s84Pos 53.2611 (-0.7972) zero)
             let gc = greatCircleThrough (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
             fmap (crossTrackDistance p) gc `shouldBe` Just (metres 307.549992)
+        it "return zero when position is on the great circle" $ do
+            let gc1 = s84Pos 53.3206 (-1.7297) zero
+            let gc2 = s84Pos 53.1887 (0.1334) zero
+            let gc = fromJust $ greatCircleThrough gc1 gc2
+            let ps = fmap (\f -> interpolate gc1 gc2 f) (take 11 (iterate (\x -> x + 0.1 ::Double) 0.0))
+            fmap (\p -> crossTrackDistance p gc) ps `shouldBe` (replicate 11 zero)
     describe "destination" $ do
         it "return the given position if distance is 0 meter" $ do
             let p0 = s84Pos 53.320556 (-1.729722) zero
@@ -177,6 +183,14 @@ spec = do
         let p3 = s84Pos 46 1 zero
         let p4 = s84Pos 46 2 zero
         let p5 = s84Pos 45.1 1.1 zero
+        let malmo = s84Pos 55.6050 13.0038 zero
+        let ystad = s84Pos 55.4295 13.82 zero
+        let lund = s84Pos 55.7047 13.1910 zero
+        let helsingborg = s84Pos 56.0465 12.6945 zero
+        let kristianstad = s84Pos 56.0294 14.1567 zero
+        let hoor = s84Pos 55.9295 13.5297 zero
+        let hassleholm = s84Pos 56.1589 13.7668 zero
+        let copenhagen = s84Pos 55.6761 12.5683 zero
         it "return False if polygon is empty" $ isInsideSurface p1 [] `shouldBe` False
         it "return False if polygon does not define at least a triangle" $ isInsideSurface p1 [p1, p2] `shouldBe` False
         it "returns True if position is inside polygon" $ do
@@ -187,22 +201,23 @@ spec = do
             let p = antipode p5
             isInsideSurface p polygon `shouldBe` False
         it "returns False if position is a vertex of the polygon" $ do
-            let polygon = [p1, p2, p4, p3]
-            isInsideSurface p1 polygon `shouldBe` False
+            let convex = [p1, p2, p4, p3]
+            fmap (\p -> isInsideSurface p convex) convex `shouldBe` replicate 4 False
+            let concave = [malmo, ystad, kristianstad, helsingborg, lund]
+            fmap (\p -> isInsideSurface p concave) concave `shouldBe` replicate 5 False
         it "handles closed polygons" $ do
             let polygon = [p1, p2, p4, p3, p1]
             isInsideSurface p5 polygon `shouldBe` True
         it "handles concave polygons" $ do
-            let malmo = s84Pos 55.6050 13.0038 zero
-            let ystad = s84Pos 55.4295 13.82 zero
-            let lund = s84Pos 55.7047 13.1910 zero
-            let helsingborg = s84Pos 56.0465 12.6945 zero
-            let kristianstad = s84Pos 56.0294 14.1567 zero
             let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
-            let hoor = s84Pos 55.9295 13.5297 zero
-            let hassleholm = s84Pos 56.1589 13.7668 zero
             isInsideSurface hoor polygon `shouldBe` True
             isInsideSurface hassleholm polygon `shouldBe` False
+        it "considers a point on an edge to be in one polygon only" $ do
+            let i = interpolate helsingborg lund 0.5
+            let poly1 = [malmo, kristianstad, helsingborg, lund]
+            let poly2 = [helsingborg, lund, copenhagen]
+            isInsideSurface i poly1 `shouldBe` True
+            isInsideSurface i poly2 `shouldBe` False
     describe "intersection" $ do
         it "returns nothing if both great arc are equals" $ do
             let a = minorArc (s84Pos 51.885 0.235 zero) (s84Pos 52.885 1.235 zero)
@@ -223,6 +238,14 @@ spec = do
             let a1 = minorArc (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
             let a2 = minorArc (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
             join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos 50.901738961111114 4.49418117 zero)
+        it "handles a minor arc across the equator" $ do
+            let a1 = minorArc (s84Pos 54 154 zero) (s84Pos (-54) 154 zero)
+            let a2 = minorArc (s84Pos 53 153 zero) (s84Pos 53 155 zero)
+            join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos 53.0041944 154 zero)
+        it "limit case TODO" $ do
+            let a1 = minorArc (s84Pos (-41.52) 141 zero) (s84Pos (-65.444811) 111.616598 zero)
+            let a2 = minorArc (s84Pos (-42.35) 141 zero) (s84Pos (-39.883333) 141 zero)
+            join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos (-41.52) 141.0 zero)
     describe "intersections" $ do
         it "returns nothing if both great circle are equals" $ do
             let gc = greatCircleHeadingOn (s84Pos 51.885 0.235 zero) (decimalDegrees 108.63)

@@ -9,22 +9,22 @@
 -- internal functions.
 --
 module Data.Geo.Jord.Internal
-    ( angleRadians
-    , signedAngleRadians
+    ( angleBetween
+    , signedAngleBetween
     , llEq
     ) where
 
 import Data.Geo.Jord.Position
 
--- | angle in __radians__ between 2 vectors.
-angleRadians :: Vector3d -> Vector3d -> Double
-angleRadians v1 v2 = signedAngleRadians v1 v2 Nothing
+-- | angle between 2 vectors.
+angleBetween :: Vector3d -> Vector3d -> Angle
+angleBetween v1 v2 = signedAngleBetween v1 v2 Nothing
 
--- | Signed angle in __radians__ between 2 vectors.
+-- | Signed angle between 2 vectors.
 -- If @n@ is 'Nothing', the angle is always in [0..pi], otherwise it is in [-pi, +pi],
 -- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
-signedAngleRadians :: Vector3d -> Vector3d -> Maybe Vector3d -> Double
-signedAngleRadians v1 v2 n = atan2 sinO cosO
+signedAngleBetween :: Vector3d -> Vector3d -> Maybe Vector3d -> Angle
+signedAngleBetween v1 v2 n = radians (atan2 sinO cosO)
   where
     sign = maybe 1 (signum . vdot (vcross v1 v2)) n
     sinO = sign * vnorm (vcross v1 v2)

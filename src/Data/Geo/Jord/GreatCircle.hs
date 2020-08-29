@@ -46,7 +46,11 @@ module Data.Geo.Jord.GreatCircle
     , intersections
     , isInsideSurface
     , mean
+    , projection
     , surfaceDistance
+    -- TODO: remove
+    , onMinorArc
+    , intersections'
     ) where
 
 import Data.Fixed (Nano)
@@ -377,15 +381,17 @@ interpolate p0 p1 f
 -- Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84)
 --
 intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Position a)
-intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
--- FIXME: isBetween is broken (rename isOnMinorArc) and select closest intersection
--- FIXME: implement projection and add test
+intersection a1@(MinorArc n1 s1 e1) a2@(MinorArc n2 s2 e2) =
     case intersections' n1 n2 (model s1) of
         Nothing -> Nothing
         (Just (i1, i2))
-            | isBetween i1 a1 && isBetween i1 a2 -> Just i1
-            | isBetween i2 a1 && isBetween i2 a2 -> Just i2
+            | onMinorArc pot a1 && onMinorArc pot a2 -> Just pot
             | otherwise -> Nothing
+            where mid = vunit $ foldl vadd vzero [nvec s1, nvec e1, nvec s2, nvec e2]
+                  pot =
+                      if vdot (nvec i1) mid > 0
+                          then i1
+                          else i2
 
 -- | Computes the intersections between the two given 'GreatCircle's.
 -- Two great circles intersect exactly twice unless there are equal (regardless of orientation),
@@ -406,28 +412,6 @@ intersection a1@(MinorArc n1 s1 _) a2@(MinorArc n2 _ _) =
 --
 intersections :: (Spherical a) => GreatCircle a -> GreatCircle a -> Maybe (Position a, Position a)
 intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
-
--- | @isBetween p a@ determines whether position @p@ is within the minor arc
--- of great circle @a@.
---
--- If @p@ is not on the arc, returns whether @p@ is within the area bound
--- by perpendiculars to the arc at each point (in the same hemisphere).
---
--- FIXME: this is broken
-isBetween :: (Spherical a) => Position a -> MinorArc a -> Bool
-isBetween p (MinorArc _ s e) = between && hemisphere
-  where
-    v0 = nvec p
-    v1 = nvec s
-    v2 = nvec e
-    v10 = vsub v0 v1
-    v12 = vsub v2 v1
-    v20 = vsub v0 v2
-    v21 = vsub v1 v2
-    e1 = vdot v10 v12 -- p is on e side of s
-    e2 = vdot v20 v21 -- p is on s side of e
-    between = e1 >= 0 && e2 >= 0
-    hemisphere = vdot v0 v1 >= 0 && vdot v0 v2 >= 0
 
 -- | @isInsideSurface p ps@ determines whether position @p@ is inside the __surface__ polygon defined by
 -- positions @ps@ (i.e. ignoring the height of the positions).
@@ -463,7 +447,11 @@ isInsideSurface p ps
     | llEq (head ps) (last ps) = isInsideSurface p (init ps)
     | length ps < 3 = False
     | otherwise =
-        let aSum = foldl (\a v' -> add a (uncurry signedAngle v' (Just v))) (decimalDegrees 0) (egdes (map (vsub v) vs))
+        let aSum =
+                foldl
+                    (\a v' -> add a (uncurry signedAngle v' (Just v)))
+                    (decimalDegrees 0)
+                    (egdes (map (vsub v) vs))
          in abs (toDecimalDegrees aSum) > 180.0
   where
     v = nvec p
@@ -492,8 +480,15 @@ mean ps =
   where
     vs = fmap nvec ps
     ts = filter (\l -> length l == 2) (subsequences vs)
-    antipodals = filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
+    antipodals =
+        filter (\t -> (realToFrac (vnorm (vadd (head t) (last t)) :: Double) :: Nano) == 0) ts
     nv = vunit $ foldl vadd vzero vs
+
+projection :: (Spherical a) => Position a -> MinorArc a -> Maybe (Position a)
+projection p maa@(MinorArc na _ _) =
+    case (minorArc (nvh na zero (model p)) p) of
+        Nothing -> Nothing
+        (Just mab) -> projection' maa mab
 
 -- private
 alongTrackDistance'' :: (Spherical a) => Position a -> Position a -> Vector3d -> Length
@@ -527,14 +522,49 @@ initialBearing' p1 p2 = normalise a (decimalDegrees 360)
     v2 = nvec p2
     gc1 = vcross v1 v2 -- great circle through p1 & p2
     gc2 = vcross v1 nvNorthPole -- great circle through p1 & north pole
-    a = radians (signedAngleRadians gc1 gc2 (Just v1))
+    a = signedAngle gc1 gc2 (Just v1)
+
+arcNormal :: (Spherical a) => Position a -> Position a -> Maybe Vector3d
+arcNormal p1 p2
+  | llEq p1 p2 = Nothing
+  | antipode = Nothing
+  | otherwise = Just (vcross (nvec p1) (nvec p2))
+
+-- | @onMinorArc p a@ determines whether position @p@ is on the minor arc @a@.
+-- Warning: this function assumes that @p@ is on great circle of the minor arc.
+-- return true if chord lengths between (p, start) & (p, end) are both less than
+-- chord length between (start, end)
+onMinorArc :: (Spherical a) => Position a -> MinorArc a -> Bool
+onMinorArc p (MinorArc _ s e) = (vdistSq v0 v1) <= l && (vdistSq v0 v2) <= l
+  where
+    v0 = nvec p
+    v1 = nvec s
+    v2 = nvec e
+    l = vdistSq v1 v2
+
+projection' ::
+       (Spherical a)
+    => MinorArc a
+    -> MinorArc a
+    -> Maybe (Position a)
+projection' maa@(MinorArc na sa ea) (MinorArc nb sb eb) =
+    case is of
+        Nothing -> Nothing
+        (Just (i1, i2)) ->
+            if onMinorArc pot maa
+                then Just pot
+                else Nothing
+            where pot =
+                      if vdot (nvec i1) mid > 0
+                          then i1
+                          else i2
+  where
+    is = intersections' na nb (model sa)
+    mid = vunit $ foldl vadd vzero [nvec sa, nvec ea, nvec sb, nvec eb]
 
 -- | reference sphere radius.
 radius :: (Spherical a) => Position a -> Length
 radius = equatorialRadius . surface . model
-
-normal' :: (Spherical a) => Position a -> Position a -> Vector3d
-normal' p1 p2 = vcross (nvec p1) (nvec p2)
 
 signedAngle :: Vector3d -> Vector3d -> Maybe Vector3d -> Angle
 signedAngle v1 v2 n = radians (signedAngleRadians v1 v2 n)

@@ -49,7 +49,6 @@ module Data.Geo.Jord.Position
     , nvectorHeightPos
     , geocentricPos
     , geocentricMetresPos
-    , nvh
     -- * Read/Show points
     , readPosition
     , positionP
@@ -64,8 +63,6 @@ module Data.Geo.Jord.Position
     , latLong'
     , northPole
     , southPole
-    , nvNorthPole
-    , nvSouthPole
     -- * re-exported for convenience
     , module Data.Geo.Jord.Angle
     , module Data.Geo.Jord.Ellipsoid
@@ -90,7 +87,7 @@ import Data.Geo.Jord.Models
 import Data.Geo.Jord.Quantity
 import Data.Geo.Jord.Vector3d
 
--- FIXME: altitude instead of height & replace 'ground' by 'surface' everywhere
+-- FIXME: replace ground & horizontal by surface everywhere
 -- | Coordinates of a position in a specified 'Model'.
 -- A position provides both geodetic latitude & longitude, height and
 -- geocentric coordinates. The horizontal position
@@ -172,7 +169,7 @@ gz (Geocentric _ _ z) = z
 -- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically
 -- opposite to @p@.
 antipode :: (Model a) => Position a -> Position a
-antipode p = nvh nv h (model p)
+antipode p = vector3dAlt nv h (model p)
   where
     h = height p
     nv = vscale (nvec p) (-1.0)
@@ -210,19 +207,11 @@ geocentric p = Geocentric (metres x) (metres y) (metres z)
 
 -- | Horizontal position of the North Pole in the given model.
 northPole :: (Model a) => a -> Position a
-northPole = nvh nvNorthPole zero
+northPole = latLongPos 90.0 0
 
 -- | Horizontal position of the South Pole in the given model.
 southPole :: (Model a) => a -> Position a
-southPole = nvh nvSouthPole zero
-
--- | Horizontal position of the North Pole (/n/-vector).
-nvNorthPole :: Vector3d
-nvNorthPole = Vector3d 0.0 0.0 1.0
-
--- | Horizontal position of the South Pole (/n/-vector).
-nvSouthPole :: Vector3d
-nvSouthPole = Vector3d 0.0 0.0 (-1.0)
+southPole = latLongPos (-90.0) 0
 
 -- | Reads a 'Position' from the given string using 'positionP'.
 readPosition :: (Model a) => String -> a -> Maybe (Position a)
@@ -372,6 +361,7 @@ geocentricMetresPos' :: (Model a) => Double -> Double -> Double -> a -> Position
 geocentricMetresPos' x y z m = Position lat lon h nv ev m
   where
     ev = Vector3d x y z
+    -- FIXME: go round lat/long for nv.
     (nv, h) = nvectorFromGeocentric ev (surface m)
     (lat, lon) = nvectorToLatLong nv
 
@@ -390,7 +380,15 @@ nvectorPos x y z = nvectorHeightPos x y z zero
 -- | 'Position' from given /n/-vector x, y, z coordinates and height in the given model.
 -- Vector (x, y, z) will be normalised to a unit vector to get a valid /n/-vector.
 nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Position a
-nvectorHeightPos x y z = nvh (vunit (Vector3d x y z))
+nvectorHeightPos x y z = vector3dAlt (vunit (Vector3d x y z))
+
+-- | 'Position' from /n/-vector as 'Vector3d' and altitude in the given model.
+vector3dAlt :: (Model a) => Vector3d -> Length -> a -> Position a
+vector3dAlt v a m = Position lat lon a nv g m
+  where
+    nv = nvectorFromLatLong . nvectorToLatLong $ v
+    (lat, lon) = llWrapped nv (longitudeRange m)
+    g = nvectorToGeocentric (nv, a) (surface m)
 
 -- | (latitude, longitude) pair in __decimal degrees__ from given position.
 latLong :: (Model a) => Position a -> (Double, Double)
@@ -399,14 +397,6 @@ latLong p = (toDecimalDegrees . latitude $ p, toDecimalDegrees . longitude $ p)
 -- | (latitude, longitude) pair from given position.
 latLong' :: (Model a) => Position a -> (Angle, Angle)
 latLong' p = (latitude p, longitude p)
- -- given 'Vector3d' is a /n/-vector.
-
--- | position from /n/-vector, height and model; this method is to be used only if
-nvh :: (Model a) => Vector3d -> Length -> a -> Position a
-nvh nv h m = Position lat lon h nv g m
-  where
-    (lat, lon) = llWrapped nv (longitudeRange m)
-    g = nvectorToGeocentric (nv, h) (surface m)
 
 -- | @nvectorToLatLong nv@ returns (latitude, longitude) pair equivalent to the given /n/-vector @nv@.
 --

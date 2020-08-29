@@ -241,11 +241,19 @@ spec = do
         it "handles a minor arc across the equator" $ do
             let a1 = minorArc (s84Pos 54 154 zero) (s84Pos (-54) 154 zero)
             let a2 = minorArc (s84Pos 53 153 zero) (s84Pos 53 155 zero)
-            join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos 53.0041944 154 zero)
-        it "limit case TODO" $ do
+            join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos 53.00419442027778 154 zero)
+        it "returns the common start position between the 2 minor arcs" $ do
             let a1 = minorArc (s84Pos (-41.52) 141 zero) (s84Pos (-65.444811) 111.616598 zero)
             let a2 = minorArc (s84Pos (-42.35) 141 zero) (s84Pos (-39.883333) 141 zero)
             join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos (-41.52) 141.0 zero)
+        it "returns the common end position between the 2 minor arcs" $ do
+            let a1 = minorArc (s84Pos (-65.444811) 111.616598 zero) (s84Pos (-41.52) 141 zero)
+            let a2 = minorArc (s84Pos (-39.883333) 141 zero) (s84Pos (-41.52) 141 zero)
+            join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos (-41.52) 141.0 zero)
+        it "handles an intersection exactly on one of the minor arcs" $ do
+            let a1 = minorArc (s84Pos 0 (-10) zero) (s84Pos 0 10 zero)
+            let a2 = minorArc (s84Pos (-10) 0 zero) (s84Pos 10 0 zero)
+            join (intersection <$> a1 <*> a2) `shouldBe` Just (s84Pos 0 0 zero)
     describe "intersections" $ do
         it "returns nothing if both great circle are equals" $ do
             let gc = greatCircleHeadingOn (s84Pos 51.885 0.235 zero) (decimalDegrees 108.63)

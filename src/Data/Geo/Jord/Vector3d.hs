@@ -12,6 +12,7 @@ module Data.Geo.Jord.Vector3d
     ( Vector3d(..)
     , vadd
     , vsub
+    , vdistSq
     , vdot
     , vnorm
     , vcross
@@ -55,6 +56,15 @@ vcross v1 v2 = Vector3d x y z
     x = vy v1 * vz v2 - vz v1 * vy v2
     y = vz v1 * vx v2 - vx v1 * vz v2
     z = vx v1 * vy v2 - vy v1 * vx v2
+
+-- | Computes the square of the straight line distance (or geometrical distance)
+-- between 2 vectors.
+vdistSq :: Vector3d -> Vector3d -> Double
+vdistSq v1 v2 = dx * dx + dy * dy + dz * dz
+  where
+    dx = vx v1 - vx v2
+    dy = vy v1 - vy v2
+    dz = vz v1 - vz v2
 
 -- | Computes the dot product of 2 vectors.
 vdot :: Vector3d -> Vector3d -> Double

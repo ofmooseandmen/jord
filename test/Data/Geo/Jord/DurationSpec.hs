@@ -4,25 +4,29 @@ module Data.Geo.Jord.DurationSpec
 
 import Test.Hspec
 
-import Data.Geo.Jord.Duration
-import Data.Geo.Jord.Quantity
+import qualified Data.Geo.Jord.Duration as Duration
 
 spec :: Spec
 spec = do
     describe "Reading valid durations" $ do
-        it "reads 1H45M36.5S" $ readDuration "1H45M36.5S" `shouldBe` Just (hms 1 45 36.5)
-        it "reads 45M" $ readDuration "45M" `shouldBe` Just (minutes 45)
-        it "reads 36S" $ readDuration "36S" `shouldBe` Just (seconds 36)
-        it "reads 36.6S" $ readDuration "36.6S" `shouldBe` Just (milliseconds 36600)
-        it "reads 1H-30M" $ readDuration "1H-30M" `shouldBe` Just (hours 0.5)
-        it "reads 0H8M5.953S" $ readDuration "0H8M5.953S" `shouldBe` Just (seconds 485.953)
-    describe "Reading invalid duration" $ it "fails to read 5" $ readDuration "5" `shouldBe` Nothing
+        it "reads 1H45M36.5S" $ Duration.read "1H45M36.5S" `shouldBe` Just (Duration.hms 1 45 36.5)
+        it "reads 45M" $ Duration.read "45M" `shouldBe` Just (Duration.minutes 45)
+        it "reads 36S" $ Duration.read "36S" `shouldBe` Just (Duration.seconds 36)
+        it "reads 36.6S" $ Duration.read "36.6S" `shouldBe` Just (Duration.milliseconds 36600)
+        it "reads 1H-30M" $ Duration.read "1H-30M" `shouldBe` Just (Duration.hours 0.5)
+        it "reads 0H8M5.953S" $
+            Duration.read "0H8M5.953S" `shouldBe` Just (Duration.seconds 485.953)
+    describe "Reading invalid duration" $
+        it "fails to read 5" $ Duration.read "5" `shouldBe` Nothing
     describe "Showing duration" $
-        it "shows duration" $ show (hms 1 45 36.5) `shouldBe` "1H45M36.500S"
+        it "shows duration" $ show (Duration.hms 1 45 36.5) `shouldBe` "1H45M36.500S"
     describe "Converting duration" $ do
-        it "converts hours to seconds" $ toSeconds (hours 1) `shouldBe` 3600.0
-        it "converts minutes to hours" $ toHours (minutes 30) `shouldBe` 0.5
-        it "converts duration to milliseconds" $ toMilliseconds (hms 1 54 3.154) `shouldBe` 6843154
+        it "converts hours to seconds" $ Duration.toSeconds (Duration.hours 1) `shouldBe` 3600.0
+        it "converts minutes to hours" $ Duration.toHours (Duration.minutes 30) `shouldBe` 0.5
+        it "converts duration to milliseconds" $
+            Duration.toMilliseconds (Duration.hms 1 54 3.154) `shouldBe` 6843154
     describe "Adding/Subtracting duration" $ do
-        it "adds duration" $ add (minutes 45) (seconds 36) `shouldBe` hms 0 45 36
-        it "subtracts duration" $ sub (hours 1) (minutes 60) `shouldBe` zero
+        it "adds duration" $
+            Duration.add (Duration.minutes 45) (Duration.seconds 36) `shouldBe` Duration.hms 0 45 36
+        it "subtracts duration" $
+            Duration.subtract (Duration.hours 1) (Duration.minutes 60) `shouldBe` Duration.zero

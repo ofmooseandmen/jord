@@ -2,10 +2,18 @@ module Main where
 
 import Criterion.Main
 
+import qualified ConversionBG
 import qualified GeodesicBG
+import qualified GeodeticBG
 import qualified GreatCircleBG
 import qualified KinematicsBG
-import qualified PositionBG
 
 main :: IO ()
-main = defaultMain [GeodesicBG.benchmark, GreatCircleBG.benchmark, KinematicsBG.benchmark, PositionBG.benchmark]
+main =
+    defaultMain
+        [ ConversionBG.benchmark
+        , GeodesicBG.benchmark
+        , GreatCircleBG.benchmark
+        , KinematicsBG.benchmark
+        , GeodeticBG.benchmark
+        ]

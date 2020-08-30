@@ -11,8 +11,8 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
+--     import Data.Geo.Jord.Geodetic
 --     import Data.Geo.Jord.LocalFrames
---     import Data.Geo.Jord.Position
 -- @
 --
 -- All functions are implemented using the vector-based approached described in
@@ -65,13 +65,22 @@ module Data.Geo.Jord.LocalFrames
     -- * Calculations
     , deltaBetween
     , nedBetween
-    , target
-    , targetN
+    , destination
+    , destinationN
     -- * re-exported for convenience
     , module Data.Geo.Jord.Rotation
     ) where
 
-import Data.Geo.Jord.Position
+import Data.Geo.Jord.Angle (Angle)
+import qualified Data.Geo.Jord.Angle as Angle
+import Data.Geo.Jord.Conversion
+import qualified Data.Geo.Jord.Geocentric as Geocentric
+import qualified Data.Geo.Jord.Geodetic as Geodetic
+import Data.Geo.Jord.Length (Length)
+import qualified Data.Geo.Jord.Length as Length (metres, toMetres)
+import Data.Geo.Jord.Math3d (V3(..))
+import qualified Data.Geo.Jord.Math3d as Math3d
+import Data.Geo.Jord.Model (Model)
 import Data.Geo.Jord.Rotation
 
 -- | class for local reference frames: a reference frame which is location dependant.
@@ -85,7 +94,7 @@ import Data.Geo.Jord.Rotation
 --     * 'FrameN': 'rEF' returns R_EN
 --
 class LocalFrame a where
-    rEF :: a -> [Vector3d] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
+    rEF :: a -> [V3] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
 
 -- | Body frame (typically of a vehicle).
 --
@@ -101,22 +110,23 @@ data FrameB a =
         { yaw :: Angle -- ^ body yaw angle (vertical axis).
         , pitch :: Angle -- ^ body pitch angle (transverse axis).
         , roll :: Angle -- ^ body roll angle (longitudinal axis).
-        , bOrigin :: Position a -- ^ frame origin.
+        , bOrigin :: Geodetic.Position a -- ^ frame origin.
+        , bNorth :: V3 -- ^ position of the north pole as /n/-vector.
         }
     deriving (Eq, Show)
 
 -- | 'FrameB' from given yaw, pitch, roll, position (origin).
-frameB :: (Model a) => Angle -> Angle -> Angle -> Position a -> FrameB a
-frameB = FrameB
+frameB :: (Model a) => Angle -> Angle -> Angle -> Geodetic.Position a -> FrameB a
+frameB y p r o = FrameB y p r o (Geodetic.nvector . Geodetic.northPole $ Geodetic.model o)
 
 -- | R_EB: frame B to Earth
 instance LocalFrame (FrameB a) where
-    rEF (FrameB y p r o) = rm
+    rEF (FrameB y p r o np) = rm
       where
         rNB = zyx2r y p r
-        n = FrameN o
+        n = FrameN o np
         rEN = rEF n
-        rm = mdot rEN rNB -- closest frames cancel: N
+        rm = Math3d.dotM rEN rNB -- closest frames cancel: N
 
 -- | Local level, Wander azimuth frame.
 --
@@ -138,7 +148,7 @@ instance LocalFrame (FrameB a) where
 data FrameL a =
     FrameL
         { wanderAzimuth :: Angle -- ^ wander azimuth: angle between x-axis of the frame L and the north direction.
-        , lOrigin :: Position a -- ^ frame origin.
+        , lOrigin :: Geodetic.Position a -- ^ frame origin.
         }
     deriving (Eq, Show)
 
@@ -146,14 +156,14 @@ data FrameL a =
 instance LocalFrame (FrameL m) where
     rEF (FrameL w o) = rm
       where
-        lat = latitude o
-        lon = longitude o
-        r = xyz2r lon (negate' lat) w
-        rEe' = [Vector3d 0 0 (-1), Vector3d 0 1 0, Vector3d 1 0 0]
-        rm = mdot rEe' r
+        lat = Geodetic.latitude o
+        lon = Geodetic.longitude o
+        r = xyz2r lon (Angle.negate lat) w
+        rEe' = [V3 0 0 (-1), V3 0 1 0, V3 1 0 0]
+        rm = Math3d.dotM rEe' r
 
 -- | 'FrameL' from given wander azimuth, position (origin).
-frameL :: (Model a) => Angle -> Position a -> FrameL a
+frameL :: (Model a) => Angle -> Geodetic.Position a -> FrameL a
 frameL = FrameL
 
 -- | North-East-Down (local level) frame.
@@ -170,76 +180,76 @@ frameL = FrameL
 -- the x- and y-axes are not defined here. Hence, this coordinate frame is not suitable for
 -- general calculations.
 --
-newtype FrameN a =
+data FrameN a =
     FrameN
-        { nOrigin :: Position a -- ^ frame origin.
+        { nOrigin :: Geodetic.Position a -- ^ frame origin.
+        , nNorth :: V3 -- ^ position of the north pole as /n/-vector.
         }
     deriving (Eq, Show)
 
 -- | R_EN: frame N to Earth
 instance LocalFrame (FrameN a) where
-    rEF (FrameN o) = transpose rm
+    rEF (FrameN o np) = Math3d.transposeM rm
       where
-        vo = nvec o
-        np = nvNorthPole
-        rd = vscale vo (-1) -- down (pointing opposite to n-vector)
-        re = vunit (vcross np vo) -- east (pointing perpendicular to the plane)
-        rn = vcross re rd -- north (by right hand rule)
+        vo = Geodetic.nvector o
+        rd = Math3d.scale vo (-1.0) -- down (pointing opposite to n-vector)
+        re = Math3d.unit (Math3d.cross np vo) -- east (pointing perpendicular to the plane)
+        rn = Math3d.cross re rd -- north (by right hand rule)
         rm = [rn, re, rd]
 
 -- | 'FrameN' from given position (origin).
-frameN :: (Model a) => Position a -> FrameN a
-frameN = FrameN
+frameN :: (Model a) => Geodetic.Position a -> FrameN a
+frameN p = FrameN p (Geodetic.nvector . Geodetic.northPole $ Geodetic.model p)
 
 -- | delta between position in one of the reference frames.
 newtype Delta =
-    Delta Vector3d
+    Delta V3
     deriving (Eq, Show)
 
 -- | 'Delta' from given x, y and z length.
 delta :: Length -> Length -> Length -> Delta
-delta x y z = Delta (Vector3d (toMetres x) (toMetres y) (toMetres z))
+delta x y z = Delta (V3 (Length.toMetres x) (Length.toMetres y) (Length.toMetres z))
 
 -- | 'Delta' from given x, y and z length in __metres__.
 deltaMetres :: Double -> Double -> Double -> Delta
-deltaMetres x y z = delta (metres x) (metres y) (metres z)
+deltaMetres x y z = delta (Length.metres x) (Length.metres y) (Length.metres z)
 
 -- | x component of given 'Delta'.
 dx :: Delta -> Length
-dx (Delta v) = metres (vx v)
+dx (Delta v) = Length.metres (vx v)
 
 -- | y component of given 'Delta'.
 dy :: Delta -> Length
-dy (Delta v) = metres (vy v)
+dy (Delta v) = Length.metres (vy v)
 
 -- | z component of given 'Delta'.
 dz :: Delta -> Length
-dz (Delta v) = metres (vz v)
+dz (Delta v) = Length.metres (vz v)
 
 -- | North, east and down delta (thus in frame 'FrameN').
 newtype Ned =
-    Ned Vector3d
+    Ned V3
     deriving (Eq, Show)
 
 -- | 'Ned' from given north, east and down.
 ned :: Length -> Length -> Length -> Ned
-ned n e d = Ned (Vector3d (toMetres n) (toMetres e) (toMetres d))
+ned n e d = Ned (V3 (Length.toMetres n) (Length.toMetres e) (Length.toMetres d))
 
 -- | 'Ned' from given north, east and down in __metres__.
 nedMetres :: Double -> Double -> Double -> Ned
-nedMetres n e d = ned (metres n) (metres e) (metres d)
+nedMetres n e d = ned (Length.metres n) (Length.metres e) (Length.metres d)
 
 -- | North component of given 'Ned'.
 north :: Ned -> Length
-north (Ned v) = metres (vx v)
+north (Ned v) = Length.metres (vx v)
 
 -- | East component of given 'Ned'.
 east :: Ned -> Length
-east (Ned v) = metres (vy v)
+east (Ned v) = Length.metres (vy v)
 
 -- | Down component of given 'Ned'.
 down :: Ned -> Length
-down (Ned v) = metres (vz v)
+down (Ned v) = Length.metres (vz v)
 
 -- | @bearing v@ computes the bearing in compass angle of the NED vector @v@ from north.
 --
@@ -247,16 +257,16 @@ down (Ned v) = metres (vz v)
 --
 bearing :: Ned -> Angle
 bearing v =
-    let a = atan2' (toMetres (east v)) (toMetres (north v))
-     in normalise a (decimalDegrees 360.0)
+    let a = Angle.atan2 (Length.toMetres (east v)) (Length.toMetres (north v))
+     in Angle.normalise a (Angle.decimalDegrees 360.0)
 
 -- | @elevation v@ computes the elevation of the NED vector @v@ from horizontal (ie tangent to ellipsoid surface).
 elevation :: Ned -> Angle
-elevation (Ned v) = negate' (asin' (vz v / vnorm v))
+elevation (Ned v) = Angle.negate (Angle.asin (vz v / Math3d.norm v))
 
 -- | @slantRange v@ computes the distance from origin in the local system of the NED vector @v@.
 slantRange :: Ned -> Length
-slantRange (Ned v) = metres (vnorm v)
+slantRange (Ned v) = Length.metres (Math3d.norm v)
 
 -- | @deltaBetween p1 p2 f@ computes the exact 'Delta' between the two
 -- positions @p1@ and @p2@ in local frame @f@.
@@ -272,15 +282,20 @@ slantRange (Ned v) = metres (vnorm v)
 -- >>> deltaBetween p1 p2 (frameL w)
 -- Delta (Vector3d {vx = 359490.5782, vy = 302818.5225, vz = 17404.2714})
 --
-deltaBetween :: (LocalFrame a, Model b) => Position b -> Position b -> (Position b -> a) -> Delta
+deltaBetween ::
+       (LocalFrame a, Model b)
+    => Geodetic.Position b
+    -> Geodetic.Position b
+    -> (Geodetic.Position b -> a)
+    -> Delta
 deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
   where
-    g1 = gcvec p1
-    g2 = gcvec p2
-    de = vsub g2 g1
+    g1 = Geocentric.toMetres . Geocentric.coords . toGeocentric $ p1
+    g2 = Geocentric.toMetres . Geocentric.coords . toGeocentric $ p2
+    de = Math3d.subtract g2 g1
     -- rotation matrix to go from Earth Frame to Frame at p1
-    rm = transpose (rEF (f p1))
-    d = vmultm de rm
+    rm = Math3d.transposeM (rEF (f p1))
+    d = Math3d.multM de rm
 
 -- | @nedBetween p1 p2@ computes the exact 'Ned' vector between the two
 -- positions @p1@ and @p2@, in north, east, and down.
@@ -307,12 +322,12 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
 -- >>> nedBetween p1 p2
 -- Ned (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
 --
-nedBetween :: (Model a) => Position a -> Position a -> Ned
+nedBetween :: (Model a) => Geodetic.Position a -> Geodetic.Position a -> Ned
 nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
   where
     (Delta d) = deltaBetween p1 p2 frameN
 
--- | @target p0 f d@ computes the target position from position @p0@ and delta @d@ in local frame @f@.
+-- | @destination p0 f d@ computes the destination position from position @p0@ and delta @d@ in local frame @f@.
 --
 -- ==== __Examples__
 --
@@ -327,15 +342,21 @@ nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
 -- >>> target p0 (frameB y r p) d
 -- 49°41'30.486"N,3°28'52.561"E 6.0077m (WGS84)
 --
-target :: (LocalFrame a, Model b) => Position b -> (Position b -> a) -> Delta -> Position b
-target p0 f (Delta d) = geocentricMetresPos x y z (model p0)
+destination ::
+       (LocalFrame a, Model b)
+    => Geodetic.Position b
+    -> (Geodetic.Position b -> a)
+    -> Delta
+    -> Geodetic.Position b
+destination p0 f (Delta d) = toGeodetic gt
   where
-    g0 = gcvec p0
+    g0 = Geocentric.toMetres . Geocentric.coords . toGeocentric $ p0
     rm = rEF (f p0)
-    c = vmultm d rm
-    (Vector3d x y z) = vadd g0 c
+    c = Math3d.multM d rm
+    (V3 x y z) = Math3d.add g0 c
+    gt = Geocentric.Position (Geocentric.metres x y z) (Geodetic.model p0)
 
--- | @targetN p0 d@ computes the target position from position @p0@ and north, east, down @d@.
+-- | @destinationN p0 d@ computes the destination position from position @p0@ and north, east, down @d@.
 --
 -- This is equivalent to:
 --
@@ -352,5 +373,5 @@ target p0 f (Delta d) = geocentricMetresPos x y z (model p0)
 -- >>> targetN p0 (nedMeters 100 200 300)
 -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
 --
-targetN :: (Model a) => Position a -> Ned -> Position a
-targetN p0 (Ned d) = target p0 frameN (Delta d)
+destinationN :: (Model a) => Geodetic.Position a -> Ned -> Geodetic.Position a
+destinationN p0 (Ned d) = destination p0 frameN (Delta d)

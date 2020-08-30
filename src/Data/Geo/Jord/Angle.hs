@@ -8,6 +8,13 @@
 --
 -- Types and functions for working with angles representing latitudes, longitude and bearings.
 --
+-- This module should be imported qualified:
+--
+-- @
+--     import Data.Geo.Jord.Angle (Angle)
+--     import qualified Data.Geo.Jord.Angle as Angle
+-- @
+--
 module Data.Geo.Jord.Angle
     (
     -- * The 'Angle' type
@@ -21,13 +28,13 @@ module Data.Geo.Jord.Angle
     , central
     , isNegative
     , isWithin
-    , negate'
+    , negate
     , normalise
     -- * Trigonometric functions
-    , asin'
-    , atan2'
-    , cos'
-    , sin'
+    , asin
+    , atan2
+    , cos
+    , sin
     -- * Accessors
     , getDegrees
     , getArcminutes
@@ -37,19 +44,29 @@ module Data.Geo.Jord.Angle
     , toDecimalDegrees
     , toRadians
     -- * Read
-    , angleP
-    , readAngle
+    , angle
+    , read
+    -- * Misc
+    , add
+    , subtract
+    , zero
+    , between
+    , betweenSigned
     ) where
 
 import Control.Applicative ((<|>))
 import Data.Fixed (mod')
+import Prelude hiding (atan2, asin, acos, cos, negate, read, sin, subtract)
+import qualified Prelude (atan2, asin, cos, sin)
 import Text.ParserCombinators.ReadP (ReadP, char, option, readP_to_S, string)
 import Text.Printf (printf)
 import Text.Read (readMaybe)
 
-import Data.Geo.Jord.Length
+import Data.Geo.Jord.Length (Length)
+import qualified Data.Geo.Jord.Length as Length (metres, toMetres)
+import Data.Geo.Jord.Math3d (V3)
+import qualified Data.Geo.Jord.Math3d as Math3d (cross, dot, norm)
 import Data.Geo.Jord.Parser
-import Data.Geo.Jord.Quantity
 
 -- | An angle with a resolution of a microarcsecond.
 -- When used as a latitude/longitude this roughly translate to a precision
@@ -60,9 +77,9 @@ newtype Angle =
         }
     deriving (Eq)
 
--- | See 'angleP'.
+-- | See 'angle'.
 instance Read Angle where
-    readsPrec _ = readP_to_S angleP
+    readsPrec _ = readP_to_S angle
 
 -- | Show 'Angle' as degrees, minutes, seconds and milliseconds - e.g. 154°25'43.5".
 instance Show Angle where
@@ -82,11 +99,31 @@ instance Show Angle where
 instance Ord Angle where
     (<=) (Angle uas1) (Angle uas2) = uas1 <= uas2
 
--- | Add/Subtract 'Angle's.
-instance Quantity Angle where
-    add a1 a2 = Angle (microarcseconds a1 + microarcseconds a2)
-    sub a1 a2 = Angle (microarcseconds a1 - microarcseconds a2)
-    zero = Angle 0
+-- | Adds 2 angles.
+add :: Angle -> Angle -> Angle
+add a1 a2 = Angle (microarcseconds a1 + microarcseconds a2)
+
+-- | Subtracts 2 angles.
+subtract :: Angle -> Angle -> Angle
+subtract a1 a2 = Angle (microarcseconds a1 - microarcseconds a2)
+
+-- | 0 degrees.
+zero :: Angle
+zero = Angle 0
+
+-- | angle between 2 vectors.
+between :: V3 -> V3 -> Angle
+between v1 v2 = betweenSigned v1 v2 Nothing
+
+-- | Signed angle between 2 vectors.
+-- If @n@ is 'Nothing', the angle is always in [0..pi], otherwise it is in [-pi, +pi],
+-- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
+betweenSigned :: V3 -> V3 -> Maybe V3 -> Angle
+betweenSigned v1 v2 n = atan2 sinO cosO
+  where
+    sign = maybe 1 (signum . Math3d.dot (Math3d.cross v1 v2)) n
+    sinO = sign * Math3d.norm (Math3d.cross v1 v2)
+    cosO = Math3d.dot v1 v2
 
 -- | 'Angle' from given decimal degrees. Any 'Double' is accepted: it must be
 -- validated by the call site when used to represent a latitude or longitude.
@@ -113,15 +150,15 @@ radians r = decimalDegrees (r / pi * 180.0)
 
 -- | @arcLength a r@ computes the 'Length' of the arc that subtends the angle @a@ for radius @r@.
 arcLength :: Angle -> Length -> Length
-arcLength a r = metres (toMetres r * toRadians a)
+arcLength a r = Length.metres (Length.toMetres r * toRadians a)
 
 -- | @central l r@ computes the central 'Angle' from the arc length @l@ and radius @r@.
 central :: Length -> Length -> Angle
-central s r = radians (toMetres s / toMetres r)
+central s r = radians (Length.toMetres s / Length.toMetres r)
 
 -- | Returns the given 'Angle' negated.
-negate' :: Angle -> Angle
-negate' (Angle millis) = Angle (-millis)
+negate :: Angle -> Angle
+negate (Angle millis) = Angle (-millis)
 
 -- | @normalise a n@ normalises @a@ to [0, @n@].
 normalise :: Angle -> Angle -> Angle
@@ -137,21 +174,21 @@ isNegative (Angle millis) = millis < 0
 isWithin :: Angle -> Angle -> Angle -> Bool
 isWithin (Angle millis) (Angle low) (Angle high) = millis >= low && millis <= high
 
--- | @atan2' y x@ computes the 'Angle' (from the positive x-axis) of the vector from the origin to the point (x,y).
-atan2' :: Double -> Double -> Angle
-atan2' y x = radians (atan2 y x)
+-- | @atan2 y x@ computes the 'Angle' (from the positive x-axis) of the vector from the origin to the point (x,y).
+atan2 :: Double -> Double -> Angle
+atan2 y x = radians (Prelude.atan2 y x)
 
--- | @asin' a@ computes arc sine of @a@.
-asin' :: Double -> Angle
-asin' a = radians (asin a)
+-- | @asin a@ computes arc sine of @a@.
+asin :: Double -> Angle
+asin a = radians (Prelude.asin a)
 
--- | @cos' a@ returns the cosinus of @a@.
-cos' :: Angle -> Double
-cos' a = cos (toRadians a)
+-- | @cos a@ returns the cosinus of @a@.
+cos :: Angle -> Double
+cos a = Prelude.cos (toRadians a)
 
--- | @sin' a@ returns the sinus of @a@.
-sin' :: Angle -> Double
-sin' a = sin (toRadians a)
+-- | @sin a@ returns the sinus of @a@.
+sin :: Angle -> Double
+sin a = Prelude.sin (toRadians a)
 
 -- | degrees to radians.
 toRadians :: Angle -> Double
@@ -202,12 +239,12 @@ signed n s
 --
 --     * second: ", ″, '' or s
 --
-angleP :: ReadP Angle
-angleP = degsMinsSecs <|> decimal
+angle :: ReadP Angle
+angle = degsMinsSecs <|> decimal
 
--- | Reads an 'Angle' from the given string using 'angleP'.
-readAngle :: String -> Maybe Angle
-readAngle s = readMaybe s :: (Maybe Angle)
+-- | Reads an 'Angle' from the given string using 'angle'.
+read :: String -> Maybe Angle
+read s = readMaybe s :: (Maybe Angle)
 
 -- | Parses DMS.MS and returns an 'Angle'.
 degsMinsSecs :: ReadP Angle

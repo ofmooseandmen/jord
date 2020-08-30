@@ -11,14 +11,15 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
+--     import Data.Geo.Jord.Geodetic
 --     import Data.Geo.Jord.Kinematics
---     import Data.Geo.Jord.Position
 -- @
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 -- and in <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry>
 --
+-- FIXME: provide accessors for Course type
 module Data.Geo.Jord.Kinematics
     (
     -- * The 'Track' type.
@@ -54,16 +55,25 @@ module Data.Geo.Jord.Kinematics
 import Control.Applicative ((<|>))
 import Data.Maybe (fromJust, isNothing)
 
-import Data.Geo.Jord.Duration
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Internal
-import Data.Geo.Jord.Position
-import Data.Geo.Jord.Speed
+import Data.Geo.Jord.Angle (Angle)
+import qualified Data.Geo.Jord.Angle as Angle
+import Data.Geo.Jord.Duration (Duration)
+import qualified Data.Geo.Jord.Duration as Duration (seconds, toMilliseconds, toSeconds, zero)
+import Data.Geo.Jord.Ellipsoid (equatorialRadius)
+import qualified Data.Geo.Jord.Geodetic as Geodetic
+import qualified Data.Geo.Jord.GreatCircle as GreatCircle (initialBearing, surfaceDistance)
+import Data.Geo.Jord.Length (Length)
+import qualified Data.Geo.Jord.Length as Length (toMetres, zero)
+import Data.Geo.Jord.Math3d (V3(..))
+import qualified Data.Geo.Jord.Math3d as Math3d (add, dot, dotM, scale)
+import Data.Geo.Jord.Model (Spherical, surface)
+import Data.Geo.Jord.Speed (Speed)
+import qualified Data.Geo.Jord.Speed as Speed (average, toMetresPerSecond)
 
 -- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
 data Track a =
     Track
-        { trackPosition :: Position a -- ^ position of the track.
+        { trackPosition :: Geodetic.Position a -- ^ position of the track.
         , trackBearing :: Angle -- ^ bearing of the track.
         , trackSpeed :: Speed -- ^ speed of the track.
         }
@@ -71,7 +81,7 @@ data Track a =
 
 -- | 'Course' represents the cardinal direction in which the vehicle is to be steered.
 newtype Course =
-    Course Vector3d
+    Course V3
     deriving (Eq, Show)
 
 -- | Time to, and distance at, closest point of approach (CPA) as well as position of both tracks at CPA.
@@ -79,8 +89,8 @@ data Cpa a =
     Cpa
         { cpaTime :: Duration -- ^ time to CPA.
         , cpaDistance :: Length -- ^ distance at CPA.
-        , cpaPosition1 :: Position a -- ^ position of track 1 at CPA.
-        , cpaPosition2 :: Position a -- ^ position of track 2 at CPA.
+        , cpaPosition1 :: Geodetic.Position a -- ^ position of track 1 at CPA.
+        , cpaPosition2 :: Geodetic.Position a -- ^ position of track 2 at CPA.
         }
     deriving (Eq, Show)
 
@@ -89,19 +99,19 @@ data Intercept a =
     Intercept
         { interceptTime :: Duration -- ^ time to intercept.
         , interceptDistance :: Length -- ^ distance at intercept.
-        , interceptPosition :: Position a -- ^ position of intercept.
+        , interceptPosition :: Geodetic.Position a -- ^ position of intercept.
         , interceptorBearing :: Angle -- ^ initial bearing of interceptor.
         , interceptorSpeed :: Speed -- ^ speed of interceptor.
         }
     deriving (Eq, Show)
 
 -- | @course p b@ computes the course of a vehicle currently at position @p@ and following bearing @b@.
-course :: (Spherical a) => Position a -> Angle -> Course
-course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
+course :: (Spherical a) => Geodetic.Position a -> Angle -> Course
+course p b = Course (V3 (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
   where
-    lat = latitude p
-    lon = longitude p
-    r = mdot (mdot (rz (negate' lon)) (ry lat)) (rx b)
+    lat = Geodetic.latitude p
+    lon = Geodetic.longitude p
+    r = Math3d.dotM (Math3d.dotM (rz (Angle.negate lon)) (ry lat)) (rx b)
 
 -- | @positionAfter p b s d@ computes the position of a vehicle currently at position @p@
 -- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed assuming
@@ -120,14 +130,16 @@ course p b = Course (Vector3d (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
 -- >>> positionAfter p b s (hours 1)
 -- 53°11'19.368"N,0°8'2.457"E 15.0km (S84)
 -- @
-positionAfter :: (Spherical a) => Position a -> Angle -> Speed -> Duration -> Position a
-positionAfter p b s d = position' p (course p b) s (toSeconds d)
+positionAfter ::
+       (Spherical a) => Geodetic.Position a -> Angle -> Speed -> Duration -> Geodetic.Position a
+positionAfter p b s d = position' p (course p b) s (Duration.toSeconds d)
 
 -- | @positionAfter p c s d@ computes the position of a vehicle currently at position @p@
 -- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed assuming
 -- the vehicle maintains a __constant__ altitude.
-positionAfter' :: (Spherical a) => Position a -> Course -> Speed -> Duration -> Position a
-positionAfter' p c s d = position' p c s (toSeconds d)
+positionAfter' ::
+       (Spherical a) => Geodetic.Position a -> Course -> Speed -> Duration -> Geodetic.Position a
+positionAfter' p c s d = position' p c s (Duration.toSeconds d)
 
 -- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed
 -- assuming the vehicle maintains a __constant__ altitude.
@@ -145,7 +157,7 @@ positionAfter' p c s d = position' p c s (toSeconds d)
 -- >>> trackPositionAfter (Track p b s) (hours 1)
 -- 53°11'19.368"N,0°8'2.457"E 15.0km (S84)
 --
-trackPositionAfter :: (Spherical a) => Track a -> Duration -> Position a
+trackPositionAfter :: (Spherical a) => Track a -> Duration -> Geodetic.Position a
 trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 
 -- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@ disregarding
@@ -174,16 +186,16 @@ trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 --
 cpa :: (Spherical a) => Track a -> Track a -> Maybe (Cpa a)
 cpa (Track p1 b1 s1) (Track p2 b2 s2)
-    | llEq p1 p2 = Just (Cpa zero zero p1 p2)
+    | Geodetic.llEq p1 p2 = Just (Cpa Duration.zero Length.zero p1 p2)
     | t < 0 = Nothing
-    | otherwise = Just (Cpa (seconds t) d cp1 cp2)
+    | otherwise = Just (Cpa (Duration.seconds t) d cp1 cp2)
   where
     c1 = course p1 b1
     c2 = course p2 b2
     t = timeToCpa p1 c1 s1 p2 c2 s2
     cp1 = position' p1 c1 s1 t
     cp2 = position' p2 c2 s2 t
-    d = surfaceDistance cp1 cp2
+    d = GreatCircle.surfaceDistance cp1 cp2
 
 -- | @intercept t p@ computes the __minimum__ speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place.
@@ -209,8 +221,8 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 -- >>> fmap (toSeconds . interceptTime) i
 -- Just 5993.831
 --
-intercept :: (Spherical a) => Track a -> Position a -> Maybe (Intercept a)
-intercept t p = interceptByTime t p (seconds (timeToIntercept t p))
+intercept :: (Spherical a) => Track a -> Geodetic.Position a -> Maybe (Intercept a)
+intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept t p))
 
 -- | @interceptBySpeed t p s@ computes the time needed by interceptor at
 -- position @p@ and travelling at speed @s@ to intercept target track @t@.
@@ -222,11 +234,11 @@ intercept t p = interceptByTime t p (seconds (timeToIntercept t p))
 --
 -- If found, 'interceptPosition' is at the altitude of the track.
 --
-interceptBySpeed :: (Spherical a) => Track a -> Position a -> Speed -> Maybe (Intercept a)
+interceptBySpeed :: (Spherical a) => Track a -> Geodetic.Position a -> Speed -> Maybe (Intercept a)
 interceptBySpeed t p s
     | isNothing minInt = Nothing
     | fmap interceptorSpeed minInt == Just s = minInt
-    | otherwise = interceptByTime t p (seconds (timeToInterceptSpeed t p s))
+    | otherwise = interceptByTime t p (Duration.seconds (timeToInterceptSpeed t p s))
   where
     minInt = intercept t p
 
@@ -264,105 +276,118 @@ interceptBySpeed t p s
 -- >>> fmap (toSeconds . interceptTime) i
 -- Just 2700
 --
-interceptByTime :: (Spherical a) => Track a -> Position a -> Duration -> Maybe (Intercept a)
+interceptByTime ::
+       (Spherical a) => Track a -> Geodetic.Position a -> Duration -> Maybe (Intercept a)
 interceptByTime t p d
-    | toMilliseconds d <= 0 = Nothing
-    | llEq (trackPosition t) p = Nothing
+    | Duration.toMilliseconds d <= 0 = Nothing
+    | Geodetic.llEq (trackPosition t) p = Nothing
     | isNothing ib = Nothing
     | otherwise =
-        let is = averageSpeed idist d
+        let is = Speed.average idist d
          in Just (Intercept d idist ipos (fromJust ib) is)
   where
     ipos = trackPositionAfter t d
-    idist = surfaceDistance p ipos
-    ib = initialBearing p ipos <|> initialBearing p (trackPosition t)
+    idist = GreatCircle.surfaceDistance p ipos
+    ib = GreatCircle.initialBearing p ipos <|> GreatCircle.initialBearing p (trackPosition t)
 
 -- private
 -- | position from speed course and seconds.
-position' :: (Spherical a) => Position a -> Course -> Speed -> Double -> Position a
-position' p0 (Course c) s sec = nvh v1 h0 (model p0)
+position' ::
+       (Spherical a) => Geodetic.Position a -> Course -> Speed -> Double -> Geodetic.Position a
+position' p0 (Course c) s sec = Geodetic.nvectorHeightPos' v1 h0 (Geodetic.model p0)
   where
-    nv0 = nvec p0
-    h0 = height p0
+    nv0 = Geodetic.nvector p0
+    h0 = Geodetic.height p0
     v1 = position'' nv0 c s sec (radiusM p0)
 
 -- | position from course, speed and seconds.
-position'' :: Vector3d -> Vector3d -> Speed -> Double -> Double -> Vector3d
+position'' :: V3 -> V3 -> Speed -> Double -> Double -> V3
 position'' v0 c s sec rm = v1
   where
-    a = toMetresPerSecond s / rm * sec
-    v1 = vadd (vscale v0 (cos a)) (vscale c (sin a))
+    a = Speed.toMetresPerSecond s / rm * sec
+    v1 = Math3d.add (Math3d.scale v0 (cos a)) (Math3d.scale c (sin a))
 
 -- | time to CPA.
 timeToCpa ::
-       (Spherical a) => Position a -> Course -> Speed -> Position a -> Course -> Speed -> Double
+       (Spherical a)
+    => Geodetic.Position a
+    -> Course
+    -> Speed
+    -> Geodetic.Position a
+    -> Course
+    -> Speed
+    -> Double
 timeToCpa p1 (Course c10) s1 p2 (Course c20) s2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
   where
-    v10 = nvec p1
+    v10 = Geodetic.nvector p1
     rm = radiusM p1
-    w1 = toMetresPerSecond s1 / rm
-    v20 = nvec p2
-    w2 = toMetresPerSecond s2 / rm
+    w1 = Speed.toMetresPerSecond s1 / rm
+    v20 = Geodetic.nvector p2
+    w2 = Speed.toMetresPerSecond s2 / rm
 
 -- | time to intercept with minimum speed
-timeToIntercept :: (Spherical a) => Track a -> Position a -> Double
+timeToIntercept :: (Spherical a) => Track a -> Geodetic.Position a -> Double
 timeToIntercept (Track p2 b2 s2) p1 = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 rm) t0 0
   where
-    v10 = nvec p1
-    v20 = nvec p2
+    v10 = Geodetic.nvector p1
+    v20 = Geodetic.nvector p2
     (Course c2) = course p2 b2
-    v10v20 = vdot v10 v20
-    v10c2 = vdot v10 c2
-    s2mps = toMetresPerSecond s2
+    v10v20 = Math3d.dot v10 v20
+    v10c2 = Math3d.dot v10 c2
+    s2mps = Speed.toMetresPerSecond s2
     rm = radiusM p1
     w2 = s2mps / rm
-    s0 = angleRadians v10 v20 -- initial angular distance between target and interceptor
+    s0 = Angle.toRadians (Angle.between v10 v20) -- initial angular distance between target and interceptor
     t0 = rm * s0 / s2mps -- assume target is travelling towards interceptor
 
 -- | time to intercept with speed.
-timeToInterceptSpeed :: (Spherical a) => Track a -> Position a -> Speed -> Double
+timeToInterceptSpeed :: (Spherical a) => Track a -> Geodetic.Position a -> Speed -> Double
 timeToInterceptSpeed (Track p2 b2 s2) p1 s1 =
     intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 rm) t0 0
   where
-    v10 = nvec p1
-    v20 = nvec p2
+    v10 = Geodetic.nvector p1
+    v20 = Geodetic.nvector p2
     (Course c2) = course p2 b2
-    v10v20 = vdot v10 v20
-    v10c2 = vdot v10 c2
+    v10v20 = Math3d.dot v10 v20
+    v10c2 = Math3d.dot v10 c2
     rm = radiusM p1
-    w1 = toMetresPerSecond s1 / rm
-    w2 = toMetresPerSecond s2 / rm
+    w1 = Speed.toMetresPerSecond s1 / rm
+    w2 = Speed.toMetresPerSecond s2 / rm
     t0 = 0.1
 
-rx :: Angle -> [Vector3d]
-rx a = [Vector3d 1 0 0, Vector3d 0 c s, Vector3d 0 (-s) c]
+rx :: Angle -> [V3]
+rx a = [V3 1 0 0, V3 0 c s, V3 0 (-s) c]
   where
-    c = cos' a
-    s = sin' a
+    c = Angle.cos a
+    s = Angle.sin a
 
-ry :: Angle -> [Vector3d]
-ry a = [Vector3d c 0 (-s), Vector3d 0 1 0, Vector3d s 0 c]
+ry :: Angle -> [V3]
+ry a = [V3 c 0 (-s), V3 0 1 0, V3 s 0 c]
   where
-    c = cos' a
-    s = sin' a
+    c = Angle.cos a
+    s = Angle.sin a
 
-rz :: Angle -> [Vector3d]
-rz a = [Vector3d c s 0, Vector3d (-s) c 0, Vector3d 0 0 1]
+rz :: Angle -> [V3]
+rz a = [V3 c s 0, V3 (-s) c 0, V3 0 0 1]
   where
-    c = cos' a
-    s = sin' a
+    c = Angle.cos a
+    s = Angle.sin a
 
-cpaA :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double
-cpaA v10 c10 w1 v20 c20 w2 = negate (vdot (vscale v10 w1) c20 + vdot (vscale v20 w2) c10)
+cpaA :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaA v10 c10 w1 v20 c20 w2 =
+    negate (Math3d.dot (Math3d.scale v10 w1) c20 + Math3d.dot (Math3d.scale v20 w2) c10)
 
-cpaB :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double
-cpaB v10 c10 w1 v20 c20 w2 = vdot (vscale c10 w1) v20 + vdot (vscale c20 w2) v10
+cpaB :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaB v10 c10 w1 v20 c20 w2 =
+    Math3d.dot (Math3d.scale c10 w1) v20 + Math3d.dot (Math3d.scale c20 w2) v10
 
-cpaC :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double
-cpaC v10 c10 w1 v20 c20 w2 = negate (vdot (vscale v10 w1) v20 - vdot (vscale c20 w2) c10)
+cpaC :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaC v10 c10 w1 v20 c20 w2 =
+    negate (Math3d.dot (Math3d.scale v10 w1) v20 - Math3d.dot (Math3d.scale c20 w2) c10)
 
-cpaD :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double
-cpaD v10 c10 w1 v20 c20 w2 = vdot (vscale c10 w1) c20 - vdot (vscale v20 w2) v10
+cpaD :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaD v10 c10 w1 v20 c20 w2 =
+    Math3d.dot (Math3d.scale c10 w1) c20 - Math3d.dot (Math3d.scale v20 w2) v10
 
 cpaFt :: Double -> Double -> Double -> Double -> Double -> Double -> Double -> Double -> Double
 cpaFt cw1t cw2t sw1t sw2t a b c d =
@@ -385,7 +410,7 @@ cpaDft w1 w2 cw1t cw2t sw1t sw2t a b c d =
     (a * w2 - b * w1) * sw1t * cw2t -
     (b * w2 - a * w1) * cw1t * sw2t
 
-cpaStep :: Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Double
+cpaStep :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double -> Double
 cpaStep v10 c10 w1 v20 c20 w2 t =
     cpaFt cw1t cw2t sw1t sw2t a b c d / cpaDft w1 w2 cw1t cw2t sw1t sw2t a b c d
   where
@@ -399,8 +424,7 @@ cpaStep v10 c10 w1 v20 c20 w2 t =
     d = cpaD v10 c10 w1 v20 c20 w2
 
 -- | Newton-Raphson for CPA time.
-cpaNrRec ::
-       Vector3d -> Vector3d -> Double -> Vector3d -> Vector3d -> Double -> Double -> Int -> Double
+cpaNrRec :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double -> Int -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     | i == 50 = -1.0 -- no convergence
     | abs fi < 1e-11 = ti1
@@ -448,13 +472,13 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
 
 -- | angular separation in radians at ti between v10 and track with initial position v20,
 -- course c2 and speed s2.
-sep :: Vector3d -> Vector3d -> Vector3d -> Speed -> Double -> Double -> Double
-sep v10 v20 c2 s2 r ti = angleRadians v10 (position'' v20 c2 s2 ti r)
+sep :: V3 -> V3 -> V3 -> Speed -> Double -> Double -> Double
+sep v10 v20 c2 s2 r ti = Angle.toRadians (Angle.between v10 (position'' v20 c2 s2 ti r))
 
 -- | reference sphere radius.
-radius :: (Spherical a) => Position a -> Length
-radius = equatorialRadius . surface . model
+radius :: (Spherical a) => Geodetic.Position a -> Length
+radius = equatorialRadius . surface . Geodetic.model
 
 -- | reference sphere radius in metres.
-radiusM :: (Spherical a) => Position a -> Double
-radiusM = toMetres . radius
+radiusM :: (Spherical a) => Geodetic.Position a -> Double
+radiusM = Length.toMetres . radius

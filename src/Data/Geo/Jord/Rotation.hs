@@ -18,8 +18,10 @@ module Data.Geo.Jord.Rotation
     , zyx2r
     ) where
 
-import Data.Geo.Jord.Angle
-import Data.Geo.Jord.Vector3d
+import Data.Geo.Jord.Angle (Angle)
+import qualified Data.Geo.Jord.Angle as Angle (atan2, cos, negate, sin)
+import Data.Geo.Jord.Math3d (V3(..))
+import qualified Data.Geo.Jord.Math3d as Math3d (transposeM)
 
 -- | Angles about new axes in the xyz-order from a rotation matrix.
 --
@@ -35,21 +37,21 @@ import Data.Geo.Jord.Vector3d
 -- T now coincides with the orientation of B.
 -- The signs of the angles are given by the directions of the axes and the
 -- right hand rule.
-r2xyz :: [Vector3d] -> [Angle]
+r2xyz :: [V3] -> [Angle]
 r2xyz [v0, v1, v2] = [x, y, z]
   where
     v00 = vx v0
     v01 = vy v0
     v12 = vz v1
     v22 = vz v2
-    z = atan2' (-v01) v00
-    x = atan2' (-v12) v22
+    z = Angle.atan2 (-v01) v00
+    x = Angle.atan2 (-v12) v22
     sy = vz v0
     -- cos y is based on as many elements as possible, to average out
     -- numerical errors. It is selected as the positive square root since
     -- y: [-pi/2 pi/2]
     cy = sqrt ((v00 * v00 + v01 * v01 + v12 * v12 + v22 * v22) / 2.0)
-    y = atan2' sy cy
+    y = Angle.atan2 sy cy
 r2xyz m = error ("Invalid rotation matrix " ++ show m)
 
 -- | Angles about new axes in the xyz-order from a rotation matrix.
@@ -67,10 +69,10 @@ r2xyz m = error ("Invalid rotation matrix " ++ show m)
 -- right hand rule.
 -- Note that if A is a north-east-down frame and B is a body frame, we
 -- have that z=yaw, y=pitch and x=roll.
-r2zyx :: [Vector3d] -> [Angle]
+r2zyx :: [V3] -> [Angle]
 r2zyx m = [z, y, x]
   where
-    [x, y, z] = fmap negate' (r2xyz (transpose m))
+    [x, y, z] = fmap Angle.negate (r2xyz (Math3d.transposeM m))
 
 -- | Rotation matrix (direction cosine matrix) from 3 angles about new axes in the xyz-order.
 --
@@ -90,18 +92,18 @@ r2zyx m = [z, y, x]
 -- T now coincides with the orientation of B.
 -- The signs of the angles are given by the directions of the axes and the
 -- right hand rule.
-xyz2r :: Angle -> Angle -> Angle -> [Vector3d]
+xyz2r :: Angle -> Angle -> Angle -> [V3]
 xyz2r x y z = [v1, v2, v3]
   where
-    cx = cos' x
-    sx = sin' x
-    cy = cos' y
-    sy = sin' y
-    cz = cos' z
-    sz = sin' z
-    v1 = Vector3d (cy * cz) ((-cy) * sz) sy
-    v2 = Vector3d (sy * sx * cz + cx * sz) ((-sy) * sx * sz + cx * cz) ((-cy) * sx)
-    v3 = Vector3d ((-sy) * cx * cz + sx * sz) (sy * cx * sz + sx * cz) (cy * cx)
+    cx = Angle.cos x
+    sx = Angle.sin x
+    cy = Angle.cos y
+    sy = Angle.sin y
+    cz = Angle.cos z
+    sz = Angle.sin z
+    v1 = V3 (cy * cz) ((-cy) * sz) sy
+    v2 = V3 (sy * sx * cz + cx * sz) ((-sy) * sx * sz + cx * cz) ((-cy) * sx)
+    v3 = V3 ((-sy) * cx * cz + sx * sz) (sy * cx * sz + sx * cz) (cy * cx)
 
 -- | rotation matrix (direction cosine matrix) from 3 angles about new axes in the zyx-order.
 --
@@ -124,15 +126,15 @@ xyz2r x y z = [v1, v2, v3]
 --
 -- Note that if A is a north-east-down frame and B is a body frame, we
 -- have that z=yaw, y=pitch and x=roll.
-zyx2r :: Angle -> Angle -> Angle -> [Vector3d]
+zyx2r :: Angle -> Angle -> Angle -> [V3]
 zyx2r z y x = [v1, v2, v3]
   where
-    cx = cos' x
-    sx = sin' x
-    cy = cos' y
-    sy = sin' y
-    cz = cos' z
-    sz = sin' z
-    v1 = Vector3d (cz * cy) ((-sz) * cx + cz * sy * sx) (sz * sx + cz * sy * cx)
-    v2 = Vector3d (sz * cy) (cz * cx + sz * sy * sx) ((-cz) * sx + sz * sy * cx)
-    v3 = Vector3d (-sy) (cy * sx) (cy * cx)
+    cx = Angle.cos x
+    sx = Angle.sin x
+    cy = Angle.cos y
+    sy = Angle.sin y
+    cz = Angle.cos z
+    sz = Angle.sin z
+    v1 = V3 (cz * cy) ((-sz) * cx + cz * sy * sx) (sz * sx + cz * sy * cx)
+    v2 = V3 (sz * cy) (cz * cx + sz * sy * sx) ((-cz) * sx + sz * sy * cx)
+    v3 = V3 (-sy) (cy * sx) (cy * cx)

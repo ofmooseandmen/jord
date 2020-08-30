@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -- |
 -- Module:      Data.Geo.Jord.LatLong
 -- Copyright:   (c) 2020 Cedric Liegeois
@@ -6,23 +7,33 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Functions related to latitudes & longitudes.
+-- Parsers and formatter of latitudes & longitudes.
 --
 module Data.Geo.Jord.LatLong
     ( isValidLatLong
-    , latLongDmsP
-    , latLongDmsCompactP
-    , latLongDmsSymbolsP
+    , latLongDms
+    , latLongDmsCompact
+    , latLongDmsSymbols
     , showLatLong
     ) where
 
 import Control.Applicative ((<|>))
+#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail (MonadFail)
+#endif
 import Data.Char ()
 import Data.Maybe ()
 import Text.ParserCombinators.ReadP (ReadP, char, option, pfail)
 
-import Data.Geo.Jord.Angle
+import Data.Geo.Jord.Angle (Angle)
+import qualified Data.Geo.Jord.Angle as Angle
+    ( angle
+    , decimalDegrees
+    , dms
+    , isNegative
+    , isWithin
+    , negate
+    )
 import Data.Geo.Jord.Model
 import Data.Geo.Jord.Parser
 
@@ -38,12 +49,12 @@ isValidLatLong lat lon m = isValidLat lat && isValidLong lon m
 --
 --     * 'Angle'[N|S] 'Angle'[E|W] - e.g. 55°36'21''N 13°0'02''E or 11°16'S 36°49'E or 47°N 122°W
 --
-latLongDmsP :: (Model a) => a -> ReadP (Angle, Angle)
-latLongDmsP m = latLongDmsCompactP m <|> latLongDmsSymbolsP m
+latLongDms :: (Model a) => a -> ReadP (Angle, Angle)
+latLongDms m = latLongDmsCompact m <|> latLongDmsSymbols m
 
 -- | reads latitude and longitude in DD(D)MMSS.
-latLongDmsCompactP :: (Model a) => a -> ReadP (Angle, Angle)
-latLongDmsCompactP m = do
+latLongDmsCompact :: (Model a) => a -> ReadP (Angle, Angle)
+latLongDmsCompact m = do
     lat <- blat
     lon <- blon
     if isValidLatLong lat lon m
@@ -70,11 +81,11 @@ blon = do
         then dmsF d' m' s'
         else dmsF (-d') m' s'
 
--- | reads N or S char.
+-- | reads N or S char.
 hemisphere :: ReadP Char
 hemisphere = char 'N' <|> char 'S'
 
--- | reads E or W char.
+-- | reads E or W char.
 meridian :: ReadP Char
 meridian = char 'E' <|> char 'W'
 
@@ -92,8 +103,8 @@ mi = do
     return (m', 0.0)
 
 -- | reads (latitude, longitude) from a human friendly text - see 'Angle'.
-latLongDmsSymbolsP :: (Model a) => a -> ReadP (Angle, Angle)
-latLongDmsSymbolsP m = do
+latLongDmsSymbols :: (Model a) => a -> ReadP (Angle, Angle)
+latLongDmsSymbols m = do
     lat <- hlat
     _ <- char ' ' <|> char ','
     lon <- hlon
@@ -104,35 +115,35 @@ latLongDmsSymbolsP m = do
 -- | reads a latitude, 'Angle'N|S expected.
 hlat :: ReadP Angle
 hlat = do
-    lat <- angleP
+    lat <- Angle.angle
     h <- hemisphere
     if h == 'N'
         then return lat
-        else return (negate' lat)
+        else return (Angle.negate lat)
 
 -- | reads a longitude, 'Angle'E|W expected.
 hlon :: ReadP Angle
 hlon = do
-    lon <- angleP
+    lon <- Angle.angle
     m' <- meridian
     if m' == 'E'
         then return lon
-        else return (negate' lon)
+        else return (Angle.negate lon)
 
 -- | Show a (latitude, longitude) pair as DMS - e.g. 55°36'21''N,13°0'2''E.
 showLatLong :: (Angle, Angle) -> String
 showLatLong (lat, lon) = showLat lat ++ "," ++ showLon lon
 
--- | Latitude to string.
+-- | Latitude to string.
 showLat :: Angle -> String
 showLat lat
-    | isNegative lat = show (negate' lat) ++ "S"
+    | Angle.isNegative lat = show (Angle.negate lat) ++ "S"
     | otherwise = show lat ++ "N"
 
--- | Longitude to string.
+-- | Longitude to string.
 showLon :: Angle -> String
 showLon lon
-    | isNegative lon = show (negate' lon) ++ "W"
+    | Angle.isNegative lon = show (Angle.negate lon) ++ "W"
     | otherwise = show lon ++ "E"
 
 dmsF :: (MonadFail m) => Int -> Int -> Double -> m Angle
@@ -141,13 +152,13 @@ dmsF degs mins secs =
         Left err -> fail err
         Right a -> return a
   where
-    e = dms degs mins secs
+    e = Angle.dms degs mins secs
 
 isValidLat :: Angle -> Bool
-isValidLat a = isWithin a (decimalDegrees (-90)) (decimalDegrees 90)
+isValidLat a = Angle.isWithin a (Angle.decimalDegrees (-90)) (Angle.decimalDegrees 90)
 
 isValidLong :: (Model a) => Angle -> a -> Bool
 isValidLong a m =
     case longitudeRange m of
-        L180 -> isWithin a (decimalDegrees (-180)) (decimalDegrees 180)
-        L360 -> isWithin a (decimalDegrees 0) (decimalDegrees 360)
+        L180 -> Angle.isWithin a (Angle.decimalDegrees (-180)) (Angle.decimalDegrees 180)
+        L360 -> Angle.isWithin a (Angle.decimalDegrees 0) (Angle.decimalDegrees 360)

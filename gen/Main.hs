@@ -1,5 +1,4 @@
 import System.Environment (getArgs)
-import System.IO (readFile, writeFile)
 import Text.ParserCombinators.ReadP (ReadP, many1, readP_to_S)
 
 import qualified Ellipsoids as E
@@ -15,7 +14,7 @@ main = do
         [inDir, outDir] -> do
             ellipsoidsModule <- process (inDir ++ "/ellipsoids.txt") outDir E.parser E.generator
             _ <- process (inDir ++ "/models.txt") outDir M.parser (M.generator ellipsoidsModule)
-            _ <- process (inDir ++ "/transformations.txt") outDir T.parser (T.generator)
+            _ <- process (inDir ++ "/transformations.txt") outDir T.parser T.generator
             return ()
         _ -> putStrLn ("Invalid arguments: " ++ show args)
 

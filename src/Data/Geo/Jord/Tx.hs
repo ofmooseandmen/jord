@@ -31,8 +31,9 @@ module Data.Geo.Jord.Tx
 import Data.List (find, foldl', sortOn)
 import Data.Maybe (mapMaybe)
 
-import Data.Geo.Jord.Model
-import Data.Geo.Jord.Vector3d
+import Data.Geo.Jord.Math3d (V3(..))
+import qualified Data.Geo.Jord.Math3d as Math3d (add, multM, scale)
+import Data.Geo.Jord.Model (Epoch(..), ModelId)
 
 -- | Coordinate transformation between 2 models (A & B).
 data Tx a =
@@ -53,21 +54,25 @@ class TxParams a where
 
 -- | 7-parameter transformation (Helmert); use 'txParams7' to construct.
 data TxParams7 =
-    TxParams7 !Vector3d !Double !Vector3d
+    TxParams7 !V3 !Double !V3
     deriving (Show)
 
 instance TxParams TxParams7 where
-    idTxParams = TxParams7 (Vector3d 0 0 0) 0 (Vector3d 0 0 0)
-    inverseTxParams (TxParams7 c s r) = TxParams7 (vscale c (-1.0)) (-s) (vscale r (-1.0))
+    idTxParams = TxParams7 (V3 0 0 0) 0 (V3 0 0 0)
+    inverseTxParams (TxParams7 c s r) =
+        TxParams7 (Math3d.scale c (-1.0)) (-s) (Math3d.scale r (-1.0))
 
 instance TxParams TxParams15 where
-    idTxParams = TxParams15 (Epoch 0) idTxParams (TxRates (Vector3d 0 0 0) 0 (Vector3d 0 0 0))
+    idTxParams = TxParams15 (Epoch 0) idTxParams (TxRates (V3 0 0 0) 0 (V3 0 0 0))
     inverseTxParams (TxParams15 e p (TxRates c s r)) =
-        TxParams15 e (inverseTxParams p) (TxRates (vscale c (-1.0)) (-s) (vscale r (-1.0)))
+        TxParams15
+            e
+            (inverseTxParams p)
+            (TxRates (Math3d.scale c (-1.0)) (-s) (Math3d.scale r (-1.0)))
 
 -- | Transformation rates for the 15-parameter transformation (Helmert); use 'txRates' to construct.
 data TxRates =
-    TxRates !Vector3d !Double !Vector3d
+    TxRates !V3 !Double !V3
     deriving (Show)
 
 -- | Epoch and 14-parameter transformation (Helmert).
@@ -91,11 +96,11 @@ txRates ::
     -> TxRates
 txRates c s r = TxRates (mmToMetres c) (s / 1e9) (masToRadians r)
 
-mmToMetres :: (Double, Double, Double) -> Vector3d
-mmToMetres (cx, cy, cz) = vscale (Vector3d cx cy cz) (1.0 / 1000.0)
+mmToMetres :: (Double, Double, Double) -> V3
+mmToMetres (cx, cy, cz) = Math3d.scale (V3 cx cy cz) (1.0 / 1000.0)
 
-masToRadians :: (Double, Double, Double) -> Vector3d
-masToRadians (rx, ry, rz) = vscale (Vector3d rx ry rz) (pi / (3600.0 * 1000.0 * 180.0))
+masToRadians :: (Double, Double, Double) -> V3
+masToRadians (rx, ry, rz) = Math3d.scale (V3 rx ry rz) (pi / (3600.0 * 1000.0 * 180.0))
 
 -- | @txParamsAt e tx15@ returns the 7-parameter transformation corresponding to the
 -- 15-parameter transformation @tx15@ at epoch @e@.
@@ -104,9 +109,9 @@ txParamsAt (Epoch e) (TxParams15 (Epoch pe) (TxParams7 c s r) (TxRates rc rs rr)
     TxParams7 c' s' r'
   where
     de = e - pe
-    c' = vadd c (vscale rc de)
+    c' = Math3d.add c (Math3d.scale rc de)
     s' = s + de * rs
-    r' = vadd r (vscale rr de)
+    r' = Math3d.add r (Math3d.scale rr de)
 
 -- | node to adjacent nodes.
 data Connection =
@@ -229,8 +234,9 @@ edgeEq (m1, m2) (Edge m1' _ m2') = m1 == m1' && m2 == m2'
 
 -- | @transformGeoc gc tx7@ returns the geocentric coordinates resulting from applying the 7-parameter
 -- transformation @tx7@ to the geocentric coordinates represented by vector @gc@.
-transformGeoc :: Vector3d -> TxParams7 -> Vector3d
-transformGeoc gc (TxParams7 c s r) = vadd c (vscale (vmultm gc (rotation r)) (1.0 + s))
+transformGeoc :: V3 -> TxParams7 -> V3
+transformGeoc gc (TxParams7 c s r) =
+    Math3d.add c (Math3d.scale (Math3d.multM gc (rotation r)) (1.0 + s))
 
-rotation :: Vector3d -> [Vector3d]
-rotation (Vector3d x y z) = [Vector3d 1.0 (-z) y, Vector3d z 1.0 (-x), Vector3d (-y) x 1.0]
+rotation :: V3 -> [V3]
+rotation (V3 x y z) = [V3 1.0 (-z) y, V3 z 1.0 (-x), V3 (-y) x 1.0]

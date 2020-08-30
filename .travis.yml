@@ -10,6 +10,8 @@ matrix:
     - os: linux
       env: STACK_YAML=stack.yaml
     - os: linux
+      env: STACK_YAML=stack-8.6.5.yaml
+    - os: linux
       env: STACK_YAML=stack-8.4.4.yaml
     - os: linux
       env: STACK_YAML=stack-8.2.2.yaml

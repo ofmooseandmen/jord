@@ -1,6 +1,13 @@
 ### 2.0.0.0
 
-- TODO
+- API change - all modules must be imported as qualified
+- API change - Position has been split between Geodetic & Geocentric
+- API change - Geodesic data type provides initialBearing, finalBearing, length and functions are removed
+- New API - GreatCircle provides projection, isLeft, turn, discretiseCircle & discretiseArc
+- Bug Fix - GreatCircle.intersection correctly handles minor arcs crossing the equator
+- Bug Fix - All Geodetic positions built from a /n/-vector have the correct angle resolution
+- Bump stack resolver to lts-16.11
+- All examples from readme can be run using `stack exec jord-examples`
 
 ### 1.0.0.1
 

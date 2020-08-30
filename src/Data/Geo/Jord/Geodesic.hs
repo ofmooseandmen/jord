@@ -14,11 +14,10 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Geodesic
---     import Data.Geo.Jord.Position
+--     import Data.Geo.Jord.Geodesic (Geodesic)
+--     import qualified Data.Geo.Jord.Geodesic as Geodesic
+--     import qualified Data.Geo.Jord.Geodetic as Geodetic
 -- @
---
--- If you wish to use both this module and the "Data.Geo.Jord.GreatCircle" module you must qualify both imports.
 --
 -- <http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf T Vincenty, "Direct and Inverse Solutions of Geodesics on the Ellipsoid with application of nested equations", Survey Review, vol XXIII no 176, 1975.>
 --
@@ -26,35 +25,42 @@ module Data.Geo.Jord.Geodesic
     (
     -- * The 'Geodesic' type
       Geodesic
-    , geodesicPos1
-    , geodesicPos2
-    , geodesicBearing1
-    , geodesicBearing2
-    , geodesicLength
-    -- * Calculations
-    , directGeodesic
-    , inverseGeodesic
-    , destination
-    , finalBearing
+    , startPosition
+    , endPosition
     , initialBearing
-    , surfaceDistance
+    , finalBearing
+    , length
+    -- * Calculations
+    , direct
+    , inverse
     ) where
 
-import Data.Geo.Jord.Internal
-import Data.Geo.Jord.Position
+import Prelude hiding (length)
+
+import Data.Geo.Jord.Angle (Angle)
+import qualified Data.Geo.Jord.Angle as Angle
+import Data.Geo.Jord.Ellipsoid
+import qualified Data.Geo.Jord.Geodetic as Geodetic
+import Data.Geo.Jord.Length (Length)
+import qualified Data.Geo.Jord.Length as Length
+import Data.Geo.Jord.Model (Ellipsoidal, surface)
 
 -- | Geodesic line: shortest route between two positions on the surface of a model.
+--
+-- Bearing are in compass angles.
+-- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
+-- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
 data Geodesic a =
     Geodesic
-        { geodesicPos1 :: Position a -- ^ geodesic start position, p1.
-        , geodesicPos2 :: Position a -- ^ geodesic end position, p2.
-        , geodesicBearing1 :: Maybe Angle -- ^ initial bearing from p1 to p2, if p1 and p2 are different.
-        , geodesicBearing2 :: Maybe Angle -- ^ final bearing from p1 to p2, if p1 and p2 are different
-        , geodesicLength :: Length -- ^ length of the geodesic: the surface distance between p1 and p2.
+        { startPosition :: Geodetic.Position a -- ^ geodesic start position, p1.
+        , endPosition :: Geodetic.Position a -- ^ geodesic end position, p2.
+        , initialBearing :: Maybe Angle -- ^ initial bearing from p1 to p2, if p1 and p2 are different.
+        , finalBearing :: Maybe Angle -- ^ final bearing from p1 to p2, if p1 and p2 are different
+        , length :: Length -- ^ length of the geodesic: the surface distance between p1 and p2.
         }
     deriving (Eq, Show)
 
--- | @directGeodesic p1 b1 d@ solves the direct geodesic problem using Vicenty formula: position
+-- | @direct p1 b1 d@ solves the direct geodesic problem using Vicenty formula: position
 -- along the geodesic, reached from position @p1@ having travelled the __surface__ distance @d@ on
 -- the initial bearing (compass angle) @b1@ at __constant__ height; it also returns the final bearing
 -- at the reached position.
@@ -63,19 +69,23 @@ data Geodesic a =
 --
 -- ==== __Examples__
 --
--- >>> import Data.Geo.Jord.Geodesic
--- >>> import Data.Geo.Jord.Position
+-- >>> import qualified Data.Geo.Jord.Angle as Angle
+-- >>> import Data.Geo.Jord.Geodesic (Geodesic)
+-- >>> import qualified Data.Geo.Jord.Geodesic as Geodesic
+-- >>> import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- >>> import qualified Data.Geo.Jord.Length as Length
+-- >>> import Data.Geo.Jord.Models (WGS84)
 -- >>>
--- >>> directGeodesic (northPole WGS84) zero (kilometres 20003.931458623)
--- Just (Geodesic {geodesicPos1 = 90°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
---               , geodesicPos2 = 90°0'0.000"S,180°0'0.000"E 0.0m (WGS84)
---               , geodesicBearing1 = Just 0°0'0.000"
---               , geodesicBearing2 = Just 180°0'0.000"
---               , geodesicLength = 20003.931458623km})
+-- >>> Geodesic.direct (Geodetic.northPole WGS84) Angle.zero (Length.kilometres 20003.931458623)
+-- Just (Geodesic {startPosition = 90°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
+--               , endPosition = 90°0'0.000"S,180°0'0.000"E 0.0m (WGS84)
+--               , initialBearing = Just 0°0'0.000"
+--               , finalBearing = Just 180°0'0.000"
+--               , length = 20003.931458623km})
 --
-directGeodesic :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Geodesic a)
-directGeodesic p1 b1 d
-    | d == zero = Just (Geodesic p1 p1 (Just b1) (Just b1) zero)
+direct :: (Ellipsoidal a) => Geodetic.Position a -> Angle -> Length -> Maybe (Geodesic a)
+direct p1 b1 d
+    | d == Length.zero = Just (Geodesic p1 p1 (Just b1) (Just b1) Length.zero)
     | otherwise =
         case rec of
             Nothing -> Nothing
@@ -92,14 +102,22 @@ directGeodesic p1 b1 d
                           (1.0 - _C) * f * sinAlpha *
                           (s + _C * sinS * (cos2S' + _C * cosS * (-1.0 + 2.0 * cos2S' * cos2S')))
                       lon2 = lon1 + _L
-                      b2 = normalise (radians (atan2 sinAlpha (-x))) (decimalDegrees 360.0)
-                      p2 = latLongHeightPos' (radians lat2) (radians lon2) (height p1) (model p1)
+                      b2 =
+                          Angle.normalise
+                              (Angle.radians (atan2 sinAlpha (-x)))
+                              (Angle.decimalDegrees 360.0)
+                      p2 =
+                          Geodetic.latLongHeightPos'
+                              (Angle.radians lat2)
+                              (Angle.radians lon2)
+                              (Geodetic.height p1)
+                              (Geodetic.model p1)
   where
-    lat1 = toRadians . latitude $ p1
-    lon1 = toRadians . longitude $ p1
-    ell = surface . model $ p1
+    lat1 = Angle.toRadians . Geodetic.latitude $ p1
+    lon1 = Angle.toRadians . Geodetic.longitude $ p1
+    ell = surface . Geodetic.model $ p1
     (a, b, f) = abf ell
-    br1 = toRadians b1
+    br1 = Angle.toRadians b1
     cosAlpha1 = cos br1
     sinAlpha1 = sin br1
     (tanU1, cosU1, sinU1) = reducedLat lat1 f
@@ -109,33 +127,35 @@ directGeodesic p1 b1 d
     uSq = cosSqAlpha * (a * a - b * b) / (b * b)
     _A = 1.0 + uSq / 16384.0 * (4096.0 + uSq * (-768.0 + uSq * (320.0 - 175.0 * uSq)))
     _B = uSq / 1024.0 * (256.0 + uSq * (-128.0 + uSq * (74.0 - 47.0 * uSq)))
-    dm = toMetres d
+    dm = Length.toMetres d
     sigma = dm / (b * _A)
     rec = directRec sigma1 dm _A _B b sigma 0
 
--- | @inverseGeodesic p1 p2@ solves the inverse geodesic problem using Vicenty formula: __surface__ distance,
+-- | @inverse p1 p2@ solves the inverse geodesic problem using Vicenty formula: __surface__ distance,
 -- and initial/final bearing between the geodesic line between positions @p1@ and @p2@.
 -- The Vincenty formula for the inverse problem can fail to converge for nearly antipodal points in which
 -- case this function returns 'Nothing'.
 --
 -- ==== __Examples__
 --
--- >>> import Data.Geo.Jord.Geodesic
--- >>> import Data.Geo.Jord.Position
+-- >>> import Data.Geo.Jord.Geodesic (Geodesic)
+-- >>> import qualified Data.Geo.Jord.Geodesic as Geodesic
+-- >>> import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- >>> import Data.Geo.Jord.Models (WGS84)
 -- >>>
--- >>> inverseGeodesic (latLongPos 0 0 WGS84) (latLongPos 0.5 179.5 WGS84)
--- Just (Geodesic {geodesicPos1 = 0°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
---               , geodesicPos2 = 0°30'0.000"N,179°30'0.000"E 0.0m (WGS84)
---               , geodesicBearing1 = Just 25°40'18.742"
---               , geodesicBearing2 = Just 154°19'37.507"
---               , geodesicLength = 19936.288578981km})
+-- >>> Geodesic.inverse (Geodetic.latLongPos 0 0 WGS84) (Geodetic.latLongPos 0.5 179.5 WGS84)
+-- Just (Geodesic {startPosition = 0°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
+--               , endPosition = 0°30'0.000"N,179°30'0.000"E 0.0m (WGS84)
+--               , initialBearing = Just 25°40'18.742"
+--               , finalBearing = Just 154°19'37.507"
+--               , length = 19936.288578981km})
 -- >>>
--- >>> inverseGeodesic (latLongPos 0 0 WGS84) (latLongPos 0.5 179.7 WGS84)
+-- >>> Geodesic.inverse (Geodetic.latLongPos 0 0 WGS84) (Geodetic.latLongPos 0.5 179.7 WGS84)
 -- Nothing
 --
-inverseGeodesic :: (Ellipsoidal a) => Position a -> Position a -> Maybe (Geodesic a)
-inverseGeodesic p1 p2
-    | llEq p1 p2 = Just (Geodesic p1 p2 Nothing Nothing zero)
+inverse :: (Ellipsoidal a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (Geodesic a)
+inverse p1 p2
+    | Geodetic.llEq p1 p2 = Just (Geodesic p1 p2 Nothing Nothing Length.zero)
     | otherwise =
         case rec of
             Nothing -> Nothing
@@ -153,7 +173,7 @@ inverseGeodesic p1 p2
                            (cosS * (-1.0 + 2.0 * cos2S' * cos2S') -
                             _B / 6.0 * cos2S' * (-3.0 + 4.0 * sinS * sinS) *
                             (-3.0 + 4.0 * cos2S' * cos2S')))
-                      d = metres (b * _A * (s - deltaSigma))
+                      d = Length.metres (b * _A * (s - deltaSigma))
                       a1R =
                           if abs sinSqS < epsilon
                               then 0.0
@@ -162,105 +182,20 @@ inverseGeodesic p1 p2
                           if abs sinSqS < epsilon
                               then pi
                               else atan2 (cosU1 * sinL) (-sinU1 * cosU2 + cosU1 * sinU2 * cosL)
-                      b1 = normalise (radians a1R) (decimalDegrees 360.0)
-                      b2 = normalise (radians a2R) (decimalDegrees 360.0)
+                      b1 = Angle.normalise (Angle.radians a1R) (Angle.decimalDegrees 360.0)
+                      b2 = Angle.normalise (Angle.radians a2R) (Angle.decimalDegrees 360.0)
   where
-    lat1 = toRadians . latitude $ p1
-    lon1 = toRadians . longitude $ p1
-    lat2 = toRadians . latitude $ p2
-    lon2 = toRadians . longitude $ p2
-    ell = surface . model $ p1
+    lat1 = Angle.toRadians . Geodetic.latitude $ p1
+    lon1 = Angle.toRadians . Geodetic.longitude $ p1
+    lat2 = Angle.toRadians . Geodetic.latitude $ p2
+    lon2 = Angle.toRadians . Geodetic.longitude $ p2
+    ell = surface . Geodetic.model $ p1
     (a, b, f) = abf ell
     _L = lon2 - lon1 -- difference in longitude
     (_, cosU1, sinU1) = reducedLat lat1 f
     (_, cosU2, sinU2) = reducedLat lat2 f
     antipodal = abs _L > pi / 2.0 || abs (lat2 - lat1) > pi / 2.0
     rec = inverseRec _L cosU1 sinU1 cosU2 sinU2 _L f antipodal 0
-
--- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
--- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
--- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
--- Returns 'Nothing' if both positions are equals or if 'inverseGeodesic' fails to converge.
---
--- This is equivalent to:
---
--- @
---     ('inverseGeodesic' p1 p2) >>= 'geodesicBearing2'
--- @
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Geodesic
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> p1 = latLongPos (-37.95103341666667) 144.42486788888888 WGS84
--- >>> p2 = latLongPos (-37.65282113888889) 143.92649552777777 WGS84
--- >>> initialBearing p1 p2
--- Just 307°10'25.070"
---
-finalBearing :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
-finalBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing2
-
--- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
--- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
--- Returns 'Nothing' if both positions are equals or if 'inverseGeodesic' fails to converge.
---
--- @
---     ('inverseGeodesic' p1 p2) >>= 'geodesicBearing1'
--- @
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Geodesic
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> p1 = latLongPos (-37.95103341666667) 144.42486788888888 WGS84
--- >>> p2 = latLongPos (-37.65282113888889) 143.92649552777777 WGS84
--- >>> initialBearing p1 p2
--- Just 306°52'5.373"
---
-initialBearing :: (Ellipsoidal a) => Position a -> Position a -> Maybe Angle
-initialBearing p1 p2 = inverseGeodesic p1 p2 >>= geodesicBearing1
-
--- | @surfaceDistance p1 p2@ computes the surface distance on the geodesic between the
--- positions @p1@ and @p2@.
--- This function relies on 'inverseGeodesic' and can therefore fail to compute the distance
--- for nearly antipodal positions.
---
--- @
---     fmap 'geodesicLength' ('inverseGeodesic' p1 p2)
--- @
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Geodesic
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> surfaceDistance (northPole WGS84) (southPole WGS84)
--- Just 20003.931458623km
---
-surfaceDistance :: (Ellipsoidal a) => Position a -> Position a -> Maybe Length
-surfaceDistance p1 p2 = fmap geodesicLength (inverseGeodesic p1 p2)
-
--- | @destination p b d@ computes the position along the geodesic, reached from
--- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@
--- at __constant__ height.
--- Note that the  bearing will normally vary before destination is reached.
---
--- @
---     fmap 'geodesicPos2' ('directGeodesic' p b d)
--- @
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Geodesic
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> destination (wgs84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
--- Just 61°10'8.983"N,164°7'52.258"E 15.0km (WGS84)
---
-destination :: (Ellipsoidal a) => Position a -> Angle -> Length -> Maybe (Position a)
-destination p b d = fmap geodesicPos2 (directGeodesic p b d)
 
 directRec ::
        Double
@@ -369,4 +304,4 @@ reducedLat lat f = (tanU, cosU, sinU)
     sinU = tanU * cosU
 
 abf :: Ellipsoid -> (Double, Double, Double)
-abf e = (toMetres . equatorialRadius $ e, toMetres . polarRadius $ e, flattening e)
+abf e = (Length.toMetres . equatorialRadius $ e, Length.toMetres . polarRadius $ e, flattening e)

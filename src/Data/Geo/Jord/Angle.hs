@@ -111,6 +111,8 @@ subtract a1 a2 = Angle (microarcseconds a1 - microarcseconds a2)
 zero :: Angle
 zero = Angle 0
 
+-- FIXME move those 2 methods below elsewhere (spherical only)
+
 -- | angle between 2 vectors.
 between :: V3 -> V3 -> Angle
 between v1 v2 = betweenSigned v1 v2 Nothing

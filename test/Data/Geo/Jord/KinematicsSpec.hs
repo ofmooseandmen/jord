@@ -205,7 +205,7 @@ spec =
                             (Speed.knots 600)
                 let ip = Geodetic.s84Pos 20 (-60) Length.zero
                 Kinematics.interceptBySpeed t ip (Speed.knots 50) `shouldBe` Nothing
-            it "returns the speed needed for intercept to take place" $ do
+            it "returns the time needed for intercept to take place" $ do
                 let t =
                         Track
                             (Geodetic.s84Pos 34 (-50) Length.zero)
@@ -276,14 +276,14 @@ spec =
             it "handles the poles" $
                 -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
                 -- target at north pole travelling at 500km/h and true north can be intercepted from
-                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 0 degrees.
+                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 180 degrees.
              do
                 let t = Track (Geodetic.northPole S84) Angle.zero (Speed.kilometresPerHour 500)
                 let ip = Geodetic.southPole S84
                 let i = Kinematics.interceptByTime t ip (Duration.seconds 3600)
                 fmap Kinematics.interceptorSpeed i `shouldBe`
                     Just (Speed.kilometresPerHour 19515.114352)
-                fmap Kinematics.interceptorBearing i `shouldBe` Just (Angle.decimalDegrees 0)
+                fmap Kinematics.interceptorBearing i `shouldBe` Just (Angle.decimalDegrees 180)
             it "handles the interceptor being at the intercept position at t" $ do
                 let tp = Geodetic.s84Pos 34 (-50) Length.zero
                 let t = Track tp (Angle.decimalDegrees 220) (Speed.knots 600)

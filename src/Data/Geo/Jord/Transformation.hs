@@ -139,13 +139,13 @@ transformCoordsF ::
 transformCoordsF p1 m2 g f =
     case ps of
         [] -> Nothing
-        _ -> Just (Geocentric.Position (Geocentric.metres v2x v2y v2z) m2)
+        _ -> Just (Geocentric.metresPos v2x v2y v2z m2)
   where
     mi1 = modelId . Geocentric.model $ p1
     mi2 = modelId m2
     ps = txParamsBetween mi1 mi2 g
     (V3 v2x v2y v2z) =
-        foldl (\gc p -> transformGeoc gc (f p)) (Geocentric.toMetres . Geocentric.coords $ p1) ps
+        foldl (\gc p -> transformGeoc gc (f p)) (Geocentric.metresCoords p1) ps
 
 transformPosCoords ::
        (Ellipsoidal a, Ellipsoidal b)
@@ -153,6 +153,6 @@ transformPosCoords ::
     -> b
     -> TxParams7
     -> Geocentric.Position b
-transformPosCoords p1 m2 ps = Geocentric.Position (Geocentric.metres v2x v2y v2z) m2
+transformPosCoords p1 m2 ps = Geocentric.metresPos v2x v2y v2z m2
   where
-    (V3 v2x v2y v2z) = transformGeoc (Geocentric.toMetres . Geocentric.coords $ p1) ps
+    (V3 v2x v2y v2z) = transformGeoc (Geocentric.metresCoords p1) ps

@@ -26,9 +26,8 @@
 --       which is to find exact solutions. Prefer using ellipsoidal models.
 --
 module Data.Geo.Jord.LocalFrames
-    (
     -- * Local Reference frame
-      LocalFrame(..)
+    ( LocalFrame(..)
     -- * Body frame
     , FrameB
     , yaw
@@ -46,19 +45,11 @@ module Data.Geo.Jord.LocalFrames
     , nOrigin
     , frameN
     -- * Deltas
-    , Delta
-    , delta
+    , Delta(..)
     , deltaMetres
-    , dx
-    , dy
-    , dz
     -- * Delta in the north, east, down frame
-    , Ned
-    , ned
+    , Ned(..)
     , nedMetres
-    , north
-    , east
-    , down
     , bearing
     , elevation
     , slantRange
@@ -202,71 +193,49 @@ frameN :: (Model a) => Geodetic.Position a -> FrameN a
 frameN p = FrameN p (Geodetic.nvector . Geodetic.northPole $ Geodetic.model p)
 
 -- | delta between position in one of the reference frames.
-newtype Delta =
-    Delta V3
+data Delta =
+    Delta
+        { dx :: Length -- ^ x component.
+        , dy :: Length -- ^ y component.
+        , dz :: Length -- ^ z component.
+        }
     deriving (Eq, Show)
-
--- | 'Delta' from given x, y and z length.
-delta :: Length -> Length -> Length -> Delta
-delta x y z = Delta (V3 (Length.toMetres x) (Length.toMetres y) (Length.toMetres z))
 
 -- | 'Delta' from given x, y and z length in __metres__.
 deltaMetres :: Double -> Double -> Double -> Delta
-deltaMetres x y z = delta (Length.metres x) (Length.metres y) (Length.metres z)
-
--- | x component of given 'Delta'.
-dx :: Delta -> Length
-dx (Delta v) = Length.metres (vx v)
-
--- | y component of given 'Delta'.
-dy :: Delta -> Length
-dy (Delta v) = Length.metres (vy v)
-
--- | z component of given 'Delta'.
-dz :: Delta -> Length
-dz (Delta v) = Length.metres (vz v)
+deltaMetres x y z = Delta (Length.metres x) (Length.metres y) (Length.metres z)
 
 -- | North, east and down delta (thus in frame 'FrameN').
-newtype Ned =
-    Ned V3
+data Ned =
+    Ned
+        { north :: Length -- ^ North component.
+        , east :: Length -- ^ East component.
+        , down :: Length -- ^ Down component.
+        }
     deriving (Eq, Show)
-
--- | 'Ned' from given north, east and down.
-ned :: Length -> Length -> Length -> Ned
-ned n e d = Ned (V3 (Length.toMetres n) (Length.toMetres e) (Length.toMetres d))
 
 -- | 'Ned' from given north, east and down in __metres__.
 nedMetres :: Double -> Double -> Double -> Ned
-nedMetres n e d = ned (Length.metres n) (Length.metres e) (Length.metres d)
-
--- | North component of given 'Ned'.
-north :: Ned -> Length
-north (Ned v) = Length.metres (vx v)
-
--- | East component of given 'Ned'.
-east :: Ned -> Length
-east (Ned v) = Length.metres (vy v)
-
--- | Down component of given 'Ned'.
-down :: Ned -> Length
-down (Ned v) = Length.metres (vz v)
+nedMetres n e d = Ned (Length.metres n) (Length.metres e) (Length.metres d)
 
 -- | @bearing v@ computes the bearing in compass angle of the NED vector @v@ from north.
 --
 -- Compass angles are clockwise angles from true north: 0 = north, 90 = east, 180 = south, 270 = west.
 --
 bearing :: Ned -> Angle
-bearing v =
-    let a = Angle.atan2 (Length.toMetres (east v)) (Length.toMetres (north v))
+bearing (Ned n e _) =
+    let a = Angle.atan2 (Length.toMetres e) (Length.toMetres n)
      in Angle.normalise a (Angle.decimalDegrees 360.0)
 
 -- | @elevation v@ computes the elevation of the NED vector @v@ from horizontal (ie tangent to ellipsoid surface).
 elevation :: Ned -> Angle
-elevation (Ned v) = Angle.negate (Angle.asin (vz v / Math3d.norm v))
+elevation n = Angle.negate (Angle.asin (vz v / Math3d.norm v))
+  where
+    v = nedV3 n
 
 -- | @slantRange v@ computes the distance from origin in the local system of the NED vector @v@.
 slantRange :: Ned -> Length
-slantRange (Ned v) = Length.metres (Math3d.norm v)
+slantRange = Length.metres . Math3d.norm . nedV3
 
 -- | @deltaBetween p1 p2 f@ computes the exact 'Delta' between the two
 -- positions @p1@ and @p2@ in local frame @f@.
@@ -290,8 +259,8 @@ deltaBetween ::
     -> Delta
 deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
   where
-    g1 = Geocentric.toMetres . Geocentric.coords . toGeocentric $ p1
-    g2 = Geocentric.toMetres . Geocentric.coords . toGeocentric $ p2
+    g1 = Geocentric.metresCoords . toGeocentric $ p1
+    g2 = Geocentric.metresCoords . toGeocentric $ p2
     de = Math3d.subtract g2 g1
     -- rotation matrix to go from Earth Frame to Frame at p1
     rm = Math3d.transposeM (rEF (f p1))
@@ -323,9 +292,9 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
 -- Ned (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
 --
 nedBetween :: (Model a) => Geodetic.Position a -> Geodetic.Position a -> Ned
-nedBetween p1 p2 = nedMetres (vx d) (vy d) (vz d)
+nedBetween p1 p2 = Ned n e d
   where
-    (Delta d) = deltaBetween p1 p2 frameN
+    (Delta n e d) = deltaBetween p1 p2 frameN
 
 -- | @destination p0 f d@ computes the destination position from position @p0@ and delta @d@ in local frame @f@.
 --
@@ -348,13 +317,13 @@ destination ::
     -> (Geodetic.Position b -> a)
     -> Delta
     -> Geodetic.Position b
-destination p0 f (Delta d) = toGeodetic gt
+destination p0 f d = toGeodetic gt
   where
-    g0 = Geocentric.toMetres . Geocentric.coords . toGeocentric $ p0
+    g0 = Geocentric.metresCoords . toGeocentric $ p0
     rm = rEF (f p0)
-    c = Math3d.multM d rm
+    c = Math3d.multM (deltaV3 d) rm
     (V3 x y z) = Math3d.add g0 c
-    gt = Geocentric.Position (Geocentric.metres x y z) (Geodetic.model p0)
+    gt = Geocentric.metresPos x y z (Geodetic.model p0)
 
 -- | @destinationN p0 d@ computes the destination position from position @p0@ and north, east, down @d@.
 --
@@ -374,4 +343,10 @@ destination p0 f (Delta d) = toGeodetic gt
 -- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
 --
 destinationN :: (Model a) => Geodetic.Position a -> Ned -> Geodetic.Position a
-destinationN p0 (Ned d) = destination p0 frameN (Delta d)
+destinationN p0 (Ned n e d) = destination p0 frameN (Delta n e d)
+
+nedV3 :: Ned -> V3
+nedV3 (Ned n e d) = V3 (Length.toMetres n) (Length.toMetres e) (Length.toMetres d)
+
+deltaV3 :: Delta -> V3
+deltaV3 (Delta x' y' z') = V3 (Length.toMetres x') (Length.toMetres y') (Length.toMetres z')

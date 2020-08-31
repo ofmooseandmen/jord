@@ -16,7 +16,7 @@ spec = do
         describe "destination" $ do
             it "return the given position if NED norm = 0" $ do
                 let p0 = Geodetic.wgs84Pos 53.320556 (-1.729722) Length.zero
-                let d = LocalFrames.ned Length.zero Length.zero Length.zero
+                let d = LocalFrames.Ned Length.zero Length.zero Length.zero
                 LocalFrames.destinationN p0 d `shouldBe` p0
             it "computes the destination position from p0 and NED" $ do
                 let p0 = Geodetic.wgs84Pos 49.66618 3.45063 Length.zero

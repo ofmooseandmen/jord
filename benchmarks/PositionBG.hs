@@ -1,23 +1,23 @@
-module ConversionBG
+module PositionBG
     ( benchmark
     ) where
 
 import Criterion.Types
-import Data.Geo.Jord.Conversion
 import qualified Data.Geo.Jord.Geocentric as Geocentric
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (metres)
 import Data.Geo.Jord.Models (S84(..), WGS84(..))
+import qualified Data.Geo.Jord.Position as Position
 
 benchmark :: Benchmark
 benchmark =
     bgroup
         "Position"
-        [ bench "toGeodetic (ellipsoidal)" $ whnf toGeodetic egeoc
-        , bench "toGeocentric (ellipsoidal)" $ whnf toGeocentric egeod
-        , bench "toGeodetic (spherical)" $ whnf toGeodetic sgeoc
-        , bench "toGeocentric (spherical)" $ whnf toGeocentric sgeod
+        [ bench "toGeodetic (ellipsoidal)" $ whnf Position.toGeodetic egeoc
+        , bench "toGeocentric (ellipsoidal)" $ whnf Position.toGeocentric egeod
+        , bench "toGeodetic (spherical)" $ whnf Position.toGeodetic sgeoc
+        , bench "toGeocentric (spherical)" $ whnf Position.toGeocentric sgeod
         ]
 
 egeoc :: Geocentric.Position WGS84

@@ -1,36 +1,43 @@
 -- |
--- Module:      Data.Geo.Jord.Transformation
+-- Module:      Data.Geo.Jord.Position
 -- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
 -- Stability:   experimental
 -- Portability: portable
 --
--- Coordinates transformation between ellipsoidal models.
+-- TODO: Functions to convert position between geodetic and geocentric and to
+-- transform position coordinates between ellipsoidal models.
 --
--- In order to use this module you should start with the following imports:
---
--- @
---     import Data.Geo.Jord.Geocentric
---     import Data.Geo.Jord.Transformation
--- @
---
---
-module Data.Geo.Jord.Transformation
-    ( transformCoords
+module Data.Geo.Jord.Position
+    ( toGeodetic
+    , toGeocentric
+    , transformCoords
     , transformCoords'
     , transformCoordsAt
     , transformCoordsAt'
-    -- * re-exported for convenience
-    , module Data.Geo.Jord.Tx
-    , module Data.Geo.Jord.Txs
     ) where
 
+import Data.Geo.Jord.Ellipsoid (Ellipsoid, eccentricity, equatorialRadius, isSphere, polarRadius)
 import qualified Data.Geo.Jord.Geocentric as Geocentric
+import qualified Data.Geo.Jord.Geodetic as Geodetic
+import Data.Geo.Jord.Length (Length)
+import qualified Data.Geo.Jord.Length as Length
 import Data.Geo.Jord.Math3d (V3(..))
-import Data.Geo.Jord.Model (Ellipsoidal, EllipsoidalT0, Epoch, modelId)
+import qualified Data.Geo.Jord.Math3d as Math3d
+import Data.Geo.Jord.Model
 import Data.Geo.Jord.Tx
-import Data.Geo.Jord.Txs
+
+toGeodetic :: (Model m) => Geocentric.Position m -> Geodetic.Position m
+toGeodetic p = Geodetic.nvectorHeightPos' nv h (Geocentric.model p)
+  where
+    (nv, h) = nvectorFromGeocentric (Geocentric.metresCoords p) (surface . Geocentric.model $ p)
+
+toGeocentric :: (Model m) => Geodetic.Position m -> Geocentric.Position m
+toGeocentric p = Geocentric.metresPos cx cy cz (Geodetic.model p)
+  where
+    (V3 cx cy cz) =
+        nvectorToGeocentric (Geodetic.nvector p, Geodetic.height p) (surface . Geodetic.model $ p)
 
 -- | @transformCoords p1 m2 g@ transforms the coordinates of the position @p1@ from its coordinate
 -- system into the coordinate system defined by the model @m2@ using the graph @g@ to find the
@@ -144,8 +151,7 @@ transformCoordsF p1 m2 g f =
     mi1 = modelId . Geocentric.model $ p1
     mi2 = modelId m2
     ps = txParamsBetween mi1 mi2 g
-    (V3 v2x v2y v2z) =
-        foldl (\gc p -> transformGeoc gc (f p)) (Geocentric.metresCoords p1) ps
+    (V3 v2x v2y v2z) = foldl (\gc p -> transformGeoc gc (f p)) (Geocentric.metresCoords p1) ps
 
 transformPosCoords ::
        (Ellipsoidal a, Ellipsoidal b)
@@ -156,3 +162,68 @@ transformPosCoords ::
 transformPosCoords p1 m2 ps = Geocentric.metresPos v2x v2y v2z m2
   where
     (V3 v2x v2y v2z) = transformGeoc (Geocentric.metresCoords p1) ps
+
+-- | @nvectorToGeocentric (nv, h) e@ returns the geocentric coordinates equivalent to the given
+-- /n/-vector @nv@ and height @h@ using the ellispoid @e@.
+nvectorToGeocentric :: (V3, Length) -> Ellipsoid -> V3
+nvectorToGeocentric (nv, h) e
+    | isSphere e = nvectorToGeocentricS (nv, h) (equatorialRadius e)
+    | otherwise = nvectorToGeocentricE (nv, h) e
+
+nvectorToGeocentricS :: (V3, Length) -> Length -> V3
+nvectorToGeocentricS (nv, h) r = Math3d.scale nv (Length.toMetres n)
+  where
+    n = Length.add h r
+
+nvectorToGeocentricE :: (V3, Length) -> Ellipsoid -> V3
+nvectorToGeocentricE (V3 nx ny nz, h) e = V3 cx cy cz
+  where
+    a = Length.toMetres . equatorialRadius $ e
+    b = Length.toMetres . polarRadius $ e
+    m = (a * a) / (b * b)
+    n = b / sqrt ((nx * nx * m) + (ny * ny * m) + (nz * nz))
+    h' = Length.toMetres h
+    cx = n * m * nx + h' * nx
+    cy = n * m * ny + h' * ny
+    cz = n * nz + h' * nz
+
+-- | @nvectorFromGeocentric g e@ returns the /n/-vector equivalent to the geocentric
+-- coordinates @g@ using the ellispoid @e@.
+nvectorFromGeocentric :: V3 -> Ellipsoid -> (V3, Length)
+nvectorFromGeocentric g e
+    | isSphere e = nvectorFromGeocentricS g (equatorialRadius e)
+    | otherwise = nvectorFromGeocentricE g e
+
+nvectorFromGeocentricS :: V3 -> Length -> (V3, Length)
+nvectorFromGeocentricS g r = (Math3d.unit g, h)
+  where
+    h = Length.subtract (Length.metres (Math3d.norm g)) r
+
+nvectorFromGeocentricE :: V3 -> Ellipsoid -> (V3, Length)
+nvectorFromGeocentricE (V3 px py pz) e = (nvecEllipsoidal d e2 k px py pz, Length.metres h)
+  where
+    e' = eccentricity e
+    e2 = e' * e'
+    e4 = e2 * e2
+    a = Length.toMetres . equatorialRadius $ e
+    a2 = a * a
+    p = (px * px + py * py) / a2
+    q = ((1 - e2) / a2) * (pz * pz)
+    r = (p + q - e4) / 6.0
+    s = (e4 * p * q) / (4.0 * r * r * r)
+    t = (1.0 + s + sqrt (s * (2.0 + s))) ** (1 / 3)
+    u = r * (1.0 + t + 1.0 / t)
+    v = sqrt (u * u + q * e4)
+    w = e2 * (u + v - q) / (2.0 * v)
+    k = sqrt (u + v + w * w) - w
+    d = k * sqrt (px * px + py * py) / (k + e2)
+    h = ((k + e2 - 1.0) / k) * sqrt (d * d + pz * pz)
+
+nvecEllipsoidal :: Double -> Double -> Double -> Double -> Double -> Double -> V3
+nvecEllipsoidal d e2 k px py pz = V3 nx ny nz
+  where
+    s = 1.0 / sqrt (d * d + pz * pz)
+    a = k / (k + e2)
+    nx = s * a * px
+    ny = s * a * py
+    nz = s * pz

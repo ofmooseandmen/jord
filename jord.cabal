@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8dc335337193540e29947376bd872a88185dd885d3278079c52d4bf482cc165e
+-- hash: 2db3b415409470b64aba141e8b64f5236e9ca65fec0ece64c23bf6e095cf7800
 
 name:           jord
 version:        2.0.0.0
@@ -31,7 +31,6 @@ source-repository head
 library
   exposed-modules:
       Data.Geo.Jord.Angle
-      Data.Geo.Jord.Conversion
       Data.Geo.Jord.Duration
       Data.Geo.Jord.Ellipsoid
       Data.Geo.Jord.Ellipsoids
@@ -45,9 +44,9 @@ library
       Data.Geo.Jord.LocalFrames
       Data.Geo.Jord.Model
       Data.Geo.Jord.Models
+      Data.Geo.Jord.Position
       Data.Geo.Jord.Rotation
       Data.Geo.Jord.Speed
-      Data.Geo.Jord.Transformation
       Data.Geo.Jord.Txs
       Data.Geo.Jord.Tx
       Data.Geo.Jord.Math3d
@@ -63,7 +62,7 @@ library
 executable jord-benchmarks
   main-is: Main.hs
   other-modules:
-      ConversionBG
+      PositionBG
       GeodesicBG
       GeodeticBG
       GreatCircleBG
@@ -109,7 +108,6 @@ test-suite jord-test
   main-is: Spec.hs
   other-modules:
       Data.Geo.Jord.AngleSpec
-      Data.Geo.Jord.ConversionSpec
       Data.Geo.Jord.DurationSpec
       Data.Geo.Jord.EllipsoidSpec
       Data.Geo.Jord.GeodesicSpec
@@ -118,9 +116,9 @@ test-suite jord-test
       Data.Geo.Jord.KinematicsSpec
       Data.Geo.Jord.LengthSpec
       Data.Geo.Jord.LocalFramesSpec
+      Data.Geo.Jord.PositionSpec
       Data.Geo.Jord.RotationSpec
       Data.Geo.Jord.SpeedSpec
-      Data.Geo.Jord.TransformationSpec
       Paths_jord
   hs-source-dirs:
       test

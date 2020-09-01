@@ -64,7 +64,7 @@ module Data.Geo.Jord.LocalFrames
 
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
-import Data.Geo.Jord.Conversion
+import Data.Geo.Jord.Position
 import qualified Data.Geo.Jord.Geocentric as Geocentric
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Length (Length)

@@ -35,14 +35,29 @@ $ stack build --test
 module Examples where
 ```
 
-All modules shall be imported as qualified:
+Import the core functional modules as qualified:
 
 ```haskell
 import qualified Data.Geo.Jord.Angle as Angle
+import qualified Data.Geo.Jord.Geocentric as Geocentric
+import qualified Data.Geo.Jord.Geodetic as Geodetic
+import qualified Data.Geo.Jord.Geodesic as Geodesic
+import qualified Data.Geo.Jord.Kinematics as Kinematics
 import qualified Data.Geo.Jord.Length as Length
 import qualified Data.Geo.Jord.LocalFrames as LocalFrames
-import qualified Data.Geo.Jord.Geodetic as Geodetic
+import qualified Data.Geo.Jord.Position as Position
+import qualified Data.Geo.Jord.Speed as Speed 
 ```
+
+Import data types and models:
+
+```haskell
+import Data.Geo.Jord.Angle(Angle)
+import Data.Geo.Jord.Length(Length)
+import Data.Geo.Jord.LocalFrames(Ned(..), Delta(..))
+import Data.Geo.Jord.Models
+import Data.Geo.Jord.Speed(Speed)
+``` 
 
 ## Solutions to the 10 examples from [NavLab](https://www.navlab.net/nvector)
 
@@ -59,6 +74,7 @@ for the north and east directions to be defined.)*
 ```haskell
 example1 :: IO()
 example1 = do
+  print "NavLab, Example 1: A and B to delta"
   let posA = Geodetic.wgs84Pos 1 2 (Length.metres 3)
   let posB = Geodetic.wgs84Pos 4 5 (Length.metres 6)
 

@@ -24,7 +24,6 @@ library:
   source-dirs: src
   exposed-modules:
     - Data.Geo.Jord.Angle
-    - Data.Geo.Jord.Conversion
     - Data.Geo.Jord.Duration
     - Data.Geo.Jord.Ellipsoid
     - Data.Geo.Jord.Ellipsoids
@@ -38,9 +37,9 @@ library:
     - Data.Geo.Jord.LocalFrames
     - Data.Geo.Jord.Model
     - Data.Geo.Jord.Models
+    - Data.Geo.Jord.Position
     - Data.Geo.Jord.Rotation
     - Data.Geo.Jord.Speed
-    - Data.Geo.Jord.Transformation
     - Data.Geo.Jord.Txs
     - Data.Geo.Jord.Tx
     - Data.Geo.Jord.Math3d
@@ -60,7 +59,7 @@ executables:
   jord-benchmarks:
     main:                Main.hs
     other-modules:
-      - ConversionBG
+      - PositionBG
       - GeodesicBG
       - GeodeticBG
       - GreatCircleBG

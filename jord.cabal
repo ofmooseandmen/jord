@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b722eba3c8e78e8274b13ad964eeebfc97a3399869034b93d617f4ff22369b20
+-- hash: 8dc335337193540e29947376bd872a88185dd885d3278079c52d4bf482cc165e
 
 name:           jord
 version:        2.0.0.0
@@ -130,4 +130,16 @@ test-suite jord-test
     , base >=4.9 && <5
     , hspec ==2.*
     , jord
+  default-language: Haskell2010
+
+test-suite readme
+  type: exitcode-stdio-1.0
+  main-is: README.lhs
+  other-modules:
+      Paths_jord
+  ghc-options: -Wall -pgmL markdown-unlit
+  build-depends:
+      base >=4.9 && <5
+    , jord
+    , markdown-unlit
   default-language: Haskell2010

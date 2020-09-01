@@ -337,7 +337,7 @@ timeToIntercept (Track p2 b2 s2) p1 = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c
     s2mps = Speed.toMetresPerSecond s2
     rm = radiusM p1
     w2 = s2mps / rm
-    s0 = betweenRadians v10 v20 -- initial angular distance between target and interceptor
+    s0 = angleBetweenRadians v10 v20 -- initial angular distance between target and interceptor
     t0 = rm * s0 / s2mps -- assume target is travelling towards interceptor
 
 -- | time to intercept with speed.
@@ -473,7 +473,7 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
 -- | angular separation in radians at ti between v10 and track with initial position v20,
 -- course c2 and speed s2.
 sep :: V3 -> V3 -> V3 -> Speed -> Double -> Double -> Double
-sep v10 v20 c2 s2 r ti = betweenRadians v10 (position'' v20 c2 s2 ti r)
+sep v10 v20 c2 s2 r ti = angleBetweenRadians v10 (position'' v20 c2 s2 ti r)
 
 -- | reference sphere radius.
 radius :: (Spherical a) => Geodetic.Position a -> Length
@@ -483,9 +483,11 @@ radius = equatorialRadius . surface . Geodetic.model
 radiusM :: (Spherical a) => Geodetic.Position a -> Double
 radiusM = Length.toMetres . radius
 
--- FIXME dupe with between but returning Angle does not work due to accuracy.
-betweenRadians :: V3 -> V3 -> Double
-betweenRadians v1 v2 = atan2 sinO cosO
+-- angle between 2 vectors in radians - this is duplicated with GreatCircle but
+-- does not return an Angle - truncating to microarcsecond resolution can be
+-- detrimental to the convergence of Newtow-Raphson.
+angleBetweenRadians :: V3 -> V3 -> Double
+angleBetweenRadians v1 v2 = atan2 sinO cosO
   where
     sinO = Math3d.norm (Math3d.cross v1 v2)
     cosO = Math3d.dot v1 v2

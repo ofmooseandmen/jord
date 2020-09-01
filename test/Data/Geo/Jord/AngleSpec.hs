@@ -9,7 +9,6 @@ import Test.Hspec
 import qualified Data.Geo.Jord.Angle as Angle
 import qualified Data.Geo.Jord.Length as Length
 
--- FIXME add tests for between and signedBetween
 spec :: Spec
 spec = do
     describe "Reading valid angles" $ do

@@ -82,3 +82,9 @@ tests:
       - jord
       - hspec == 2.*
       - HUnit == 1.6.*
+  readme:
+    main: README.lhs
+    dependencies:
+      - jord
+      - markdown-unlit
+    ghc-options: -pgmL markdown-unlit    

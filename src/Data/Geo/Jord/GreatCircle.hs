@@ -201,7 +201,7 @@ angularDistance ::
     -> Geodetic.Position a
     -> Maybe (Geodetic.Position a)
     -> Angle
-angularDistance p1 p2 n = Angle.betweenSigned v1 v2 vn
+angularDistance p1 p2 n = signedAngleBetween v1 v2 vn
   where
     v1 = Geodetic.nvector p1
     v2 = Geodetic.nvector p2
@@ -234,7 +234,7 @@ crossTrackDistance :: (Spherical a) => Geodetic.Position a -> GreatCircle a -> L
 crossTrackDistance p (GreatCircle n _ _) =
     Angle.arcLength (Angle.subtract a (Angle.decimalDegrees 90)) (radius p)
   where
-    a = Angle.between n (Geodetic.nvector p)
+    a = angleBetween n (Geodetic.nvector p)
 
 -- | @crossTrackDistance' p s b@ computes the signed distance from horizontal Position @p@ to the
 -- great circle passing by @s@ and heading on bearing @b@.
@@ -293,7 +293,7 @@ destination p b d
 surfaceDistance :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Length
 surfaceDistance p1 p2 = Angle.arcLength a (radius p1)
   where
-    a = Angle.between (Geodetic.nvector p1) (Geodetic.nvector p2)
+    a = angleBetween (Geodetic.nvector p1) (Geodetic.nvector p2)
 
 -- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
@@ -473,7 +473,7 @@ isInsideSurface p ps
     | otherwise =
         let aSum =
                 foldl
-                    (\a v' -> Angle.add a (uncurry Angle.betweenSigned v' (Just v)))
+                    (\a v' -> Angle.add a (uncurry signedAngleBetween v' (Just v)))
                     Angle.zero
                     (egdes (map (Math3d.subtract v) vs))
          in abs (Angle.toDecimalDegrees aSum) > 180.0
@@ -515,7 +515,7 @@ alongTrackDistance'' :: (Spherical a) => Geodetic.Position a -> Geodetic.Positio
 alongTrackDistance'' p s n = Angle.arcLength a (radius s)
   where
     a =
-        Angle.betweenSigned
+        signedAngleBetween
             (Geodetic.nvector s)
             (Math3d.cross (Math3d.cross n (Geodetic.nvector p)) n)
             (Just n)
@@ -547,7 +547,7 @@ initialBearing' p1 p2 = Angle.normalise a (Angle.decimalDegrees 360)
     v2 = Geodetic.nvector p2
     gc1 = Math3d.cross v1 v2 -- great circle through p1 & p2
     gc2 = Math3d.cross v1 (Geodetic.nvector . Geodetic.northPole $ m) -- great circle through p1 & north pole
-    a = Angle.betweenSigned gc1 gc2 (Just v1)
+    a = signedAngleBetween gc1 gc2 (Just v1)
 
 arcNormal :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe V3
 arcNormal p1 p2
@@ -571,3 +571,17 @@ onMinorArc p (MinorArc _ s e) =
 -- | reference sphere radius.
 radius :: (Spherical a) => Geodetic.Position a -> Length
 radius = equatorialRadius . surface . Geodetic.model
+
+-- | angle between 2 vectors.
+angleBetween :: V3 -> V3 -> Angle
+angleBetween v1 v2 = signedAngleBetween v1 v2 Nothing
+
+-- | Signed angle between 2 vectors.
+-- If @n@ is 'Nothing', the angle is always in [0..pi], otherwise it is in [-pi, +pi],
+-- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
+signedAngleBetween :: V3 -> V3 -> Maybe V3 -> Angle
+signedAngleBetween v1 v2 n = Angle.atan2 sinO cosO
+  where
+    sign = maybe 1 (signum . Math3d.dot (Math3d.cross v1 v2)) n
+    sinO = sign * Math3d.norm (Math3d.cross v1 v2)
+    cosO = Math3d.dot v1 v2

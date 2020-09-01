@@ -215,7 +215,7 @@ spec =
                 let i = Kinematics.interceptBySpeed t ip (Speed.knots 700)
                 fmap Kinematics.interceptTime i `shouldBe` Just (Duration.seconds 2764.692)
                 fmap Kinematics.interceptorBearing i `shouldBe`
-                    Just (Angle.decimalDegrees 25.93541248472222)
+                    Just (Angle.decimalDegrees 25.935412485277777)
                 fmap Kinematics.interceptDistance i `shouldBe`
                     Just (Length.kilometres 995.596069189)
             it "returns the same as intercept when called with minimum speed" $ do
@@ -267,7 +267,7 @@ spec =
                 let i = Kinematics.interceptByTime t ip d
                 fmap Kinematics.interceptorSpeed i `shouldBe` Just (Speed.knots 730.9592213822895)
                 fmap Kinematics.interceptorBearing i `shouldBe`
-                    Just (Angle.decimalDegrees 26.119902564166665)
+                    Just (Angle.decimalDegrees 26.11990256388889)
                 fmap Kinematics.interceptPosition i `shouldBe`
                     Just (Geodetic.s84Pos 28.136679674444444 (-55.455947612222225) Length.zero)
                 fmap Kinematics.interceptDistance i `shouldBe`

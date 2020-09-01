@@ -50,8 +50,6 @@ module Data.Geo.Jord.Angle
     , add
     , subtract
     , zero
-    , between
-    , betweenSigned
     ) where
 
 import Control.Applicative ((<|>))
@@ -64,8 +62,6 @@ import Text.Read (readMaybe)
 
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (metres, toMetres)
-import Data.Geo.Jord.Math3d (V3)
-import qualified Data.Geo.Jord.Math3d as Math3d (cross, dot, norm)
 import Data.Geo.Jord.Parser
 
 -- | An angle with a resolution of a microarcsecond.
@@ -110,22 +106,6 @@ subtract a1 a2 = Angle (microarcseconds a1 - microarcseconds a2)
 -- | 0 degrees.
 zero :: Angle
 zero = Angle 0
-
--- FIXME move those 2 methods below elsewhere (spherical only)
-
--- | angle between 2 vectors.
-between :: V3 -> V3 -> Angle
-between v1 v2 = betweenSigned v1 v2 Nothing
-
--- | Signed angle between 2 vectors.
--- If @n@ is 'Nothing', the angle is always in [0..pi], otherwise it is in [-pi, +pi],
--- signed + if @v1@ is clockwise looking along @n@, - in opposite direction.
-betweenSigned :: V3 -> V3 -> Maybe V3 -> Angle
-betweenSigned v1 v2 n = atan2 sinO cosO
-  where
-    sign = maybe 1 (signum . Math3d.dot (Math3d.cross v1 v2)) n
-    sinO = sign * Math3d.norm (Math3d.cross v1 v2)
-    cosO = Math3d.dot v1 v2
 
 -- | 'Angle' from given decimal degrees. Any 'Double' is accepted: it must be
 -- validated by the call site when used to represent a latitude or longitude.

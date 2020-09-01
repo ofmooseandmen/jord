@@ -31,12 +31,25 @@ $ stack build --test
 
 [See documentation on Hackage](http://hackage.haskell.org/package/jord/docs/Data-Geo-Jord.html)
 
+```haskell
+module Examples where
+```
+
+All modules shall be imported as qualified:
+
+```haskell
+import qualified Data.Geo.Jord.Angle as Angle
+import qualified Data.Geo.Jord.Length as Length
+import qualified Data.Geo.Jord.LocalFrames as LocalFrames
+import qualified Data.Geo.Jord.Geodetic as Geodetic
+```
+
 ## Solutions to the 10 examples from [NavLab](https://www.navlab.net/nvector)
 
 ### Example 1: A and B to delta
 
 *Given two positions, A and B as latitudes, longitudes and depths relative to Earth, E.*
- 
+
 *Find the exact vector between the two positions, given in meters north, east, and down, and find the direction (azimuth)
 to B, relative to north. Assume WGS-84 ellipsoid. The given depths are from the ellipsoid surface. Use position A to
 define north, east, and down directions. (Due to the curvature of Earth and different directions to the North Pole,
@@ -44,42 +57,44 @@ the north, east, and down directions will change (relative to Earth) for differe
 for the north and east directions to be defined.)*
 
 ```haskell
-import Data.Geo.Jord.LocalFrames
-import Data.Geo.Jord.Position
+example1 :: IO()
+example1 = do
+  let posA = Geodetic.wgs84Pos 1 2 (Length.metres 3)
+  let posB = Geodetic.wgs84Pos 4 5 (Length.metres 6)
 
-posA = wgs84Pos 1 2 (metres 3)
-posB = wgs84Pos 4 5 (metres 6)
+  let delta = nedBetween posA posB
+  print delta
+  -- Ned (Vector3d {vx = 331730.234781, vy = 332997.874989, vz = 17404.271362})
 
-delta = nedBetween posA posB 
--- > Ned (Vector3d {vx = 331730.234781, vy = 332997.874989, vz = 17404.271362})
-slantRange delta 
--- > 470.356717903km
-bearing delta 
--- > 45°6'33.347"
-elevation delta 
--- > -2°7'14.011"
+  print (slantRange delta)
+  -- 470.356717903km
+
+  print (bearing delta)
+  -- 45°6'33.347"
+
+  print (elevation delta)
+  -- -2°7'14.011"
 ```
 
-### Example 2: A and B to delta
+### Example 2: B and delta to C
 
 *A radar or sonar attached to a vehicle B (Body coordinate frame) measures the distance and direction to an object C.
 We assume that the distance and two angles (typically bearing and elevation relative to B) are already combined to the
 vector p_BC_B (i.e. the vector from B to C, decomposed in B). The position of B is given as n_EB_E and z_EB, and the
 orientation (attitude) of B is given as R_NB (this rotation matrix can be found from roll/pitch/yaw by using zyx2R).*
- 
+
 *Find the exact position of object C as n-vector and depth ( n_EC_E and z_EC ), assuming Earth ellipsoid with semi-major
 axis a and flattening f. For WGS-72, use a = 6 378 135 m and f = 1/298.26.*
 
 ```haskell
-import Data.Geo.Jord.LocalFrames
-import Data.Geo.Jord.Position
+example2 :: IO()
+example2 = do
+    let f = LocalFrames.frameB (Angle.decimalDegrees 40) (Angle.decimalDegrees 20) (Angle.decimalDegrees 30)
+    let p = Geodetic.nvectorHeightPos 1 2 3 (Length.metres 400) WGS72
+    let d = LocalFrames.deltaMetres 3000 2000 100
 
-f = frameB (decimalDegrees 40) (decimalDegrees 20) (decimalDegrees 30)
-p = nvectorHeightPos 1 2 3 (metres 400) WGS72
-d = deltaMetres 3000 2000 100
-
-target p f d
--- > 53°18'46.839"N,63°29'6.179"E 406.006018m (WGS72)
+    print (target p f d)
+    -- 53°18'46.839"N,63°29'6.179"E 406.006018m (WGS72)
 ```
 
 ### Example 3: ECEF-vector to geodetic latitude
@@ -140,7 +155,7 @@ surfaceDistance posA posB
 ### Example 6: Interpolated position
 
 *Given the position of B at time t0 and t1, n_EB_E(t0) and n_EB_E(t1).*
- 
+
 *Find an interpolated position at time ti, n_EB_E(ti). All positions are given as n-vectors.*
 
 ```haskell
@@ -175,7 +190,7 @@ mean ps
 *We have an initial position A, direction of travel given as an azimuth (bearing) relative to north (clockwise), and
 finally the distance to travel along a great circle given as sAB. Use Earth radius 6371e3 m to find the destination
 point B.*
- 
+
 *In geodesy this is known as “The first geodetic problem” or “The direct geodetic problem” for a sphere, and we see
 that this is similar to Example 2, but now the delta is given as an azimuth and a great circle distance.
 (“The second/inverse geodetic problem” for a sphere is already solved in Examples 1 and 5.)*
@@ -206,9 +221,9 @@ destination p (decimalDegrees 200) (metres 1000)
 
 *Define a path from two given positions (at the surface of a spherical Earth), as the great circle that goes through
 the two points.*
- 
+
 *Path A is given by A1 and A2, while path B is given by B1 and B2.*
- 
+
 *Find the position C where the two great circles intersect.*
 
 ```haskell
@@ -235,7 +250,7 @@ join (intersection <$> ma <*> mb)
 ### Example 10: Cross track distance
 
 *Path A is given by the two positions A1 and A2 (similar to the previous example).
- 
+
 *Find the cross track distance sxt between the path A (i.e. the great circle through A1 and A2) and the position B
 (i.e. the shortest distance at the surface, between the great circle and B).*
 

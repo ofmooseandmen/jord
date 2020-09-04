@@ -136,34 +136,6 @@ transformAt' ::
     -> Geocentric.Position b
 transformAt' p1 e m2 ps = transformOne p1 m2 (Transformation.paramsAt e ps)
 
-transformGraph ::
-       (Ellipsoidal a, Ellipsoidal b, Params p)
-    => Geocentric.Position a
-    -> b
-    -> Graph p
-    -> (p -> Params7)
-    -> Maybe (Geocentric.Position b)
-transformGraph p1 m2 g f =
-    case ps of
-        [] -> Nothing
-        _ -> Just (Geocentric.metresPos v2x v2y v2z m2)
-  where
-    mi1 = modelId . Geocentric.model $ p1
-    mi2 = modelId m2
-    ps = Transformation.paramsBetween mi1 mi2 g
-    (V3 v2x v2y v2z) =
-        foldl (\gc p -> Transformation.apply gc (f p)) (Geocentric.metresCoords p1) ps
-
-transformOne ::
-       (Ellipsoidal a, Ellipsoidal b)
-    => Geocentric.Position a
-    -> b
-    -> Params7
-    -> Geocentric.Position b
-transformOne p1 m2 ps = Geocentric.metresPos v2x v2y v2z m2
-  where
-    (V3 v2x v2y v2z) = Transformation.apply (Geocentric.metresCoords p1) ps
-
 -- | @nvectorToGeocentric (nv, h) e@ returns the geocentric coordinates equivalent to the given
 -- /n/-vector @nv@ and height @h@ using the ellispoid @e@.
 nvectorToGeocentric :: (V3, Length) -> Ellipsoid -> V3
@@ -228,3 +200,31 @@ nvecEllipsoidal d e2 k px py pz = V3 nx ny nz
     nx = s * a * px
     ny = s * a * py
     nz = s * pz
+
+transformGraph ::
+       (Ellipsoidal a, Ellipsoidal b, Params p)
+    => Geocentric.Position a
+    -> b
+    -> Graph p
+    -> (p -> Params7)
+    -> Maybe (Geocentric.Position b)
+transformGraph p1 m2 g f =
+    case ps of
+        [] -> Nothing
+        _ -> Just (Geocentric.metresPos v2x v2y v2z m2)
+  where
+    mi1 = modelId . Geocentric.model $ p1
+    mi2 = modelId m2
+    ps = Transformation.paramsBetween mi1 mi2 g
+    (V3 v2x v2y v2z) =
+        foldl (\gc p -> Transformation.apply gc (f p)) (Geocentric.metresCoords p1) ps
+
+transformOne ::
+       (Ellipsoidal a, Ellipsoidal b)
+    => Geocentric.Position a
+    -> b
+    -> Params7
+    -> Geocentric.Position b
+transformOne p1 m2 ps = Geocentric.metresPos v2x v2y v2z m2
+  where
+    (V3 v2x v2y v2z) = Transformation.apply (Geocentric.metresCoords p1) ps

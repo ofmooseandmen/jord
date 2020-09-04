@@ -58,28 +58,6 @@ import Data.Geo.Jord.Models
 import Data.Geo.Jord.Speed(Speed)
 ```
 
-Below are several examples that illustrates how to use the library. To run them all TODO.
-
-```haskell
-main :: IO()
-main = do
-    example1
-    example2
-    example3
-    example4
-    example5
-    example5Exact
-    example6
-    example7
-    example8
-    example8Exact
-    example9
-    example10
-    example11
-    example12
-    example13
-```
-
 ## Solutions to the 10 examples from [NavLab](https://www.navlab.net/nvector)
 
 ### Example 1: A and B to delta
@@ -99,17 +77,22 @@ example1 = do
     let pB = Geodetic.wgs84Pos 4 5 (Length.metres 6)
 
     let ned = LocalFrames.nedBetween pA pB
-    print ned
-    -- Ned (Vector3d {vx = 331730.234781, vy = 332997.874989, vz = 17404.271362})
+    -- Ned {north = 331.730863099km, east = 332.998501491km, down = 17.39830421km}
 
-    print (LocalFrames.slantRange ned)
-    -- 470.356717903km
+    let slantRange = LocalFrames.slantRange ned
+    -- 470.357383823km
 
-    print (LocalFrames.bearing ned)
-    -- 45°6'33.347"
+    let bearing = LocalFrames.bearing ned
+    -- 45°6'33.346"
 
-    print (LocalFrames.elevation ned)
-    -- -2°7'14.011"
+    let elevation = LocalFrames.elevation ned
+    -- -2°7'11.381"
+
+    putStrLn ("NavLab, Example1: A and B to delta\n\
+              \  delta      = " ++ (show ned) ++ "\n\
+              \  slantRange = " ++ (show slantRange) ++ "\n\
+              \  bearing    = " ++ (show bearing) ++ "\n\
+              \  elevation  = " ++ (show elevation) ++ "\n")
 ```
 
 ### Example 2: B and delta to C
@@ -134,8 +117,10 @@ example2 = do
     let delta = LocalFrames.deltaMetres 3000 2000 100
 
     let pC = LocalFrames.destination pB frameB delta
-    print pC
-    -- 53°18'46.839"N,63°29'6.179"E 406.006018m (WGS72)
+    -- 53°18'46.839"N,63°29'6.179"E 406.006017m (WGS72)
+
+    putStrLn ("NavLab, Example 2: B and delta to C\n\
+              \  pC = " ++ (show pC) ++ "\n")
 ```
 
 ### Example 3: ECEF-vector to geodetic latitude
@@ -149,8 +134,10 @@ example3 = do
     let ecef = Geocentric.metresPos 5733900.0 (-6371000.0) 7008100.000000001 WGS84
 
     let geod = Positions.toGeodetic ecef
-    print geod
     -- 39°22'43.495"N,48°0'46.035"W 4702.059834295km (WGS84)
+
+    putStrLn ("NavLab, 3: ECEF-vector to geodetic latitude\n\
+              \  geodetic pos = " ++ (show geod) ++ "\n")
 ```
 
 ### Example 4: Geodetic latitude to ECEF-vector
@@ -164,8 +151,10 @@ example4 = do
     let geod = Geodetic.wgs84Pos 1 2 (Length.metres 3)
 
     let ecef = Positions.toGeocentric geod
-    print ecef
-    -- Position {gx = 6373290.277218281, gy = 222560.20067473655, gz = 110568.82718177968}
+    -- Position {gx = 6373.290277218km, gy = 222.560200675km, gz = 110.568827182km, model = WGS84}
+
+    putStrLn ("NavLab, 4: Geodetic latitude to ECEF-vector\n\
+              \  geocentric pos = " ++ (show ecef) ++ "\n")
 ```
 
 ### Example 5: Surface distance
@@ -182,21 +171,10 @@ example5 = do
     let pB = Geodetic.s84Pos 89 (-170) Length.zero
 
     let distance = GreatCircle.surfaceDistance pA pB
-    print distance
     -- 332.456901835km
-```
 
-*Exact solution for the WGS84 ellipsoid*
-
-```haskell
-example5Exact :: IO()
-example5Exact = do
-    let pA = Geodetic.wgs84Pos 88 0 Length.zero
-    let pB = Geodetic.wgs84Pos 89 (-170) Length.zero
-
-    let distance = fmap Geodesic.length (Geodesic.inverse pA pB)
-    print distance
-    -- Just 333.947509469km
+    putStrLn ("NavLab, 5: Surface distance\n\
+              \  distance = " ++ (show distance) ++ "\n")
 ```
 
 ### Example 6: Interpolated position
@@ -213,8 +191,10 @@ example6 = do
     let f = 0.6
 
     let interpolated = GreatCircle.interpolated pA pB f
-    print interpolated
     -- 89°47'59.929"N,180°0'0.000"E 0.0m (S84)
+
+    putStrLn ("NavLab, 6: Interpolated position\n\
+              \  interpolated = " ++ (show interpolated) ++ "\n")
 ```
 
 ### Example 7: Mean position
@@ -225,7 +205,6 @@ n_EM_E. Note that the calculation is independent of the depths of the positions.
 ```haskell
 example7 :: IO()
 example7 = do
-    print "NavLab Example 7: Mean position"
     let ps =
             [ Geodetic.s84Pos 90 0 Length.zero
             , Geodetic.s84Pos 60 10 Length.zero
@@ -233,8 +212,10 @@ example7 = do
             ]
 
     let mean = GreatCircle.mean ps
-    print mean
     -- Just 67°14'10.150"N,6°55'3.040"W 0.0m (S84)
+
+    putStrLn ("NavLab, Example 7: Mean position\n\
+              \  mean = " ++ (show mean) ++ "\n")
 ```
 
 ### Example 8: A and azimuth/distance to B
@@ -253,22 +234,10 @@ example8 = do
     let distance = Length.metres 1000
 
     let dest = GreatCircle.destination p bearing distance
-    print dest
     -- 79°59'29.575"N,90°1'3.714"W 0.0m (S84)
-```
 
-*Exact solution for the WGS84 ellipsoid*
-
-```haskell
-example8Exact :: IO()
-example8Exact = do
-    let p = Geodetic.wgs84Pos 80 (-90) Length.zero
-    let bearing = Angle.decimalDegrees 200
-    let distance = Length.metres 1000
-
-    let dest = fmap Geodesic.endPosition (Geodesic.direct p bearing distance)
-    print dest
-    -- Just 79°59'29.701"N,90°1'3.436"W 0.0m (WGS84)
+    putStrLn ("NavLab, Example 8: A and azimuth/distance to B\n\
+              \  destination = " ++ (show dest) ++ "\n")
 ```
 
 ### Example 9: Intersection of two paths
@@ -290,14 +259,16 @@ example9 = do
     let ga = GreatCircle.through a1 a2
     let gb = GreatCircle.through b1 b2
     let intersections = GreatCircle.intersections <$> ga <*> gb
-    print intersections
-    -- Just (50°54'6.260"N,4°29'39.052"E 0.0m (S84),50°54'6.260"S,175°30'20.947"W 0.0m (S84))
+    -- Just (Just (50°54'6.260"N,4°29'39.052"E 0.0m (S84),50°54'6.260"S,175°30'20.947"W 0.0m (S84)))
 
     let ma = GreatCircle.minorArc a1 a2
     let mb = GreatCircle.minorArc b1 b2
     let intersection = GreatCircle.intersection <$> ma <*> mb
-    print intersection
-    -- Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84)
+    -- Just (Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84))
+
+    putStrLn ("NavLab, Example 9: Intersection of two paths\n\
+              \  great circle intersections = " ++ (show intersections) ++ "\n\
+              \  minor arc intersection     = " ++ (show intersection) ++ "\n")
 ```
 
 ### Example 10: Cross track distance
@@ -316,20 +287,73 @@ example10 = do
                  (Geodetic.s84Pos 10 0 Length.zero)
 
     let sxt = fmap (\g -> GreatCircle.crossTrackDistance p g) gc
-    print sxt
     -- Just 11.117814411km
+
+    putStrLn ("NavLab, Example 10: Cross track distance\n\
+              \  cross track distance = " ++ (show sxt) ++ "\n")
+```
+
+## Solutions to the geodesic problems (Vincenty)
+
+### Example 11: Inverse problem
+
+*Given the coordinates of the two points (Φ1, L1) and (Φ2, L2), the inverse problem finds the azimuths α1, α2 and the ellipsoidal distance s.*
+
+```haskell
+example11 :: IO()
+example11 = do
+    let pA = Geodetic.wgs84Pos 88 0 Length.zero
+    let pB = Geodetic.wgs84Pos 89 (-170) Length.zero
+
+    let inv = Geodesic.inverse pA pB
+    let initialBearing = fmap Geodesic.initialBearing inv
+    -- Just (Just 356°40'8.701")
+
+    let finalBearing = fmap Geodesic.finalBearing inv
+    -- Just (Just 186°40'19.615")
+
+    let distance = fmap Geodesic.length inv
+    -- Just 333.947509469km
+
+    putStrLn ("Geodesic, Example 11: Inverse problem\n\
+              \    initial bearing = " ++ (show initialBearing) ++ "\n\
+              \    final bearing   = " ++ (show finalBearing) ++ "\n\
+              \    distance        = " ++ (show distance) ++ "\n")
+```
+
+### Example 12: Direct problem
+
+*Given an initial point (Φ1, L1) and initial azimuth, α1, and a distance, s, along the geodesic the problem is to find the end point (Φ2, L2) and azimuth, α2.*
+
+```haskell
+example12 :: IO()
+example12 = do
+    let p = Geodetic.wgs84Pos 80 (-90) Length.zero
+    let bearing = Angle.decimalDegrees 200
+    let distance = Length.metres 1000
+
+    let dct = Geodesic.direct p bearing distance
+    let destination = fmap Geodesic.endPosition dct
+    -- Just 79°59'29.701"N,90°1'3.436"W 0.0m (WGS84)
+
+    let finalBearing = fmap Geodesic.finalBearing dct
+    -- Just (Just 199°58'57.528")
+
+    putStrLn ("Geodesic, Example 12: Direct problem\n\
+              \    destination   = " ++ (show destination) ++ "\n\
+              \    final bearing = " ++ (show finalBearing) ++ "\n")
 ```
 
 ## Solutions to kinematics problems
 
-### Closest point of approach
+### Example 13: Closest point of approach
 
 *The Closest Point of Approach (CPA) refers to the positions at which two dynamically moving objects reach their
 closest possible distance.*
 
 ```haskell
-example11 :: IO()
-example11 = do
+example13 :: IO()
+example13 = do
     let ownship = Track
                  (Geodetic.s84Pos 20 (-60) Length.zero)
                  (Angle.decimalDegrees 10)
@@ -340,24 +364,34 @@ example11 = do
                  (Speed.knots 300)
 
     let cpa = Kinematics.cpa ownship intruder
-    print cpa
-    -- Just (Cpa {
-    --       cpaTime = 3H9M56.155S,
-    --       cpaDistance = 124.231730834km,
-    --       cpaPosition1 = 20°46'43.641"N,59°51'11.225"W 0.0m (S84),
-    --       cpaPosition2 = 21°24'8.523"N,60°50'48.159"W 10000.0m (S84)})
+    let timeToCpa = fmap Kinematics.timeToCpa cpa
+    -- Just 3H9M56.155S
+
+    let distanceAtCpa = fmap Kinematics.distanceAtCpa cpa
+    -- Just 124.231730834km
+
+    let cpaOwnshipPosition = fmap Kinematics.cpaOwnshipPosition cpa
+    -- Just 20°46'43.641"N,59°51'11.225"W 0.0m (S84)
+
+    let cpaIntruderPosition = fmap Kinematics.cpaIntruderPosition cpa
+    -- Just 21°24'8.523"N,60°50'48.159"W 10000.0m (S84)
+
+    putStrLn ("Kinematics, Example 13: Closest point of approach\n\
+              \    time to CPA      = " ++ (show timeToCpa) ++ "\n\
+              \    distance at CPA  = " ++ (show distanceAtCpa) ++ "\n\
+              \    CPA ownship pos  = " ++ (show cpaOwnshipPosition) ++ "\n\
+              \    CPA intruder pos = " ++ (show cpaIntruderPosition) ++ "\n")
 ```
 
-### Speed required to intercept target
+### Example 14: Speed required to intercept target
 
 *Inputs are the initial latitude and longitude of an interceptor and a target, and the target course and speed.
 Also input is the time of the desired intercept. Outputs are the speed required of the interceptor, the course
 of the interceptor, the distance travelled to intercept, and the latitude and longitude of the intercept.*
 
 ```haskell
-example12 :: IO()
-example12 = do
-    print "Kinematics Example 12: Speed required to intercept target"
+example14 :: IO()
+example14 = do
     let track = Track
                 (Geodetic.s84Pos 34 (-50) Length.zero)
                 (Angle.decimalDegrees 220)
@@ -366,16 +400,26 @@ example12 = do
     let interceptTime = Duration.seconds 2700
 
     let intercept = Kinematics.interceptByTime track interceptor interceptTime
-    print intercept
-    -- Just (Intercept {
-    --       interceptTime = 0H45M0.000S,
-    --       interceptDistance = 1015.302358852km,
-    --       interceptPosition = 28°8'12.046"N,55°27'21.411"W 0.0m (S84),
-    --       interceptorBearing = 26°7'11.649",
-    --       interceptorSpeed = 1353.736478km/h})
+    let distanceToIntercept = fmap Kinematics.distanceToIntercept intercept
+    -- Just 1015.302358852km
+
+    let interceptPosition = fmap Kinematics.interceptPosition intercept
+    -- Just 28°8'12.046"N,55°27'21.411"W 0.0m (S84)
+
+    let interceptorBearing = fmap Kinematics.interceptorBearing intercept
+    -- Just 26°7'11.649"
+
+    let interceptorSpeed = fmap Kinematics.interceptorSpeed intercept
+    -- Just 1353.736478km/h
+
+    putStrLn ("Kinematics, Example 14: Speed required to intercept target\n\
+              \    distance to intercept = " ++ (show distanceToIntercept) ++ "\n\
+              \    intercept position    = " ++ (show interceptPosition) ++ "\n\
+              \    interceptor bearing   = " ++ (show interceptorBearing) ++ "\n\
+              \    interceptor speed     = " ++ (show interceptorSpeed) ++ "\n")
 ```
 
-### Time required to intercept target
+### Example 15: Time required to intercept target
 
 *Inputs are the initial latitude and longitude of an interceptor and a target, and the target course and speed. For a
 given interceptor speed, it may or may not be possible to make an intercept.*
@@ -387,31 +431,75 @@ make such and intercept.*
 then the time required to intercept is computed.*
 
 ```haskell
-example13 :: IO()
-example13 = do
+example15 :: IO()
+example15 = do
     let track = Track
                     (Geodetic.s84Pos 34 (-50) Length.zero)
                     (Angle.decimalDegrees 220)
                     (Speed.knots 600)
     let interceptor = Geodetic.s84Pos 20 (-60) Length.zero
 
-    let intercept = Kinematics.intercept track interceptor
-    print intercept
-    -- Just (Intercept {
-    --       interceptTime = 1H39M53.831S,
-    --       interceptDistance = 162.294627463km,
-    --       interceptPosition = 20°43'42.305"N,61°20'56.848"W 0.0m (S84),
-    --       interceptorBearing = 300°10'18.053",
-    --       interceptorSpeed = 97.476999km/h})
+    let minIntercept = Kinematics.intercept track interceptor
+    let minTimeToIntercept = fmap Kinematics.timeToIntercept minIntercept
+    -- Just 1H39M53.831S
+
+    let minDistanceToIntercept = fmap Kinematics.distanceToIntercept minIntercept
+    -- Just 162.294627463km
+
+    let minInterceptPosition = fmap Kinematics.interceptPosition minIntercept
+    -- Just 20°43'42.305"N,61°20'56.848"W 0.0m (S84)
+
+    let minInterceptorBearing = fmap Kinematics.interceptorBearing minIntercept
+    -- Just 300°10'18.053"
+
+    let minInterceptorSpeed = fmap Kinematics.interceptorSpeed minIntercept
+    -- Just 97.476999km/h
+
+    putStrLn ("Kinematics, Example 15: Time required to intercept target (min)\n\
+              \    time to intercept     = " ++ (show minTimeToIntercept) ++ "\n\
+              \    distance to intercept = " ++ (show minDistanceToIntercept) ++ "\n\
+              \    intercept position    = " ++ (show minInterceptPosition) ++ "\n\
+              \    interceptor bearing   = " ++ (show minInterceptorBearing) ++ "\n\
+              \    interceptor speed     = " ++ (show minInterceptorSpeed) ++ "\n")
 
     let interceptSpeed = Speed.knots 700
 
-    let intercept' = Kinematics.interceptBySpeed track interceptor interceptSpeed
-    print intercept'
-    -- Just (Intercept {
-    --       interceptTime = 0H46M4.692S,
-    --       interceptDistance = 995.596069189km,
-    --       interceptPosition = 27°59'36.764"N,55°34'43.852"W 0.0m (S84),
-    --       interceptorBearing = 25°56'7.484",
-    --       interceptorSpeed = 1296.399689km/h})
+    let intercept = Kinematics.interceptBySpeed track interceptor interceptSpeed
+    let timeToIntercept = fmap Kinematics.timeToIntercept intercept
+    -- Just 0H46M4.692S
+
+    let distanceToIntercept = fmap Kinematics.distanceToIntercept intercept
+    -- Just 995.596069189km
+
+    let interceptPosition = fmap Kinematics.interceptPosition intercept
+    -- Just 27°59'36.764"N,55°34'43.852"W 0.0m (S84)
+
+    let interceptorBearing = fmap Kinematics.interceptorBearing intercept
+    -- Just 25°56'7.484"
+
+    putStrLn ("Kinematics, Example 15: Time required to intercept target\n\
+              \    time to intercept     = " ++ (show timeToIntercept) ++ "\n\
+              \    distance to intercept = " ++ (show distanceToIntercept) ++ "\n\
+              \    intercept position    = " ++ (show interceptPosition) ++ "\n\
+              \    interceptor bearing   = " ++ (show interceptorBearing) ++ "\n")
+```
+
+```haskell
+main :: IO()
+main = do
+    example1
+    example2
+    example3
+    example4
+    example5
+    example6
+    example7
+    example8
+    example9
+    example10
+    example11
+    example12
+    example13
+    example14
+    example15
 ```

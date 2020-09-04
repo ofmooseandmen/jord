@@ -28,14 +28,14 @@ module Data.Geo.Jord.Kinematics
     , Course
     -- * The 'Cpa' type.
     , Cpa
-    , cpaTime
-    , cpaDistance
-    , cpaPosition1
-    , cpaPosition2
+    , timeToCpa
+    , distanceAtCpa
+    , cpaOwnshipPosition
+    , cpaIntruderPosition
     -- * The 'Intercept' type.
     , Intercept
-    , interceptTime
-    , interceptDistance
+    , timeToIntercept
+    , distanceToIntercept
     , interceptPosition
     , interceptorBearing
     , interceptorSpeed
@@ -87,18 +87,18 @@ newtype Course =
 -- | Time to, and distance at, closest point of approach (CPA) as well as position of both tracks at CPA.
 data Cpa a =
     Cpa
-        { cpaTime :: Duration -- ^ time to CPA.
-        , cpaDistance :: Length -- ^ distance at CPA.
-        , cpaPosition1 :: Geodetic.Position a -- ^ position of track 1 at CPA.
-        , cpaPosition2 :: Geodetic.Position a -- ^ position of track 2 at CPA.
+        { timeToCpa :: Duration -- ^ time to CPA.
+        , distanceAtCpa :: Length -- ^ distance at CPA.
+        , cpaOwnshipPosition :: Geodetic.Position a -- ^ position of ownship CPA.
+        , cpaIntruderPosition :: Geodetic.Position a -- ^ position of intruder at CPA.
         }
     deriving (Eq, Show)
 
 -- | Time, distance and position of intercept as well as speed and initial bearing of interceptor.
 data Intercept a =
     Intercept
-        { interceptTime :: Duration -- ^ time to intercept.
-        , interceptDistance :: Length -- ^ distance at intercept.
+        { timeToIntercept :: Duration -- ^ time to intercept.
+        , distanceToIntercept :: Length -- ^ distance travelled to intercept.
         , interceptPosition :: Geodetic.Position a -- ^ position of intercept.
         , interceptorBearing :: Angle -- ^ initial bearing of interceptor.
         , interceptorSpeed :: Speed -- ^ speed of interceptor.
@@ -192,7 +192,7 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
   where
     c1 = course p1 b1
     c2 = course p2 b2
-    t = timeToCpa p1 c1 s1 p2 c2 s2
+    t = timeToCpa' p1 c1 s1 p2 c2 s2
     cp1 = position' p1 c1 s1 t
     cp2 = position' p2 c2 s2 t
     d = GreatCircle.surfaceDistance cp1 cp2
@@ -222,7 +222,7 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 -- Just 5993.831
 --
 intercept :: (Spherical a) => Track a -> Geodetic.Position a -> Maybe (Intercept a)
-intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept t p))
+intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept' t p))
 
 -- | @interceptBySpeed t p s@ computes the time needed by interceptor at
 -- position @p@ and travelling at speed @s@ to intercept target track @t@.
@@ -308,7 +308,7 @@ position'' v0 c s sec rm = v1
     v1 = Math3d.add (Math3d.scale v0 (cos a)) (Math3d.scale c (sin a))
 
 -- | time to CPA.
-timeToCpa ::
+timeToCpa' ::
        (Spherical a)
     => Geodetic.Position a
     -> Course
@@ -317,7 +317,7 @@ timeToCpa ::
     -> Course
     -> Speed
     -> Double
-timeToCpa p1 (Course c10) s1 p2 (Course c20) s2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
+timeToCpa' p1 (Course c10) s1 p2 (Course c20) s2 = cpaNrRec v10 c10 w1 v20 c20 w2 0 0
   where
     v10 = Geodetic.nvector p1
     rm = radiusM p1
@@ -326,8 +326,8 @@ timeToCpa p1 (Course c10) s1 p2 (Course c20) s2 = cpaNrRec v10 c10 w1 v20 c20 w2
     w2 = Speed.toMetresPerSecond s2 / rm
 
 -- | time to intercept with minimum speed
-timeToIntercept :: (Spherical a) => Track a -> Geodetic.Position a -> Double
-timeToIntercept (Track p2 b2 s2) p1 = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 rm) t0 0
+timeToIntercept' :: (Spherical a) => Track a -> Geodetic.Position a -> Double
+timeToIntercept' (Track p2 b2 s2) p1 = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 rm) t0 0
   where
     v10 = Geodetic.nvector p1
     v20 = Geodetic.nvector p2

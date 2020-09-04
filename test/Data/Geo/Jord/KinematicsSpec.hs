@@ -60,7 +60,7 @@ spec =
             it "returns nothing for trailing tracks at same speed" $ do
                 let p1 = Geodetic.s84Pos 20 30 Length.zero
                 let px = GreatCircle.destination p1 (Angle.decimalDegrees 20) (Length.kilometres 1)
-                let p2 = GreatCircle.interpolate p1 px 0.25
+                let p2 = GreatCircle.interpolated p1 px 0.25
                 let b1 = fromJust (GreatCircle.initialBearing p1 px)
                 let b2 = fromJust (GreatCircle.initialBearing p2 px)
                 let t1 = Track p1 b1 (Speed.knots 400)
@@ -69,7 +69,7 @@ spec =
             it "returns nothing for trailing tracks with track ahead escaping" $ do
                 let p1 = Geodetic.s84Pos 20 30 Length.zero
                 let px = GreatCircle.destination p1 (Angle.decimalDegrees 20) (Length.kilometres 1)
-                let p2 = GreatCircle.interpolate p1 px 0.25
+                let p2 = GreatCircle.interpolated p1 px 0.25
                 let b1 = fromJust (GreatCircle.initialBearing p1 px)
                 let b2 = fromJust (GreatCircle.initialBearing p2 px)
                 let t1 = Track p1 b1 (Speed.knots 400)
@@ -78,7 +78,7 @@ spec =
             it "handles trailing tracks with track behind catching up" $ do
                 let p1 = Geodetic.s84Pos 20 30 Length.zero
                 let px = GreatCircle.destination p1 (Angle.decimalDegrees 20) (Length.kilometres 1)
-                let p2 = GreatCircle.interpolate p1 px 0.25
+                let p2 = GreatCircle.interpolated p1 px 0.25
                 let b1 = fromJust (GreatCircle.initialBearing p1 px)
                 let b2 = fromJust (GreatCircle.initialBearing p2 px)
                 let t1 = Track p1 b1 (Speed.knots 402)

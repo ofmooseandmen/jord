@@ -9,7 +9,7 @@
 #    * scale factors in parts per billion, rates in parts per billion per year
 #
 #    * rotations in milliarcseconds, rates in milliarcseconds per year
-module Data.Geo.Jord.Txs
+module Data.Geo.Jord.Transformations
 
 # WGS84 to NAD83 transformation parameters.
 WGS84 -> NAD83

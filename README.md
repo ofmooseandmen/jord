@@ -31,33 +31,54 @@ $ stack build --test
 
 [See documentation on Hackage](http://hackage.haskell.org/package/jord/docs/Data-Geo-Jord.html)
 
-```haskell
-module Examples where
-```
-
 Import the core functional modules as qualified:
 
 ```haskell
 import qualified Data.Geo.Jord.Angle as Angle
+import qualified Data.Geo.Jord.Duration as Duration
 import qualified Data.Geo.Jord.Geocentric as Geocentric
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.Geodesic as Geodesic
+import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Kinematics as Kinematics
 import qualified Data.Geo.Jord.Length as Length
 import qualified Data.Geo.Jord.LocalFrames as LocalFrames
-import qualified Data.Geo.Jord.Position as Position
-import qualified Data.Geo.Jord.Speed as Speed 
+import qualified Data.Geo.Jord.Positions as Positions
+import qualified Data.Geo.Jord.Speed as Speed
 ```
 
-Import data types and models:
+Import data types and models and transformation parameters:
 
 ```haskell
 import Data.Geo.Jord.Angle(Angle)
+import Data.Geo.Jord.Kinematics(Track(..))
 import Data.Geo.Jord.Length(Length)
 import Data.Geo.Jord.LocalFrames(Ned(..), Delta(..))
 import Data.Geo.Jord.Models
 import Data.Geo.Jord.Speed(Speed)
-``` 
+```
+
+Below are several examples that illustrates how to use the library. To run them all TODO.
+
+```haskell
+main :: IO()
+main = do
+    example1
+    example2
+    example3
+    example4
+    example5
+    example5Exact
+    example6
+    example7
+    example8
+    example8Exact
+    example9
+    example10
+    example11
+    example12
+    example13
+```
 
 ## Solutions to the 10 examples from [NavLab](https://www.navlab.net/nvector)
 
@@ -74,22 +95,21 @@ for the north and east directions to be defined.)*
 ```haskell
 example1 :: IO()
 example1 = do
-  print "NavLab, Example 1: A and B to delta"
-  let posA = Geodetic.wgs84Pos 1 2 (Length.metres 3)
-  let posB = Geodetic.wgs84Pos 4 5 (Length.metres 6)
+    let pA = Geodetic.wgs84Pos 1 2 (Length.metres 3)
+    let pB = Geodetic.wgs84Pos 4 5 (Length.metres 6)
 
-  let delta = nedBetween posA posB
-  print delta
-  -- Ned (Vector3d {vx = 331730.234781, vy = 332997.874989, vz = 17404.271362})
+    let ned = LocalFrames.nedBetween pA pB
+    print ned
+    -- Ned (Vector3d {vx = 331730.234781, vy = 332997.874989, vz = 17404.271362})
 
-  print (slantRange delta)
-  -- 470.356717903km
+    print (LocalFrames.slantRange ned)
+    -- 470.356717903km
 
-  print (bearing delta)
-  -- 45°6'33.347"
+    print (LocalFrames.bearing ned)
+    -- 45°6'33.347"
 
-  print (elevation delta)
-  -- -2°7'14.011"
+    print (LocalFrames.elevation ned)
+    -- -2°7'14.011"
 ```
 
 ### Example 2: B and delta to C
@@ -105,11 +125,16 @@ axis a and flattening f. For WGS-72, use a = 6 378 135 m and f = 1/298.26.*
 ```haskell
 example2 :: IO()
 example2 = do
-    let f = LocalFrames.frameB (Angle.decimalDegrees 40) (Angle.decimalDegrees 20) (Angle.decimalDegrees 30)
-    let p = Geodetic.nvectorHeightPos 1 2 3 (Length.metres 400) WGS72
-    let d = LocalFrames.deltaMetres 3000 2000 100
+    let frameB =
+            LocalFrames.frameB
+                (Angle.decimalDegrees 40)
+                (Angle.decimalDegrees 20)
+                (Angle.decimalDegrees 30)
+    let pB = Geodetic.nvectorHeightPos 1 2 3 (Length.metres 400) WGS72
+    let delta = LocalFrames.deltaMetres 3000 2000 100
 
-    print (target p f d)
+    let pC = LocalFrames.destination pB frameB delta
+    print pC
     -- 53°18'46.839"N,63°29'6.179"E 406.006018m (WGS72)
 ```
 
@@ -119,10 +144,13 @@ example2 = do
 Find the geodetic latitude, longitude and height (latEB, lonEB and hEB), assuming WGS-84 ellipsoid.*
 
 ```haskell
-import Data.Geo.Jord.Position
+example3 :: IO()
+example3 = do
+    let ecef = Geocentric.metresPos 5733900.0 (-6371000.0) 7008100.000000001 WGS84
 
-geocentricMetresPos 5733900.0 (-6371000.0) 7008100.000000001 WGS84
--- > 39°22'43.495"N,48°0'46.035"W 4702.059834295km (WGS84)
+    let geod = Positions.toGeodetic ecef
+    print geod
+    -- 39°22'43.495"N,48°0'46.035"W 4702.059834295km (WGS84)
 ```
 
 ### Example 4: Geodetic latitude to ECEF-vector
@@ -131,10 +159,13 @@ geocentricMetresPos 5733900.0 (-6371000.0) 7008100.000000001 WGS84
 for this position, p_EB_E.*
 
 ```haskell
-import Data.Geo.Jord.Position
+example4 :: IO()
+example4 = do
+    let geod = Geodetic.wgs84Pos 1 2 (Length.metres 3)
 
-gcvec (wgs84Pos 1 2 (metres 3))
--- > Vector3d {vx = 6373290.277218281, vy = 222560.20067473655, vz = 110568.82718177968}
+    let ecef = Positions.toGeocentric geod
+    print ecef
+    -- Position {gx = 6373290.277218281, gy = 222560.20067473655, gz = 110568.82718177968}
 ```
 
 ### Example 5: Surface distance
@@ -145,27 +176,27 @@ Earth, directly above/below A and B. The Euclidean distance (chord length) dAB s
 Use Earth radius 6371e3 m. Compare the results with exact calculations for the WGS-84 ellipsoid.*
 
 ```haskell
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Position
+example5 :: IO()
+example5 = do
+    let pA = Geodetic.s84Pos 88 0 Length.zero
+    let pB = Geodetic.s84Pos 89 (-170) Length.zero
 
-posA = s84Pos 88 0 zero
-posB = s84Pos 89 (-170) zero
-
-surfaceDistance posA posB
--- > 332.456901835km
+    let distance = GreatCircle.surfaceDistance pA pB
+    print distance
+    -- 332.456901835km
 ```
 
 *Exact solution for the WGS84 ellipsoid*
 
 ```haskell
-import Data.Geo.Jord.Geodesic
-import Data.Geo.Jord.Position
+example5Exact :: IO()
+example5Exact = do
+    let pA = Geodetic.wgs84Pos 88 0 Length.zero
+    let pB = Geodetic.wgs84Pos 89 (-170) Length.zero
 
-posA = wgs84Pos 88 0 zero
-posB = wgs84Pos 89 (-170) zero
-
-surfaceDistance posA posB
--- > Just 333.947509469km
+    let distance = fmap Geodesic.length (Geodesic.inverse pA pB)
+    print distance
+    -- Just 333.947509469km
 ```
 
 ### Example 6: Interpolated position
@@ -175,15 +206,15 @@ surfaceDistance posA posB
 *Find an interpolated position at time ti, n_EB_E(ti). All positions are given as n-vectors.*
 
 ```haskell
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Position
+example6 :: IO()
+example6 = do
+    let pA = Geodetic.s84Pos 89 0 Length.zero
+    let pB = Geodetic.s84Pos 89 180 Length.zero
+    let f = 0.6
 
-posA = s84Pos 89 0 zero
-posB = s84Pos 89 180 zero
-f = (16 - 10) / (20 - 10) :: Double
-
-interpolate posA posB f
--- > 89°47'59.929"N,180°0'0.000"E 0.0m (S84)
+    let interpolated = GreatCircle.interpolated pA pB f
+    print interpolated
+    -- 89°47'59.929"N,180°0'0.000"E 0.0m (S84)
 ```
 
 ### Example 7: Mean position
@@ -192,75 +223,81 @@ interpolate posA posB f
 n_EM_E. Note that the calculation is independent of the depths of the positions.*
 
 ```haskell
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Position
+example7 :: IO()
+example7 = do
+    print "NavLab Example 7: Mean position"
+    let ps =
+            [ Geodetic.s84Pos 90 0 Length.zero
+            , Geodetic.s84Pos 60 10 Length.zero
+            , Geodetic.s84Pos 50 (-20) Length.zero
+            ]
 
-ps = [s84Pos 90 0 zero, s84Pos 60 10 zero, s84Pos 50 (-20) zero]
-
-mean ps
--- > Just 67°14'10.150"N,6°55'3.040"W 0.0m (S84)
+    let mean = GreatCircle.mean ps
+    print mean
+    -- Just 67°14'10.150"N,6°55'3.040"W 0.0m (S84)
 ```
 
 ### Example 8: A and azimuth/distance to B
 
-*We have an initial position A, direction of travel given as an azimuth (bearing) relative to north (clockwise), and
-finally the distance to travel along a great circle given as sAB. Use Earth radius 6371e3 m to find the destination
+*We have an initial position A, direction of travel given as an azimuth (bearing) relative to north (clockwise), and finally the distance to travel along a great circle given as sAB. Use Earth radius 6371e3 m to find the destination
 point B.*
 
-*In geodesy this is known as “The first geodetic problem” or “The direct geodetic problem” for a sphere, and we see
-that this is similar to Example 2, but now the delta is given as an azimuth and a great circle distance.
+*In geodesy this is known as “The first geodetic problem” or “The direct geodetic problem” for a sphere, and we see that this is similar to Example 2, but now the delta is given as an azimuth and a great circle distance.
 (“The second/inverse geodetic problem” for a sphere is already solved in Examples 1 and 5.)*
 
 ```haskell
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Position
+example8 :: IO()
+example8 = do
+    let p = Geodetic.s84Pos 80 (-90) Length.zero
+    let bearing = Angle.decimalDegrees 200
+    let distance = Length.metres 1000
 
-p = s84Pos 80 (-90) zero
-
-destination p (decimalDegrees 200) (metres 1000)
--- > 79°59'29.575"N,90°1'3.714"W 0.0m (S84)
+    let dest = GreatCircle.destination p bearing distance
+    print dest
+    -- 79°59'29.575"N,90°1'3.714"W 0.0m (S84)
 ```
 
 *Exact solution for the WGS84 ellipsoid*
 
 ```haskell
-import Data.Geo.Jord.Geodesic
-import Data.Geo.Jord.Position
+example8Exact :: IO()
+example8Exact = do
+    let p = Geodetic.wgs84Pos 80 (-90) Length.zero
+    let bearing = Angle.decimalDegrees 200
+    let distance = Length.metres 1000
 
-p = wgs84Pos 80 (-90) zero
-
-destination p (decimalDegrees 200) (metres 1000)
--- > Just 79°59'29.701"N,90°1'3.436"W 0.0m (WGS84)
+    let dest = fmap Geodesic.endPosition (Geodesic.direct p bearing distance)
+    print dest
+    -- Just 79°59'29.701"N,90°1'3.436"W 0.0m (WGS84)
 ```
 
 ### Example 9: Intersection of two paths
 
-*Define a path from two given positions (at the surface of a spherical Earth), as the great circle that goes through
-the two points.*
+*Define a path from two given positions (at the surface of a spherical Earth), as the great circle that goes through the two points.*
 
 *Path A is given by A1 and A2, while path B is given by B1 and B2.*
 
 *Find the position C where the two great circles intersect.*
 
 ```haskell
-import Control.Monad (join)
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Position
+example9 :: IO()
+example9 = do
+    let a1 = Geodetic.s84Pos 51.885 0.235 Length.zero
+    let a2 = Geodetic.s84Pos 48.269 13.093 Length.zero
+    let b1 = Geodetic.s84Pos 49.008 2.549 Length.zero
+    let b2 = Geodetic.s84Pos 56.283 11.304 Length.zero
 
-a1 = s84Pos 51.885 0.235 zero
-a2 = s84Pos 48.269 13.093 zero
-b1 = s84Pos 49.008 2.549 zero
-b2 = s84Pos 56.283 11.304 zero
+    let ga = GreatCircle.through a1 a2
+    let gb = GreatCircle.through b1 b2
+    let intersections = GreatCircle.intersections <$> ga <*> gb
+    print intersections
+    -- Just (50°54'6.260"N,4°29'39.052"E 0.0m (S84),50°54'6.260"S,175°30'20.947"W 0.0m (S84))
 
-ga = greatCircleThrough a1 a2
-gb = greatCircleThrough b1 b2
-join (intersections <$> ga <*> gb)
--- > Just (50°54'6.260"N,4°29'39.052"E 0.0m (S84),50°54'6.260"S,175°30'20.947"W 0.0m (S84))
-
-ma = minorArc a1 a2
-mb = minorArc b1 b2
-join (intersection <$> ma <*> mb)
--- > Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84)
+    let ma = GreatCircle.minorArc a1 a2
+    let mb = GreatCircle.minorArc b1 b2
+    let intersection = GreatCircle.intersection <$> ma <*> mb
+    print intersection
+    -- Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84)
 ```
 
 ### Example 10: Cross track distance
@@ -271,14 +308,16 @@ join (intersection <$> ma <*> mb)
 (i.e. the shortest distance at the surface, between the great circle and B).*
 
 ```haskell
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Position
+example10 :: IO()
+example10 = do
+    let p = Geodetic.s84Pos 1 0.1 Length.zero
+    let gc = GreatCircle.through
+                 (Geodetic.s84Pos 0 0 Length.zero)
+                 (Geodetic.s84Pos 10 0 Length.zero)
 
-p = s84Pos 1 0.1 zero
-gc = greatCircleThrough (s84Pos 0 0 zero) (s84Pos 10 0 zero)
-
-fmap (\g -> crossTrackDistance p g) gc
--- > Just 11.117814411km
+    let sxt = fmap (\g -> GreatCircle.crossTrackDistance p g) gc
+    print sxt
+    -- Just 11.117814411km
 ```
 
 ## Solutions to kinematics problems
@@ -289,18 +328,24 @@ fmap (\g -> crossTrackDistance p g) gc
 closest possible distance.*
 
 ```haskell
-import Data.Geo.Jord.Kinematics
-import Data.Geo.Jord.Position
+example11 :: IO()
+example11 = do
+    let ownship = Track
+                 (Geodetic.s84Pos 20 (-60) Length.zero)
+                 (Angle.decimalDegrees 10)
+                 (Speed.knots 15)
+    let intruder = Track
+                 (Geodetic.s84Pos 34 (-50) (Length.metres 10000))
+                 (Angle.decimalDegrees 220)
+                 (Speed.knots 300)
 
-t1 = Track (s84Pos 20 (-60) zero) (decimalDegrees 10) (knots 15)
-t2 = Track (s84Pos 34 (-50) (metres 10000)) (decimalDegrees 220) (knots 300)
-
-cpa t1 t2
--- > Just (Cpa {
--- >     cpaTime = 3H9M56.155S,
--- >     cpaDistance = 124.231730834km,
--- >     cpaPosition1 = 20°46'43.641"N,59°51'11.225"W 0.0m (S84),
--- >     cpaPosition2 = 21°24'8.523"N,60°50'48.159"W 10000.0m (S84)})
+    let cpa = Kinematics.cpa ownship intruder
+    print cpa
+    -- Just (Cpa {
+    --       cpaTime = 3H9M56.155S,
+    --       cpaDistance = 124.231730834km,
+    --       cpaPosition1 = 20°46'43.641"N,59°51'11.225"W 0.0m (S84),
+    --       cpaPosition2 = 21°24'8.523"N,60°50'48.159"W 10000.0m (S84)})
 ```
 
 ### Speed required to intercept target
@@ -310,20 +355,24 @@ Also input is the time of the desired intercept. Outputs are the speed required 
 of the interceptor, the distance travelled to intercept, and the latitude and longitude of the intercept.*
 
 ```haskell
-import Data.Geo.Jord.Kinematics
-import Data.Geo.Jord.Position
+example12 :: IO()
+example12 = do
+    print "Kinematics Example 12: Speed required to intercept target"
+    let track = Track
+                (Geodetic.s84Pos 34 (-50) Length.zero)
+                (Angle.decimalDegrees 220)
+                (Speed.knots 600)
+    let interceptor = Geodetic.s84Pos 20 (-60) Length.zero
+    let interceptTime = Duration.seconds 2700
 
-t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
-ip = s84Pos 20 (-60) zero
-d = seconds 2700
-
-interceptByTime t ip d
--- > Just (Intercept {
--- >     interceptTime = 0H45M0.000S,
--- >     interceptDistance = 1015.302358852km,
--- >     interceptPosition = 28°8'12.046"N,55°27'21.411"W 0.0m (S84),
--- >     interceptorBearing = 26°7'11.649",
--- >     interceptorSpeed = 1353.736478km/h})
+    let intercept = Kinematics.interceptByTime track interceptor interceptTime
+    print intercept
+    -- Just (Intercept {
+    --       interceptTime = 0H45M0.000S,
+    --       interceptDistance = 1015.302358852km,
+    --       interceptPosition = 28°8'12.046"N,55°27'21.411"W 0.0m (S84),
+    --       interceptorBearing = 26°7'11.649",
+    --       interceptorSpeed = 1353.736478km/h})
 ```
 
 ### Time required to intercept target
@@ -338,25 +387,31 @@ make such and intercept.*
 then the time required to intercept is computed.*
 
 ```haskell
-import Data.Geo.Jord.Kinematics
-import Data.Geo.Jord.Position
+example13 :: IO()
+example13 = do
+    let track = Track
+                    (Geodetic.s84Pos 34 (-50) Length.zero)
+                    (Angle.decimalDegrees 220)
+                    (Speed.knots 600)
+    let interceptor = Geodetic.s84Pos 20 (-60) Length.zero
 
-t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
-ip = s84Pos 20 (-60) zero
+    let intercept = Kinematics.intercept track interceptor
+    print intercept
+    -- Just (Intercept {
+    --       interceptTime = 1H39M53.831S,
+    --       interceptDistance = 162.294627463km,
+    --       interceptPosition = 20°43'42.305"N,61°20'56.848"W 0.0m (S84),
+    --       interceptorBearing = 300°10'18.053",
+    --       interceptorSpeed = 97.476999km/h})
 
-intercept t ip
--- > Just (Intercept {
--- >     interceptTime = 1H39M53.831S,
--- >     interceptDistance = 162.294627463km,
--- >     interceptPosition = 20°43'42.305"N,61°20'56.848"W 0.0m (S84),
--- >     interceptorBearing = 300°10'18.053",
--- >     interceptorSpeed = 97.476999km/h})
+    let interceptSpeed = Speed.knots 700
 
-interceptBySpeed t ip (knots 700)
--- > Just (Intercept {
--- >     interceptTime = 0H46M4.692S,
--- >     interceptDistance = 995.596069189km,
--- >     interceptPosition = 27°59'36.764"N,55°34'43.852"W 0.0m (S84),
--- >     interceptorBearing = 25°56'7.484",
--- >     interceptorSpeed = 1296.399689km/h})
+    let intercept' = Kinematics.interceptBySpeed track interceptor interceptSpeed
+    print intercept'
+    -- Just (Intercept {
+    --       interceptTime = 0H46M4.692S,
+    --       interceptDistance = 995.596069189km,
+    --       interceptPosition = 27°59'36.764"N,55°34'43.852"W 0.0m (S84),
+    --       interceptorBearing = 25°56'7.484",
+    --       interceptorSpeed = 1296.399689km/h})
 ```

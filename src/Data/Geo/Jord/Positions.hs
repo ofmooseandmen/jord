@@ -9,13 +9,13 @@
 -- TODO: Functions to convert position between geodetic and geocentric and to
 -- transform position coordinates between ellipsoidal models.
 --
-module Data.Geo.Jord.Position
+module Data.Geo.Jord.Positions
     ( toGeodetic
     , toGeocentric
-    , transformCoords
-    , transformCoords'
-    , transformCoordsAt
-    , transformCoordsAt'
+    , transform
+    , transform'
+    , transformAt
+    , transformAt'
     ) where
 
 import Data.Geo.Jord.Ellipsoid (Ellipsoid, eccentricity, equatorialRadius, isSphere, polarRadius)
@@ -26,7 +26,8 @@ import qualified Data.Geo.Jord.Length as Length
 import Data.Geo.Jord.Math3d (V3(..))
 import qualified Data.Geo.Jord.Math3d as Math3d
 import Data.Geo.Jord.Model
-import Data.Geo.Jord.Tx
+import Data.Geo.Jord.Transformation (Graph, Params, Params15, Params7)
+import qualified Data.Geo.Jord.Transformation as Transformation
 
 toGeodetic :: (Model m) => Geocentric.Position m -> Geodetic.Position m
 toGeodetic p = Geodetic.nvectorHeightPos' nv h (Geocentric.model p)
@@ -53,19 +54,18 @@ toGeocentric p = Geocentric.metresPos cx cy cz (Geodetic.model p)
 -- >>> transformCoords pWGS84 NAD83 staticTxs
 -- Just 48°41'31.523"N,6°11'3.723"E 188.1212m (NAD83)
 --
-transformCoords ::
+transform ::
        (Ellipsoidal a, Ellipsoidal b)
     => Geocentric.Position a
     -> b
-    -> TxGraph TxParams7
+    -> Graph Params7
     -> Maybe (Geocentric.Position b)
-transformCoords p1 m2 g = transformCoordsF p1 m2 g id
+transform p1 m2 g = transformGraph p1 m2 g id
 
 -- | @transformCoords' p1 m2 tx@ transforms the coordinates of the position @p1@ from its coordinate system
 -- into the coordinate system defined by the model @m2@ using the 7-parameters transformation @tx@.
 --
--- Notes: this function does not checks whether both models are equals. It should be used when the
--- 7-parameter transformation is known. Most of the time prefer using 'transformCoords'.
+-- Notes: TODO.
 --
 -- ==== __Examples__
 --
@@ -77,13 +77,13 @@ transformCoords p1 m2 g = transformCoordsF p1 m2 g id
 -- >>> transformCoords' pWGS84 NAD83 tx
 -- 48°41'31.523"N,6°11'3.723"E 188.1212m (NAD83)
 --
-transformCoords' ::
+transform' ::
        (Ellipsoidal a, Ellipsoidal b)
     => Geocentric.Position a
     -> b
-    -> TxParams7
+    -> Params7
     -> Geocentric.Position b
-transformCoords' = transformPosCoords
+transform' = transformOne
 
 -- | @transformCoordsAt p1 e m2 g@ transforms the coordinates of the position @p1@ observed at epoch @e@
 -- from its coordinate system into the coordinate system defined by the model @m2@ using the graph @g@ to
@@ -99,14 +99,14 @@ transformCoords' = transformPosCoords
 -- >>> transformCoordsAt pITRF2014 (Epoch 2019.0) NAD83_CORS96 dynamicTxs -- through ITRF2000
 -- Just 48°41'31.538"N,6°11'3.722"E 188.112035m (NAD83_CORS96)
 --
-transformCoordsAt ::
+transformAt ::
        (EllipsoidalT0 a, EllipsoidalT0 b)
     => Geocentric.Position a
     -> Epoch
     -> b
-    -> TxGraph TxParams15
+    -> Graph Params15
     -> Maybe (Geocentric.Position b)
-transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
+transformAt p1 e m2 g = transformGraph p1 m2 g (Transformation.paramsAt e)
 
 -- | @transformCoordsAt' p1 e m2 tx@ transforms the coordinates of the position @p1@ observed at epoch @e@
 -- from its coordinate system into the coordinate system defined by the model @m2@ using
@@ -127,41 +127,42 @@ transformCoordsAt p1 e m2 g = transformCoordsF p1 m2 g (txParamsAt e)
 -- >>> transformCoordsAt' pITRF2014 (Epoch 2019.0) ETRF2000 tx
 -- 48°41'31.561"N,6°11'3.865"E 188.0178m (ETRF2000)
 --
-transformCoordsAt' ::
+transformAt' ::
        (EllipsoidalT0 a, EllipsoidalT0 b)
     => Geocentric.Position a
     -> Epoch
     -> b
-    -> TxParams15
+    -> Params15
     -> Geocentric.Position b
-transformCoordsAt' p1 e m2 ps = transformPosCoords p1 m2 (txParamsAt e ps)
+transformAt' p1 e m2 ps = transformOne p1 m2 (Transformation.paramsAt e ps)
 
-transformCoordsF ::
-       (Ellipsoidal a, Ellipsoidal b, TxParams p)
+transformGraph ::
+       (Ellipsoidal a, Ellipsoidal b, Params p)
     => Geocentric.Position a
     -> b
-    -> TxGraph p
-    -> (p -> TxParams7)
+    -> Graph p
+    -> (p -> Params7)
     -> Maybe (Geocentric.Position b)
-transformCoordsF p1 m2 g f =
+transformGraph p1 m2 g f =
     case ps of
         [] -> Nothing
         _ -> Just (Geocentric.metresPos v2x v2y v2z m2)
   where
     mi1 = modelId . Geocentric.model $ p1
     mi2 = modelId m2
-    ps = txParamsBetween mi1 mi2 g
-    (V3 v2x v2y v2z) = foldl (\gc p -> transformGeoc gc (f p)) (Geocentric.metresCoords p1) ps
+    ps = Transformation.paramsBetween mi1 mi2 g
+    (V3 v2x v2y v2z) =
+        foldl (\gc p -> Transformation.apply gc (f p)) (Geocentric.metresCoords p1) ps
 
-transformPosCoords ::
+transformOne ::
        (Ellipsoidal a, Ellipsoidal b)
     => Geocentric.Position a
     -> b
-    -> TxParams7
+    -> Params7
     -> Geocentric.Position b
-transformPosCoords p1 m2 ps = Geocentric.metresPos v2x v2y v2z m2
+transformOne p1 m2 ps = Geocentric.metresPos v2x v2y v2z m2
   where
-    (V3 v2x v2y v2z) = transformGeoc (Geocentric.metresCoords p1) ps
+    (V3 v2x v2y v2z) = Transformation.apply (Geocentric.metresCoords p1) ps
 
 -- | @nvectorToGeocentric (nv, h) e@ returns the geocentric coordinates equivalent to the given
 -- /n/-vector @nv@ and height @h@ using the ellispoid @e@.

@@ -2,17 +2,18 @@
 
 - API change - all modules must be imported as qualified
 - API change - Position has been split between Geodetic & Geocentric
+- API change - positions conversion/transformation are provided by Positions module
+- API change - GreatCicle: interpolate -> interpolated, isInsideSurface -> insideSurface
 - API change - Geodesic data type provides initialBearing, finalBearing, length and functions are removed
-- New API - GreatCircle provides projection, isLeft, turn, discretiseCircle & discretiseArc
 - Bug Fix - GreatCircle.intersection correctly handles minor arcs crossing the equator
 - Bug Fix - All Geodetic positions built from a /n/-vector have the correct angle resolution
 - Bump stack resolver to lts-16.11
-- All examples from readme can be run using `stack exec jord-examples`
+- Examples in readme are compile to make sure they are valid
 
 ### 1.0.0.1
 
 - Fixed typo in doc
-- Bumped stack resolver to latest 
+- Bumped stack resolver to latest
 
 ### 1.0.0.0
 

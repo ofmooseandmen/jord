@@ -41,10 +41,10 @@ module Data.Geo.Jord.GreatCircle
     , destination
     , finalBearing
     , initialBearing
-    , interpolate
+    , insideSurface
+    , interpolated
     , intersection
     , intersections
-    , isInsideSurface
     , mean
     , surfaceDistance
     ) where
@@ -362,9 +362,9 @@ initialBearing p1 p2
 -- >>> interpolate p1 p2 0.5
 -- 54°47'0.805"N,5°11'41.947"E 15.0km (S84)
 --
-interpolate ::
+interpolated ::
        (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Double -> Geodetic.Position a
-interpolate p0 p1 f
+interpolated p0 p1 f
     | f < 0 || f > 1 = error ("fraction must be in range [0..1], was " ++ show f)
     | f == 0 = p0
     | f == 1 = p1
@@ -437,7 +437,7 @@ intersections ::
     -> Maybe (Geodetic.Position a, Geodetic.Position a)
 intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 
--- | @isInsideSurface p ps@ determines whether position @p@ is inside the __surface__ polygon defined by
+-- | @insideSurface p ps@ determines whether position @p@ is inside the __surface__ polygon defined by
 -- positions @ps@ (i.e. ignoring the height of the positions).
 -- The polygon can be opened or closed (i.e. if @head ps /= last ps@).
 --
@@ -464,11 +464,11 @@ intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 -- >>> isInsideSurface hassleholm polygon
 -- False
 --
-isInsideSurface :: (Spherical a) => Geodetic.Position a -> [Geodetic.Position a] -> Bool
-isInsideSurface p ps
+insideSurface :: (Spherical a) => Geodetic.Position a -> [Geodetic.Position a] -> Bool
+insideSurface p ps
     | null ps = False
     | any (Geodetic.llEq p) ps = False
-    | Geodetic.llEq (head ps) (last ps) = isInsideSurface p (init ps)
+    | Geodetic.llEq (head ps) (last ps) = insideSurface p (init ps)
     | length ps < 3 = False
     | otherwise =
         let aSum =

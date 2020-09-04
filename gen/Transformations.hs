@@ -68,7 +68,7 @@ params' n = do
     return (Params [tx, ty, tz] s [rx, ry, rz])
 
 generator :: G.Generator Transformation
-generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Tx"] genTx genAll
+generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Transformation"] genTx genAll
 
 genTx :: Transformation -> String
 genTx t
@@ -79,14 +79,15 @@ dynamicTx :: Transformation -> String
 dynamicTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: Tx TxParams15\n" ++
+    " :: Transformation Params15\n" ++
     func t ++
-    " =\n    Tx " ++
+    " =\n    Transformation " ++
+    "\n        " ++
     idToString (from t) ++
     "\n        " ++
     idToString (to t) ++
     "\n        " ++
-    "(TxParams15" ++
+    "(Params15" ++
     "\n             " ++
     epochToString (epoch t) ++
     "\n             " ++
@@ -96,9 +97,10 @@ staticTx :: Transformation -> String
 staticTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: Tx TxParams7\n" ++
+    " :: Transformation Params7\n" ++
     func t ++
-    " =\n    Tx " ++
+    " =\n    Transformation " ++
+    "\n        " ++
     idToString (from t) ++
     "\n        " ++ idToString (to t) ++ "\n        " ++ tx7ToString (params t)
 
@@ -107,11 +109,11 @@ idToString s = "(ModelId \"" ++ s ++ "\")"
 
 tx7ToString :: Params -> String
 tx7ToString (Params t s r) =
-    "(txParams7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+    "(params7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 ratesToString :: Params -> String
 ratesToString (Params t s r) =
-    "(txRates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+    "(rates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 dsToString :: [Double] -> String
 dsToString ds = "(" ++ intercalate ", " (map show ds) ++ ")"
@@ -136,18 +138,18 @@ genAll ts = genStaticTxs s ++ "\n" ++ genDynamicTxs d
 genStaticTxs :: [Transformation] -> String
 genStaticTxs ts =
     "-- | Graph of all static transformations.\n\
-   \staticTxs :: TxGraph TxParams7\n\
-   \staticTxs =\n\
-   \    txGraph\n\
+   \staticTransformations :: Graph Params7\n\
+   \staticTransformations =\n\
+   \    graph\n\
    \        [ " ++
     funcs ts ++ "\n        ]\n"
 
 genDynamicTxs :: [Transformation] -> String
 genDynamicTxs ts =
     "-- | Graph of all dynamic transformations.\n\
-   \dynamicTxs :: TxGraph TxParams15\n\
-   \dynamicTxs =\n\
-   \    txGraph\n\
+   \dynamicTransformations :: Graph Params15\n\
+   \dynamicTransformations =\n\
+   \    graph\n\
    \        [ " ++
     funcs ts ++ "\n        ]\n"
 

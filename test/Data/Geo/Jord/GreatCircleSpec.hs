@@ -71,7 +71,7 @@ spec = do
             let gc = fromJust $ GreatCircle.through gc1 gc2
             let ps =
                     fmap
-                        (\f -> GreatCircle.interpolate gc1 gc2 f)
+                        (\f -> GreatCircle.interpolated gc1 gc2 f)
                         (take 11 (iterate (\x -> x + 0.1 :: Double) 0.0))
             fmap (\p -> GreatCircle.crossTrackDistance p gc) ps `shouldBe`
                 (replicate 11 Length.zero)
@@ -198,23 +198,23 @@ spec = do
             let p2 = Geodetic.s84Pos 50.066389 (-5.714722) (Length.metres 5000)
             GreatCircle.initialBearing p1 p2 `shouldBe`
                 Just (Angle.decimalDegrees 191.27520031611112)
-    describe "interpolate" $ do
+    describe "interpolated" $ do
         let p1 = Geodetic.s84Pos 44 44 Length.zero
         let p2 = Geodetic.s84Pos 46 46 Length.zero
         it "fails if f < 0.0" $
-            evaluate (GreatCircle.interpolate p1 p2 (-0.5)) `shouldThrow`
+            evaluate (GreatCircle.interpolated p1 p2 (-0.5)) `shouldThrow`
             errorCall "fraction must be in range [0..1], was -0.5"
         it "fails if f > 1.0" $
-            evaluate (GreatCircle.interpolate p1 p2 1.1) `shouldThrow`
+            evaluate (GreatCircle.interpolated p1 p2 1.1) `shouldThrow`
             errorCall "fraction must be in range [0..1], was 1.1"
-        it "returns p0 if f == 0" $ GreatCircle.interpolate p1 p2 0.0 `shouldBe` p1
-        it "returns p1 if f == 1" $ GreatCircle.interpolate p1 p2 1.0 `shouldBe` p2
+        it "returns p0 if f == 0" $ GreatCircle.interpolated p1 p2 0.0 `shouldBe` p1
+        it "returns p1 if f == 1" $ GreatCircle.interpolated p1 p2 1.0 `shouldBe` p2
         it "returns the interpolated position" $ do
             let p3 = Geodetic.s84Pos 53.479444 (-2.245278) (Length.metres 10000)
             let p4 = Geodetic.s84Pos 55.605833 13.035833 (Length.metres 20000)
-            GreatCircle.interpolate p3 p4 0.5 `shouldBe`
+            GreatCircle.interpolated p3 p4 0.5 `shouldBe`
                 Geodetic.s84Pos 54.78355703138889 5.194985318055555 (Length.metres 15000)
-    describe "isInsideSurface" $ do
+    describe "insideSurface" $ do
         let p1 = Geodetic.s84Pos 45 1 Length.zero
         let p2 = Geodetic.s84Pos 45 2 Length.zero
         let p3 = Geodetic.s84Pos 46 1 Length.zero
@@ -228,34 +228,34 @@ spec = do
         let hoor = Geodetic.s84Pos 55.9295 13.5297 Length.zero
         let hassleholm = Geodetic.s84Pos 56.1589 13.7668 Length.zero
         let copenhagen = Geodetic.s84Pos 55.6761 12.5683 Length.zero
-        it "return False if polygon is empty" $ GreatCircle.isInsideSurface p1 [] `shouldBe` False
+        it "return False if polygon is empty" $ GreatCircle.insideSurface p1 [] `shouldBe` False
         it "return False if polygon does not define at least a triangle" $
-            GreatCircle.isInsideSurface p1 [p1, p2] `shouldBe` False
+            GreatCircle.insideSurface p1 [p1, p2] `shouldBe` False
         it "returns True if position is inside polygon" $ do
             let polygon = [p1, p2, p4, p3]
-            GreatCircle.isInsideSurface p5 polygon `shouldBe` True
+            GreatCircle.insideSurface p5 polygon `shouldBe` True
         it "returns False if position is inside polygon" $ do
             let polygon = [p1, p2, p4, p3]
             let p = Geodetic.antipode p5
-            GreatCircle.isInsideSurface p polygon `shouldBe` False
+            GreatCircle.insideSurface p polygon `shouldBe` False
         it "returns False if position is a vertex of the polygon" $ do
             let convex = [p1, p2, p4, p3]
-            fmap (\p -> GreatCircle.isInsideSurface p convex) convex `shouldBe` replicate 4 False
+            fmap (\p -> GreatCircle.insideSurface p convex) convex `shouldBe` replicate 4 False
             let concave = [malmo, ystad, kristianstad, helsingborg, lund]
-            fmap (\p -> GreatCircle.isInsideSurface p concave) concave `shouldBe` replicate 5 False
+            fmap (\p -> GreatCircle.insideSurface p concave) concave `shouldBe` replicate 5 False
         it "handles closed polygons" $ do
             let polygon = [p1, p2, p4, p3, p1]
-            GreatCircle.isInsideSurface p5 polygon `shouldBe` True
+            GreatCircle.insideSurface p5 polygon `shouldBe` True
         it "handles concave polygons" $ do
             let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
-            GreatCircle.isInsideSurface hoor polygon `shouldBe` True
-            GreatCircle.isInsideSurface hassleholm polygon `shouldBe` False
+            GreatCircle.insideSurface hoor polygon `shouldBe` True
+            GreatCircle.insideSurface hassleholm polygon `shouldBe` False
         it "considers a point on an edge to be in one polygon only" $ do
-            let i = GreatCircle.interpolate helsingborg lund 0.5
+            let i = GreatCircle.interpolated helsingborg lund 0.5
             let poly1 = [malmo, kristianstad, helsingborg, lund]
             let poly2 = [helsingborg, lund, copenhagen]
-            GreatCircle.isInsideSurface i poly1 `shouldBe` True
-            GreatCircle.isInsideSurface i poly2 `shouldBe` False
+            GreatCircle.insideSurface i poly1 `shouldBe` True
+            GreatCircle.insideSurface i poly2 `shouldBe` False
     describe "intersection" $ do
         it "returns nothing if both great arc are equals" $ do
             let a =

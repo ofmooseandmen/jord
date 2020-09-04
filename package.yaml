@@ -35,14 +35,14 @@ library:
     - Data.Geo.Jord.LatLong
     - Data.Geo.Jord.Length
     - Data.Geo.Jord.LocalFrames
+    - Data.Geo.Jord.Math3d
     - Data.Geo.Jord.Model
     - Data.Geo.Jord.Models
-    - Data.Geo.Jord.Position
+    - Data.Geo.Jord.Positions
     - Data.Geo.Jord.Rotation
     - Data.Geo.Jord.Speed
-    - Data.Geo.Jord.Txs
-    - Data.Geo.Jord.Tx
-    - Data.Geo.Jord.Math3d
+    - Data.Geo.Jord.Transformation
+    - Data.Geo.Jord.Transformations
   other-modules:
     - Data.Geo.Jord.Parser
 
@@ -59,7 +59,7 @@ executables:
   jord-benchmarks:
     main:                Main.hs
     other-modules:
-      - PositionBG
+      - PositionsBG
       - GeodesicBG
       - GeodeticBG
       - GreatCircleBG
@@ -68,11 +68,6 @@ executables:
     dependencies:
       - jord
       - criterion
-  jord-examples:
-    main:                Main.hs
-    dependencies:
-      - jord
-    source-dirs:         examples
 tests:
   jord-test:
     main:                Spec.hs
@@ -81,9 +76,9 @@ tests:
       - jord
       - hspec == 2.*
       - HUnit == 1.6.*
-  readme:
+  jord-readme:
     main: README.lhs
     dependencies:
       - jord
       - markdown-unlit
-    ghc-options: -pgmL markdown-unlit    
+    ghc-options: -pgmL markdown-unlit

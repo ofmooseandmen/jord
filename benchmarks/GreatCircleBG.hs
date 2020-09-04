@@ -19,7 +19,7 @@ benchmark =
         , bench "angularDistance" $ whnf (GreatCircle.angularDistance p1 p2) (Just p3)
         , bench "crossTrackDistance" $ whnf (GreatCircle.crossTrackDistance' p1 p2) a
         , bench "destination" $ whnf (GreatCircle.destination p1 a) l
-        , bench "interpolate" $ whnf (GreatCircle.interpolate p1 p2) 0.5
+        , bench "interpolated" $ whnf (GreatCircle.interpolated p1 p2) 0.5
         , bench "surfaceDistance" $ whnf (GreatCircle.surfaceDistance p1) p2
         , bench "finalBearing" $ whnf (GreatCircle.finalBearing p1) p2
         , bench "initialBearing" $ whnf (GreatCircle.initialBearing p1) p2

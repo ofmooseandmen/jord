@@ -1,4 +1,4 @@
-module PositionBG
+module PositionsBG
     ( benchmark
     ) where
 
@@ -8,16 +8,16 @@ import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (metres)
 import Data.Geo.Jord.Models (S84(..), WGS84(..))
-import qualified Data.Geo.Jord.Position as Position
+import qualified Data.Geo.Jord.Positions as Positions
 
 benchmark :: Benchmark
 benchmark =
     bgroup
-        "Position"
-        [ bench "toGeodetic (ellipsoidal)" $ whnf Position.toGeodetic egeoc
-        , bench "toGeocentric (ellipsoidal)" $ whnf Position.toGeocentric egeod
-        , bench "toGeodetic (spherical)" $ whnf Position.toGeodetic sgeoc
-        , bench "toGeocentric (spherical)" $ whnf Position.toGeocentric sgeod
+        "Positions"
+        [ bench "toGeodetic (ellipsoidal)" $ whnf Positions.toGeodetic egeoc
+        , bench "toGeocentric (ellipsoidal)" $ whnf Positions.toGeocentric egeod
+        , bench "toGeodetic (spherical)" $ whnf Positions.toGeodetic sgeoc
+        , bench "toGeocentric (spherical)" $ whnf Positions.toGeocentric sgeod
         ]
 
 egeoc :: Geocentric.Position WGS84

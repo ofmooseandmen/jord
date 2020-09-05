@@ -101,6 +101,7 @@ test-suite jord-readme
       base >=4.9 && <5
     , jord
     , markdown-unlit
+  build-tool-depends: markdown-unlit:markdown-unlit
   default-language: Haskell2010
 
 test-suite jord-test
@@ -128,4 +129,5 @@ test-suite jord-test
     , base >=4.9 && <5
     , hspec ==2.*
     , jord
+  build-tool-depends: hspec-discover:hspec-discover 
   default-language: Haskell2010

@@ -483,6 +483,7 @@ example15 = do
               \    intercept position    = " ++ (show interceptPosition) ++ "\n\
               \    interceptor bearing   = " ++ (show interceptorBearing) ++ "\n")
 ```
+***
 
 ```haskell
 main :: IO()

@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the master branch - TODO remove fixes
+  push:
+    branches:
+      - master
+      - fixes
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        ghc: [ '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.1' ]
+        os: [ ubuntu-latest, macOS-latest, windows-latest ]
+    name: Haskell GHC ${{ matrix.ghc }} sample on ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-haskell@v1.1
+        name: Setup Haskell
+        with:
+          ghc-version: ${{ matrix.ghc }}
+
+      - name: Configure project
+        run: |
+          cabal v2-update
+          cabal v2-configure --disable-optimization --enable-benchmarks --enable-tests --write-ghc-environment-files=always -j2
+
+      - name: Build & test
+        run: |
+            cabal v2-build
+            cabal v2-test
+

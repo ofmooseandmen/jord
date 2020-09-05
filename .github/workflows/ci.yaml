@@ -2,11 +2,10 @@ name: CI
 
 # Trigger the workflow on push or pull request, but only for the master branch
 # see: https://kodimensional.dev/github-actions
-# TODO: remove fixes
 on:
   pull_request:
   push:
-    branches: [master, fixes]
+    branches: [master]
 
 jobs:
   cabal:

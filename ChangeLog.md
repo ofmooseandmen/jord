@@ -5,10 +5,12 @@
 - API change - positions conversion/transformation are provided by Positions module
 - API change - GreatCicle: interpolate -> interpolated, isInsideSurface -> insideSurface
 - API change - Geodesic data type provides initialBearing, finalBearing, length and functions are removed
+- API change - LocalFrames -> Local
 - Bug Fix - GreatCircle.intersection correctly handles minor arcs crossing the equator
 - Bug Fix - All Geodetic positions built from a /n/-vector have the correct angle resolution
 - Bump stack resolver to lts-16.11
 - Examples in readme are compile to make sure they are valid
+- Use github actions for CI
 
 ### 1.0.0.1
 

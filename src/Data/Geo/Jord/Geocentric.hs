@@ -30,9 +30,10 @@ module Data.Geo.Jord.Geocentric
     , southPole
     ) where
 
+import Data.Geo.Jord.Ellipsoid (polarRadius)
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (metres, toMetres)
-import Data.Geo.Jord.Math3d (V3(..))
+import Data.Geo.Jord.Math3d (V3(..), scale)
 import Data.Geo.Jord.Model
 
 -- | Geocentric coordinates (cartesian X, Y, Z) of a position in a specified 'Model'.
@@ -69,12 +70,19 @@ metresPos xm ym zm = Position (Length.metres xm) (Length.metres ym) (Length.metr
 -- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically
 -- opposite to @p@.
 antipode :: (Model a) => Position a -> Position a
-antipode p = p -- FIXME implement
+antipode p = metresPos xm ym zm (model p)
+  where
+    c = metresCoords p
+    (V3 xm ym zm) = scale c (-1.0)
 
 -- | Surface position of the North Pole in the given model.
 northPole :: (Model a) => a -> Position a
-northPole = metresPos 0 0 0 -- FIXME implement
+northPole m = metresPos 0 0 r m
+  where
+    r = Length.toMetres . polarRadius . surface $ m
 
 -- | Surface position of the South Pole in the given model.
 southPole :: (Model a) => a -> Position a
-southPole = metresPos 0 0 0 -- FIXME implement
+southPole m = metresPos 0 0 (-r) m
+  where
+    r = Length.toMetres . polarRadius . surface $ m

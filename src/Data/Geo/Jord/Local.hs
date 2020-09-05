@@ -27,7 +27,7 @@
 module Data.Geo.Jord.Local
     (
     -- * Local Reference frame
-      LocalFrame(..)
+      Frame(..)
     -- * Body frame
     , FrameB
     , yaw
@@ -81,7 +81,7 @@ import Data.Geo.Jord.Rotation
 --     * 'FrameL': 'rEF' returns R_EL
 --
 --     * 'FrameN': 'rEF' returns R_EN
-class LocalFrame a where
+class Frame a where
     rEF :: a -> [V3] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
 
 -- | Body frame (typically of a vehicle).
@@ -106,7 +106,7 @@ frameB :: (Model a) => Angle -> Angle -> Angle -> Geodetic.Position a -> FrameB 
 frameB y p r o = FrameB y p r o (Geodetic.nvector . Geodetic.northPole $ Geodetic.model o)
 
 -- | R_EB: frame B to Earth
-instance LocalFrame (FrameB a) where
+instance Frame (FrameB a) where
     rEF (FrameB y p r o np) = rm
       where
         rNB = zyx2r y p r
@@ -138,7 +138,7 @@ data FrameL a =
     deriving (Eq, Show)
 
 -- | R_EL: frame L to Earth
-instance LocalFrame (FrameL m) where
+instance Frame (FrameL m) where
     rEF (FrameL w o) = rm
       where
         lat = Geodetic.latitude o
@@ -172,7 +172,7 @@ data FrameN a =
     deriving (Eq, Show)
 
 -- | R_EN: frame N to Earth
-instance LocalFrame (FrameN a) where
+instance Frame (FrameN a) where
     rEF (FrameN o np) = Math3d.transposeM rm
       where
         vo = Geodetic.nvector o
@@ -238,7 +238,7 @@ slantRange = Length.metres . Math3d.norm . nedV3
 -- >>> Local.deltaBetween p1 p2 (Local.frameL w)
 -- Delta {dx = 359.490578214km, dy = 302.818522536km, dz = 17.404271362km}
 deltaBetween ::
-       (LocalFrame a, Model b)
+       (Frame a, Model b)
     => Geodetic.Position b
     -> Geodetic.Position b
     -> (Geodetic.Position b -> a)
@@ -285,7 +285,7 @@ nedBetween p1 p2 = Ned n e d
 -- >>> Local.destination p0 (Local.frameB y r p) d
 -- 49°41'30.485"N,3°28'52.561"E 6.007735m (WGS84)
 destination ::
-       (LocalFrame a, Model b)
+       (Frame a, Model b)
     => Geodetic.Position b
     -> (Geodetic.Position b -> a)
     -> Delta

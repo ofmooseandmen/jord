@@ -106,16 +106,16 @@ spec = do
             let pNAD83 = Positions.toGeocentric (Geodetic.latLongPos 0 0 NAD83_CORS96)
             -- goes via ITRF2000
             let pITRF2014 = fromJust (Positions.transformAt pNAD83 (Epoch 2014.0) ITRF2014 txs)
-            Positions.transformAt pITRF2014 (Epoch 2014.0) NAD83_CORS96 txs `shouldBe` (Just pNAD83)
+            Positions.transformAt pITRF2014 (Epoch 2014.0) NAD83_CORS96 txs `shouldBe` Just pNAD83
         it "converts between ITRF2000 & ETRF2000" $ do
             let txs = dynamicTransformations
             let pITRF2000 = Geocentric.metresPos 4027894.006 307045.600 4919474.910 ITRF2000
             let pETRF2000 = fromJust (Positions.transformAt pITRF2000 (Epoch 2012) ETRF2000 txs)
             pETRF2000 `shouldBe`
-                (Geocentric.metresPos 4027894.3559 307045.2508 4919474.6447 ETRF2000)
+                Geocentric.metresPos 4027894.355909 307045.250849 4919474.644695 ETRF2000
         it "converts between ITRF2014 & ETRF2000" $ do
             let txs = dynamicTransformations
             let pITRF2014 = Geocentric.metresPos 4027894.006 307045.600 4919474.910 ITRF2014
             let pETRF2000 = fromJust (Positions.transformAt pITRF2014 (Epoch 2012) ETRF2000 txs)
             pETRF2000 `shouldBe`
-                (Geocentric.metresPos 4027894.3662 307045.2530 4919474.6263 ETRF2000)
+                Geocentric.metresPos 4027894.366234 307045.252967 4919474.626307 ETRF2000

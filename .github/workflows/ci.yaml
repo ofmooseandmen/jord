@@ -88,4 +88,9 @@ jobs:
 
       - name: Test
         run: |
-          stack test --system-ghc
+          stack test --system-ghc --coverage
+
+      - name: Doc
+        run: |
+          stack haddock --no-haddock-deps
+

@@ -1,6 +1,6 @@
 # Jord - Geographical Position Calculations
 
-[![travis build status](https://img.shields.io/travis/ofmooseandmen/jord/master.svg?label=travis+build)](https://travis-ci.org/ofmooseandmen/jord)
+[![GitHub CI](https://github.com/ofmooseandmen/jord/workflows/CI/badge.svg)](https://github.com/ofmooseandmen/jord/actions)
 [![Hackage](https://img.shields.io/hackage/v/jord.svg)](http://hackage.haskell.org/package/jord)
 [![license](https://img.shields.io/badge/license-BSD3-lightgray.svg)](https://opensource.org/licenses/BSD-3-Clause)
 

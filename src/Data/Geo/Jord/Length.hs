@@ -8,11 +8,11 @@
 --
 -- Types and functions for working with (signed) lengths in metres, kilometres, nautical miles or feet.
 --
--- This module should be imported qualified:
+-- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Length (Length)
---     import qualified Data.Geo.Jord.Length as Length
+-- import Data.Geo.Jord.Length (Length)
+-- import qualified Data.Geo.Jord.Length as Length
 -- @
 --
 module Data.Geo.Jord.Length
@@ -53,7 +53,7 @@ newtype Length =
         }
     deriving (Eq)
 
--- | See 'lengthP'.
+-- | See 'length'.
 instance Read Length where
     readsPrec _ = readP_to_S length
 

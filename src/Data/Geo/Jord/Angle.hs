@@ -8,13 +8,12 @@
 --
 -- Types and functions for working with angles representing latitudes, longitude and bearings.
 --
--- This module should be imported qualified:
+-- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Angle (Angle)
---     import qualified Data.Geo.Jord.Angle as Angle
+-- import Data.Geo.Jord.Angle (Angle)
+-- import qualified Data.Geo.Jord.Angle as Angle
 -- @
---
 module Data.Geo.Jord.Angle
     (
     -- * The 'Angle' type
@@ -108,7 +107,7 @@ zero :: Angle
 zero = Angle 0
 
 -- | 'Angle' from given decimal degrees. Any 'Double' is accepted: it must be
--- validated by the call site when used to represent a latitude or longitude.
+-- validated by the call site when representing a latitude or longitude.
 decimalDegrees :: Double -> Angle
 decimalDegrees dec = Angle (round (dec * 3600000000.0))
 
@@ -220,7 +219,6 @@ signed n s
 --     * minute: ', ′ or m
 --
 --     * second: ", ″, '' or s
---
 angle :: ReadP Angle
 angle = degsMinsSecs <|> decimal
 

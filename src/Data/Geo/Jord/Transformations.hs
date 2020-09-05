@@ -19,7 +19,6 @@
 --    * rotations in milliarcseconds, rates in milliarcseconds per year
 --
 -- This module has been generated.
---
 module Data.Geo.Jord.Transformations where
 
 import Data.Geo.Jord.Model

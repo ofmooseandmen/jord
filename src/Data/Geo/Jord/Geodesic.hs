@@ -14,13 +14,14 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Geodesic (Geodesic)
---     import qualified Data.Geo.Jord.Geodesic as Geodesic
---     import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- import qualified Data.Geo.Jord.Angle as Angle
+-- import Data.Geo.Jord.Geodesic (Geodesic)
+-- import qualified Data.Geo.Jord.Geodesic as Geodesic
+-- import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- import qualified Data.Geo.Jord.Length as Length
 -- @
 --
 -- <http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf T Vincenty, "Direct and Inverse Solutions of Geodesics on the Ellipsoid with application of nested equations", Survey Review, vol XXIII no 176, 1975.>
---
 module Data.Geo.Jord.Geodesic
     (
     -- * The 'Geodesic' type
@@ -52,37 +53,28 @@ import Data.Geo.Jord.Model (Ellipsoidal, surface)
 -- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
 data Geodesic a =
     Geodesic
-        { startPosition :: Geodetic.Position a -- ^ geodesic start position, p1.
-        , endPosition :: Geodetic.Position a -- ^ geodesic end position, p2.
-        , initialBearing :: Maybe Angle -- ^ initial bearing from p1 to p2, if p1 and p2 are different.
-        , finalBearing :: Maybe Angle -- ^ final bearing from p1 to p2, if p1 and p2 are different
-        , length :: Length -- ^ length of the geodesic: the surface distance between p1 and p2.
+        { startPosition :: Geodetic.Position a -- ^ geodesic start position.
+        , endPosition :: Geodetic.Position a -- ^ geodesic end position.
+        , initialBearing :: Maybe Angle -- ^ initial bearing from @startPosition@ to @endPosition@, if both are different.
+        , finalBearing :: Maybe Angle -- ^ final bearing from @startPosition@ to @endPosition@, if both are different.
+        , length :: Length -- ^ length of the geodesic: the surface distance between @startPosition@ to @endPosition@.
         }
     deriving (Eq, Show)
 
 -- | @direct p1 b1 d@ solves the direct geodesic problem using Vicenty formula: position
 -- along the geodesic, reached from position @p1@ having travelled the __surface__ distance @d@ on
 -- the initial bearing (compass angle) @b1@ at __constant__ height; it also returns the final bearing
--- at the reached position.
+-- at the reached position. For example:
+--
+-- >>> Geodesic.direct (Geodetic.northPole WGS84) Angle.zero (Length.kilometres 20003.931458623)
+-- Just (Geodesic { startPosition = 90°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
+--                , endPosition = 90°0'0.000"S,180°0'0.000"E 0.0m (WGS84)
+--                , initialBearing = Just 0°0'0.000"
+--                , finalBearing = Just 180°0'0.000"
+--                , length = 20003.931458623km})
+--
 -- The Vincenty formula for the direct problem should always converge, however this function returns
 -- 'Nothing' if it would ever fail to do so (probably thus indicating a bug in the implementation).
---
--- ==== __Examples__
---
--- >>> import qualified Data.Geo.Jord.Angle as Angle
--- >>> import Data.Geo.Jord.Geodesic (Geodesic)
--- >>> import qualified Data.Geo.Jord.Geodesic as Geodesic
--- >>> import qualified Data.Geo.Jord.Geodetic as Geodetic
--- >>> import qualified Data.Geo.Jord.Length as Length
--- >>> import Data.Geo.Jord.Models (WGS84)
--- >>>
--- >>> Geodesic.direct (Geodetic.northPole WGS84) Angle.zero (Length.kilometres 20003.931458623)
--- Just (Geodesic {startPosition = 90°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
---               , endPosition = 90°0'0.000"S,180°0'0.000"E 0.0m (WGS84)
---               , initialBearing = Just 0°0'0.000"
---               , finalBearing = Just 180°0'0.000"
---               , length = 20003.931458623km})
---
 direct :: (Ellipsoidal a) => Geodetic.Position a -> Angle -> Length -> Maybe (Geodesic a)
 direct p1 b1 d
     | d == Length.zero = Just (Geodesic p1 p1 (Just b1) (Just b1) Length.zero)
@@ -132,27 +124,20 @@ direct p1 b1 d
     rec = directRec sigma1 dm _A _B b sigma 0
 
 -- | @inverse p1 p2@ solves the inverse geodesic problem using Vicenty formula: __surface__ distance,
--- and initial/final bearing between the geodesic line between positions @p1@ and @p2@.
--- The Vincenty formula for the inverse problem can fail to converge for nearly antipodal points in which
--- case this function returns 'Nothing'.
+-- and initial/final bearing between the geodesic line between positions @p1@ and @p2@. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Geodesic (Geodesic)
--- >>> import qualified Data.Geo.Jord.Geodesic as Geodesic
--- >>> import qualified Data.Geo.Jord.Geodetic as Geodetic
--- >>> import Data.Geo.Jord.Models (WGS84)
--- >>>
 -- >>> Geodesic.inverse (Geodetic.latLongPos 0 0 WGS84) (Geodetic.latLongPos 0.5 179.5 WGS84)
--- Just (Geodesic {startPosition = 0°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
---               , endPosition = 0°30'0.000"N,179°30'0.000"E 0.0m (WGS84)
---               , initialBearing = Just 25°40'18.742"
---               , finalBearing = Just 154°19'37.507"
---               , length = 19936.288578981km})
--- >>>
+-- Just (Geodesic { startPosition = 0°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
+--                , endPosition = 0°30'0.000"N,179°30'0.000"E 0.0m (WGS84)
+--                , initialBearing = Just 25°40'18.742"
+--                , finalBearing = Just 154°19'37.507"
+--                , length = 19936.288578981km})
+--
+-- The Vincenty formula for the inverse problem can fail to converge for nearly antipodal points in which
+-- case this function returns 'Nothing'. For example:
+--
 -- >>> Geodesic.inverse (Geodetic.latLongPos 0 0 WGS84) (Geodetic.latLongPos 0.5 179.7 WGS84)
 -- Nothing
---
 inverse :: (Ellipsoidal a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (Geodesic a)
 inverse p1 p2
     | Geodetic.llEq p1 p2 = Just (Geodesic p1 p2 Nothing Nothing Length.zero)

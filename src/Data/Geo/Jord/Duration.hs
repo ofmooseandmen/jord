@@ -8,13 +8,12 @@
 --
 -- Types and functions for working with (signed) durations.
 --
--- This module should be imported qualified:
+-- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Duration (Duration)
---     import qualified Data.Geo.Jord.Duration as Duration
+-- import Data.Geo.Jord.Duration (Duration)
+-- import qualified Data.Geo.Jord.Duration as Duration
 -- @
---
 module Data.Geo.Jord.Duration
     (
     -- * The 'Duration' type
@@ -53,7 +52,7 @@ newtype Duration =
         }
     deriving (Eq)
 
--- | See 'durationP'.
+-- | See 'duration'.
 instance Read Duration where
     readsPrec _ = readP_to_S duration
 

@@ -26,8 +26,9 @@
 --       which is to find exact solutions. Prefer using ellipsoidal models.
 --
 module Data.Geo.Jord.LocalFrames
+    (
     -- * Local Reference frame
-    ( LocalFrame(..)
+      LocalFrame(..)
     -- * Body frame
     , FrameB
     , yaw

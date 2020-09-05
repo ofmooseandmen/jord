@@ -12,8 +12,8 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Geodetic
---     import Data.Geo.Jord.GreatCircle
+-- import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 -- @
 --
 -- All functions are implemented using the vector-based approached described in
@@ -68,7 +68,6 @@ import Data.Geo.Jord.Model (Spherical, surface)
 --
 -- It is internally represented as its normal vector - i.e. the normal vector
 -- to the plane containing the great circle.
---
 data GreatCircle a =
     GreatCircle !V3 !a String
     deriving (Eq)
@@ -78,18 +77,14 @@ instance (Spherical a) => Show (GreatCircle a) where
 
 -- | @greatCircleThrough p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@.
 -- If positions are antipodal, any great circle passing through those positions will be returned.
--- Returns 'Nothing' if given positions are equal.
+-- For example:
 --
--- ==== __Examples__
---
--- >>> import qualified Data.Geo.Jord.GreatCircle
--- >>> import qualified Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
--- >>> let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
+-- >>> let p1 = Geodetic.latLongHeightPos 45.0 (-143.5) (Length.metres 1500) S84
+-- >>> let p2 = Geodetic.latLongHeightPos 46.0 14.5 (Length.metres 3000) S84
 -- >>> GreatCircle.through p1 p2 -- heights are ignored, great circle is always at surface.
 -- Just Great Circle { through 45°0'0.000"N,143°30'0.000"W 1500.0m (S84) & 46°0'0.000"N,14°30'0.000"E 3000.0m (S84) }
 --
+-- Returns 'Nothing' if given positions are equal.
 through ::
        (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (GreatCircle a)
 through p1 p2 = fmap (\n -> GreatCircle n (Geodetic.model p1) dscr) (arcNormal p1 p2)
@@ -97,18 +92,12 @@ through p1 p2 = fmap (\n -> GreatCircle n (Geodetic.model p1) dscr) (arcNormal p
     dscr = "Great Circle { through " ++ show p1 ++ " & " ++ show p2 ++ " }"
 
 -- | @greatCircleHeadingOn p b@ returns the 'GreatCircle' passing by position @p@ and
--- heading on bearing @b@.
+-- heading on bearing @b@. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p = latLongPos 45.0 (-143.5) S84
--- >>> let b = decimalDegrees 33.0
--- >>> greatCircleHeadingOn p b
+-- >>> let p = Geodetic.latLongPos 45.0 (-143.5) S84
+-- >>> let b = Angle.decimalDegrees 33.0
+-- >>> GreatCircle.headingOn p b
 -- Great Circle { by 45°0'0.000"N,143°30'0.000"W 0.0m (S84) & heading on 33°0'0.000" }
---
 headingOn :: (Spherical a) => Geodetic.Position a -> Angle -> GreatCircle a
 headingOn p b = GreatCircle (Math3d.subtract n' e') m dscr
   where
@@ -129,18 +118,14 @@ data MinorArc a =
 instance (Spherical a) => Show (MinorArc a) where
     show (MinorArc _ s e) = "Minor Arc { from: " ++ show s ++ ", to: " ++ show e ++ " }"
 
--- | @minorArc p1 p2@ returns the 'MinorArc' from @p1@ to @p2@.
--- Returns 'Nothing' if given positions are equal.
+-- | @minorArc p1 p2@ returns the 'MinorArc' from @p1@ to @p2@.  For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = latLongHeightPos 45.0 (-143.5) (metres 1500) S84
--- >>> let p2 = latLongHeightPos 46.0 14.5 (metres 3000) S84
+-- >>> let p1 = Geodetic.latLongHeightPos 45.0 (-143.5) (Length.metres 1500) S84
+-- >>> let p2 = Geodetic.latLongHeightPos 46.0 14.5 (Length.metres 3000) S84
+-- >>> GreatCircle.minorArc p1 p2
 -- Just Minor Arc { from: 45°0'0.000"N,143°30'0.000"W 1500.0m (S84), to: 46°0'0.000"N,14°30'0.000"E 3000.0m (S84) }
 --
+-- Returns 'Nothing' if given positions are equal.
 minorArc :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (MinorArc a)
 minorArc p1 p2 = fmap (\n -> MinorArc n p1 p2) (arcNormal p1 p2)
 
@@ -155,37 +140,26 @@ minorArcEnd (MinorArc _ _ e) = e
 -- | @alongTrackDistance p a@ computes how far Position @p@ is along a path described
 -- by the minor arc @a@: if a perpendicular is drawn from @p@  to the path, the
 -- along-track distance is the signed distance from the start point to where the
--- perpendicular crosses the path.
+-- perpendicular crosses the path. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p = s84Pos 53.2611 (-0.7972) zero
--- >>> let ma = minorArcBetween (s84Pos 53.3206 (-1.7297) zero) (s84Pos 53.1887 0.1334 zero)
--- >>> fmap (alongTrackDistance p) ma
--- Right 62.3315757km
---
+-- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972) Length.zero
+-- >>> let mas = Geodetic.s84Pos 53.3206 (-1.7297) Length.zero
+-- >>> let mae = Geodetic.s84Pos 53.1887 0.1334 Length.zero
+-- >>> fmap (GreatCircle.alongTrackDistance p) (GreatCircle.minorArc mas mae)
+-- Just 62.3315791km
 alongTrackDistance :: (Spherical a) => Geodetic.Position a -> MinorArc a -> Length
 alongTrackDistance p (MinorArc n s _) = alongTrackDistance'' p s n
 
 -- | @alongTrackDistance' p s b@ computes how far Position @p@ is along a path starting
 -- at @s@ and heading on bearing @b@: if a perpendicular is drawn from @p@  to the path, the
 -- along-track distance is the signed distance from the start point to where the
--- perpendicular crosses the path.
+-- perpendicular crosses the path. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p = s84Pos 53.2611 (-0.7972) zero
--- >>> let s = s84Pos 53.3206 (-1.7297) zero
--- >>> let b = decimalDegrees 96.0017325
--- >>> alongTrackDistance' p s b
--- 62.3315757km
---
+-- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972) Length.zero
+-- >>> let s = Geodetic.s84Pos 53.3206 (-1.7297) Length.zero
+-- >>> let b = Angle.decimalDegrees 96.0017325
+-- >>> GreatCircle.alongTrackDistance' p s b
+-- 62.3315791km
 alongTrackDistance' ::
        (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Angle -> Length
 alongTrackDistance' p s b = alongTrackDistance'' p s n
@@ -208,28 +182,19 @@ angularDistance p1 p2 n = signedAngleBetween v1 v2 vn
     vn = fmap Geodetic.nvector n
 
 -- | @crossTrackDistance p gc@ computes the signed distance from horizontal Position @p@ to great circle @gc@.
--- Returns a negative 'Length' if Position is left of great circle,
--- positive 'Length' if Position is right of great circle; the orientation of the
--- great circle is therefore important.
+-- Returns a negative 'Length' if Position is left of great circle, positive 'Length' if Position is right
+-- of great circle; the orientation of the great circle is therefore important. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let gc1 = greatCircleThrough (s84Pos 51 0 zero) (s84Pos 52 1 zero)
--- >>> fmap (crossTrackDistance p) gc1
--- Right -176.7568725km
--- >>>
--- >>> let gc2 = greatCircleThrough (s84Pos 52 1 zero) (s84Pos 51 0 zero)
--- >>> fmap (crossTrackDistance p) gc2
--- Right 176.7568725km
--- >>>
--- >>> let p = s84Pos 53.2611 (-0.7972) zero
--- >>> let gc = greatCircleHeadingOn (s84Pos 53.3206 (-1.7297) zero) (decimalDegrees 96.0)
--- >>> crossTrackDistance p gc
--- -305.6629 metres
---
+-- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972) Length.zero
+-- >>> let gc1 = GreatCircle.through (Geodetic.s84Pos 51 0 Length.zero) (Geodetic.s84Pos 52 1 Length.zero)
+-- >>> fmap (GreatCircle.crossTrackDistance p) gc1
+-- Just -176.756870526km
+-- >>> let gc2 = GreatCircle.through (Geodetic.s84Pos 52 1 Length.zero) (Geodetic.s84Pos 51 0 Length.zero)
+-- >>> fmap (GreatCircle.crossTrackDistance p) gc2
+-- Just 176.7568725km
+-- >>> let gc3 = GreatCircle.headingOn (Geodetic.s84Pos 53.3206 (-1.7297) Length.zero) (Angle.decimalDegrees 96.0)
+-- >>> GreatCircle.crossTrackDistance p gc3
+-- -305.665267m metres
 crossTrackDistance :: (Spherical a) => Geodetic.Position a -> GreatCircle a -> Length
 crossTrackDistance p (GreatCircle n _ _) =
     Angle.arcLength (Angle.subtract a (Angle.decimalDegrees 90)) (radius p)
@@ -241,27 +206,20 @@ crossTrackDistance p (GreatCircle n _ _) =
 --
 -- This is equivalent to:
 --
--- @
---     'crossTrackDistance' p ('greatCircleHeadingOn' s b)
--- @
---
+-- > GreatCircle.crossTrackDistance p (GreatCircle.headingOn s b)
 crossTrackDistance' ::
        (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Angle -> Length
 crossTrackDistance' p s b = crossTrackDistance p (headingOn s b)
 
 -- | @destination p b d@ computes the position along the great circle, reached from
 -- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@
--- at __constant__ height.
--- Note that the  bearing will normally vary before destination is reached.
+-- at __constant__ height. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> destination (s84Pos 54 154 (metres 15000)) (decimalDegrees 33) (kilometres 1000)
+-- >>> let p = Geodetic.s84Pos 54 154 (Length.metres 15000)
+-- >>> GreatCircle.destination p (Angle.decimalDegrees 33) (Length.kilometres 1000)
 -- 61°10'44.188"N,164°10'19.254"E 15.0km (S84)
 --
+-- Note that the bearing will normally vary before destination is reached.
 destination :: (Spherical a) => Geodetic.Position a -> Angle -> Length -> Geodetic.Position a
 destination p b d
     | d == Length.zero = p
@@ -277,19 +235,12 @@ destination p b d
     nvd = Math3d.add (Math3d.scale nv (Angle.cos ta)) (Math3d.scale de (Angle.sin ta))
 
 -- | @surfaceDistance p1 p2@ computes the surface distance on the great circle between the
--- positions @p1@ and @p2@.
+-- positions @p1@ and @p2@. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> surfaceDistance (northPole S84) (southPole S84)
+-- >>> GreatCircle.surfaceDistance (Geodetic.northPole S84) (Geodetic.southPole S84)
 -- 20015.114352233km
--- >>>
--- >>> surfaceDistance (northPole S84) (northPole S84)
+-- >>> GreatCircle.surfaceDistance (Geodetic.northPole S84) (Geodetic.northPole S84)
 -- 0.0m
---
 surfaceDistance :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Length
 surfaceDistance p1 p2 = Angle.arcLength a (radius p1)
   where
@@ -298,22 +249,14 @@ surfaceDistance p1 p2 = Angle.arcLength a (radius p1)
 -- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
--- Returns 'Nothing' if both positions are equals.
+-- For example:
 --
--- ==== __Examples__
---
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = s84Pos 0 1 (metres 12000)
--- >>> let p2 = s84Pos 0 0 (metres 5000)
--- >>> finalBearing p1 p2
+-- >>> let p1 = Geodetic.s84Pos 0 1 Length.zero
+-- >>> let p2 = Geodetic.s84Pos 0 0 Length.zero
+-- >>> GreatCircle.finalBearing p1 p2
 -- Just 270°0'0.000"
--- >>>
--- >>> finalBearing p1 p1
--- Nothing
 --
+-- Returns 'Nothing' if both positions are equals.
 finalBearing :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe Angle
 finalBearing p1 p2
     | Geodetic.llEq p1 p2 = Nothing
@@ -321,47 +264,33 @@ finalBearing p1 p2
 
 -- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
--- Returns 'Nothing' if both positions are equals.
+-- For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = s84Pos 58.643889 (-5.714722) (metres 12000)
--- >>> let p2 = s84Pos 50.066389 (-5.714722) (metres 12000)
--- >>> initialBearing p1 p2
+-- >>> let p1 = Geodetic.s84Pos 58.643889 (-5.714722) Length.zero
+-- >>> let p2 = Geodetic.s84Pos 50.066389 (-5.714722) Length.zero
+-- >>> GreatCircle.initialBearing p1 p2
 -- Just 180°0'0.000"
--- >>>
--- >>> initialBearing p1 p1
--- Nothing
 --
+-- Returns 'Nothing' if both positions are equals.
 initialBearing :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe Angle
 initialBearing p1 p2
     | Geodetic.llEq p1 p2 = Nothing
     | otherwise = Just (initialBearing' p1 p2)
 
--- | @interpolate p0 p1 f# computes the position at fraction @f@ between the @p0@ and @p1@.
+-- | @interpolated p0 p1 f# computes the position at fraction @f@ between the @p0@ and @p1@. For example:
+--
+-- >>> let p1 = Geodetic.s84Pos 53.479444 (-2.245278) (Length.metres 10000)
+-- >>> let p2 = Geodetic.s84Pos 55.605833 13.035833 (Length.metres 20000)
+-- >>> GreatCircle.interpolated p1 p2 0.5
+-- 54°47'0.805"N,5°11'41.947"E 15.0km (S84)
 --
 -- Special conditions:
 --
 -- @
---     interpolate p0 p1 0.0 = p0
---     interpolate p0 p1 1.0 = p1
--- @
---
+-- interpolated p0 p1 0.0 = p0
+-- interpolated p0 p1 1.0 = p1
 -- 'error's if @f < 0 || f > 1@
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = s84Pos 53.479444 (-2.245278) (metres 10000)
--- >>> let p2 = s84Pos 55.605833 13.035833 (metres 20000)
--- >>> interpolate p1 p2 0.5
--- 54°47'0.805"N,5°11'41.947"E 15.0km (S84)
---
+-- @
 interpolated ::
        (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Double -> Geodetic.Position a
 interpolated p0 p1 f

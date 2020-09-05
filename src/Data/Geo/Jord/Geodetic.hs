@@ -14,6 +14,13 @@
 --
 -- See <http://clynchg3c.com/Technote/geodesy/coorddef.pdf Earth Coordinates>
 --
+-- In order to use this module you should start with the following imports:
+--
+-- @
+-- import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- import qualified Data.Geo.Jord.Length as Length
+-- import Data.Geo.Jord.Models
+-- @
 module Data.Geo.Jord.Geodetic
     (
     -- * The 'Position' type
@@ -78,7 +85,6 @@ import Data.Geo.Jord.Models (S84(..), WGS84(..))
 -- The "eq" instance returns True if and only if, both positions have the same
 -- latitude, longitude, height and model. Note: two positions in different models
 -- may represent the same location but are not considered equal.
--- -
 data Position a =
     Position
         { latitude :: Angle -- ^ geodetic latitude
@@ -93,7 +99,7 @@ instance (Model a) => Show (Position a) where
         LL.showLatLong (latitude p, longitude p) ++
         " " ++ (show . height $ p) ++ " (" ++ (show . model $ p) ++ ")"
 
--- model equality is ensure by @a@
+-- model equality is ensured by @a@
 instance (Model a) => Eq (Position a) where
     p1 == p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2 && height p1 == height p2
 
@@ -110,10 +116,7 @@ llEq p1 p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2
 --
 -- This is equivalent to:
 --
--- @
---     'latLongHeightPos' lat lon zero model
--- @
---
+-- > Geodetic.latLongHeightPos lat lon Length.zero model
 latLongPos :: (Model a) => Double -> Double -> a -> Position a
 latLongPos lat lon = latLongHeightPos lat lon Length.zero
 
@@ -124,10 +127,7 @@ latLongPos lat lon = latLongHeightPos lat lon Length.zero
 --
 -- This is equivalent to:
 --
--- @
---     'latLongHeightPos'' lat lon zero model
--- @
---
+-- > Geodetic.latLongHeightPos' lat lon Length.zero model
 latLongPos' :: (Model a) => Angle -> Angle -> a -> Position a
 latLongPos' lat lon = latLongHeightPos' lat lon Length.zero
 
@@ -136,7 +136,6 @@ latLongPos' lat lon = latLongHeightPos' lat lon Length.zero
 --
 -- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
 -- with the rest of the API, then wrapped to their respective range.
---
 latLongHeightPos :: (Model a) => Double -> Double -> Length -> a -> Position a
 latLongHeightPos lat lon = latLongHeightPos' (Angle.decimalDegrees lat) (Angle.decimalDegrees lon)
 
@@ -156,10 +155,7 @@ latLongHeightPos' lat lon h m = Position lat' lon' h nv m
 --
 -- This is equivalent to:
 --
--- @
---     'latLongHeightPos' lat lon h 'WGS84'
--- @
---
+-- > Geodetic.latLongHeightPos lat lon h WGS84
 wgs84Pos :: Double -> Double -> Length -> Position WGS84
 wgs84Pos lat lon h = latLongHeightPos lat lon h WGS84
 
@@ -168,10 +164,7 @@ wgs84Pos lat lon h = latLongHeightPos lat lon h WGS84
 --
 -- This is equivalent to:
 --
--- @
---     'latLongHeightPos'' lat lon h 'WGS84'
--- @
---
+-- > Geodetic.latLongHeightPos' lat lon h WGS84
 wgs84Pos' :: Angle -> Angle -> Length -> Position WGS84
 wgs84Pos' lat lon h = latLongHeightPos' lat lon h WGS84
 
@@ -183,10 +176,7 @@ wgs84Pos' lat lon h = latLongHeightPos' lat lon h WGS84
 --
 -- This is equivalent to:
 --
--- @
---     'latLongHeightPos' lat lon h 'S84'
--- @
---
+-- > Geodetic.latLongHeightPos lat lon h S84
 s84Pos :: Double -> Double -> Length -> Position S84
 s84Pos lat lon h = latLongHeightPos lat lon h S84
 
@@ -195,10 +185,7 @@ s84Pos lat lon h = latLongHeightPos lat lon h S84
 --
 -- This is equivalent to:
 --
--- @
---     'latLongHeightPos'' lat lon h 'S84'
--- @
---
+-- > Geodetic.latLongHeightPos' lat lon h S84
 s84Pos' :: Angle -> Angle -> Length -> Position S84
 s84Pos' lat lon h = latLongHeightPos' lat lon h S84
 
@@ -208,10 +195,7 @@ s84Pos' lat lon h = latLongHeightPos' lat lon h S84
 --
 -- This is equivalent to:
 --
--- @
---     'nvectorPos'' (V3 x y z)
--- @
---
+-- > Geodetic.nvectorPos' (V3 x y z)
 nvectorPos :: (Model a) => Double -> Double -> Double -> a -> Position a
 nvectorPos x y z = nvectorPos' (V3 x y z)
 
@@ -220,10 +204,7 @@ nvectorPos x y z = nvectorPos' (V3 x y z)
 -- with the rest of the API.
 -- This is equivalent to:
 --
--- @
---     'nvectorHeightPos'' (V3 x y z) h
--- @
---
+-- > Geodetic.nvectorHeightPos' (V3 x y z) h
 nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Position a
 nvectorHeightPos x y z = nvectorHeightPos' (V3 x y z)
 
@@ -233,10 +214,7 @@ nvectorHeightPos x y z = nvectorHeightPos' (V3 x y z)
 --
 -- This is equivalent to:
 --
--- @
---     'nvectorHeightPos'' lat lon zero model
--- @
---
+-- > Geodetic.nvectorHeightPos' lat lon Length.zero model
 nvectorPos' :: (Model a) => V3 -> a -> Position a
 nvectorPos' v = nvectorHeightPos' v Length.zero
 
@@ -250,6 +228,14 @@ nvectorHeightPos' v h = Position lat lon h nv
     nv = nvectorFromLatLong ll
 
 -- | Reads a 'Position' from the given string using 'position'.
+--
+-- ==== __Examples__
+--
+-- >>> Geodetic.read "55°36'21''N 013°00'02''E" WGS84
+-- Just 55°36'21.000"N,13°0'2.000"E 0.0m (WGS84)
+-- >>>
+-- >>> Geodetic.read "55°36'21''N 013°00'02''E 1500m" WGS84
+-- Just 55°36'21.000"N,13°0'2.000"E 1500.0m (WGS84)
 read :: (Model a) => String -> a -> Maybe (Position a)
 read s m =
     case map fst $ filter (null . snd) $ readP_to_S (position m) s of
@@ -265,17 +251,6 @@ read s m =
 --     * 'Angle'[N|S] 'Angle'[E|W] - e.g. 55°36'21''N 13°0'02''E or 11°16'S 36°49'E or 47°N 122°W
 --
 -- Additionally the string may end by a valid 'Length'.
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> readPosition "55°36'21''N 013°00'02''E" WGS84
--- Just 55°36'21.000"N,13°0'2.000"E 0.0m (WGS84)
--- >>>
--- >>> readPosition "55°36'21''N 013°00'02''E 1500m" WGS84
--- Just 55°36'21.000"N,13°0'2.000"E 1500.0m (WGS84)
---
 position :: (Model a) => a -> ReadP (Position a)
 position m = do
     (lat, lon) <- LL.latLongDms m

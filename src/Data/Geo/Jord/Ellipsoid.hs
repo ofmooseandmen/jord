@@ -9,7 +9,6 @@
 -- Types and functions for working with ellipsoids (including spheres).
 --
 -- see "Data.Geo.Jord.Ellipsoids" for supported ellipsoids.
---
 module Data.Geo.Jord.Ellipsoid
     ( Ellipsoid
     , equatorialRadius

@@ -8,9 +8,11 @@
 --
 -- Types and functions for working with speed in metres per second, kilometres per hour, miles per hour, knots or feet per second.
 --
+-- In order to use this module you should start with the following imports:
+--
 -- @
---     import Data.Geo.Jord.Speed (Speed)
---     import qualified Data.Geo.Jord.Speed as Speed
+-- import Data.Geo.Jord.Speed (Speed)
+-- import qualified Data.Geo.Jord.Speed as Speed
 -- @
 --
 module Data.Geo.Jord.Speed
@@ -57,7 +59,7 @@ newtype Speed =
         }
     deriving (Eq)
 
--- | See 'speedP'.
+-- | See 'speed'.
 instance Read Speed where
     readsPrec _ = readP_to_S speed
 

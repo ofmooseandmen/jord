@@ -11,15 +11,14 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Geodetic
---     import Data.Geo.Jord.Kinematics
+-- import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- import qualified Data.Geo.Jord.Kinematics as Kinematics
 -- @
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
 -- and in <https://calhoun.nps.edu/bitstream/handle/10945/29516/sometacticalalgo00shud.pdf Shudde, Rex H. (1986). Some tactical algorithms for spherical geometry>
 --
--- FIXME: provide accessors for Course type
 module Data.Geo.Jord.Kinematics
     (
     -- * The 'Track' type.
@@ -115,21 +114,17 @@ course p b = Course (V3 (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
 
 -- | @positionAfter p b s d@ computes the position of a vehicle currently at position @p@
 -- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed assuming
--- the vehicle maintains a __constant__ altitude.
+-- the vehicle maintains a __constant__ altitude. For example:
 --
--- @positionAfter p b s d@ is a shortcut for @positionAfter' ('course' p b) s d@.
+-- >>> let p = Geodetic.s84Pos 53.321 (-1.729) (Length.metres 15000)
+-- >>> let b = Angle.decimalDegrees 96.0217
+-- >>> let s = Speed.kilometresPerHour 124.8
+-- >>> Kinematics.positionAfter p b s (Duration.hours 1)
+-- 53°11'19.367"N,0°8'2.456"E 15.0km (S84)
 --
--- ==== __Examples__
+-- This is equivalent to:
 --
--- >>> import Data.Geo.Jord.Kinematics
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p = s84Pos 53.321 (-1.729) (metres 15000)
--- >>> let b = decimalDegrees 96.0217
--- >>> let s = kilometresPerHour 124.8
--- >>> positionAfter p b s (hours 1)
--- 53°11'19.368"N,0°8'2.457"E 15.0km (S84)
--- @
+-- > Kinematics.positionAfter' (Kinematics.course p b) s d
 positionAfter ::
        (Spherical a) => Geodetic.Position a -> Angle -> Speed -> Duration -> Geodetic.Position a
 positionAfter p b s d = position' p (course p b) s (Duration.toSeconds d)
@@ -142,48 +137,28 @@ positionAfter' ::
 positionAfter' p c s d = position' p c s (Duration.toSeconds d)
 
 -- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed
--- assuming the vehicle maintains a __constant__ altitude.
+-- assuming the vehicle maintains a __constant__ altitude. For example:
 --
--- @trackPositionAfter ('Track' p b s) d@ is a equivalent to @positionAfter' p ('course' p b) s d@.
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Kinematics
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p = s84Pos 53.321 (-1.729) (metres 15000)
--- >>> let b = decimalDegrees 96.0217
--- >>> let s = kilometresPerHour 124.8
--- >>> trackPositionAfter (Track p b s) (hours 1)
--- 53°11'19.368"N,0°8'2.457"E 15.0km (S84)
---
+-- >>> let p = Geodetic.s84Pos 53.321 (-1.729) (Length.metres 15000)
+-- >>> let b = Angle.decimalDegrees 96.0217
+-- >>> let s = Speed.kilometresPerHour 124.8
+-- >>> Kinematics.trackPositionAfter (Kinematics.Track p b s) (Duration.hours 1)
+-- 53°11'19.367"N,0°8'2.456"E 15.0km (S84)
 trackPositionAfter :: (Spherical a) => Track a -> Duration -> Geodetic.Position a
 trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 
--- | @cpa t1 t2@ computes the closest point of approach between tracks @t1@ and @t2@ disregarding
+-- | @cpa ownship intruder@ computes the closest point of approach between tracks @ownship@ and @intruder@ disregarding
 -- their respective altitude.
--- If a closest point of approach is found, height of 'cpaPosition1' - respectively 'cpaPosition2',
--- will be the altitude of the first - respectively second, track.
+-- If a closest point of approach is found, height of 'cpaOwnshipPosition' - respectively 'cpaIntruderPosition',
+-- will be the altitude of the ownship - respectively intruder, track. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Kinematics
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = s84Pos 20 (-60) zero
--- >>> let b1 = decimalDegrees 10
--- >>> let s1 = knots 15
--- >>> let p2 = s84Pos 34 (-50) zero
--- >>> let b2 = decimalDegrees 220
--- >>> let s2 = knots 300
--- >>> let t1 = Track p1 b1 s1
--- >>> let t2 = Track p2 b2 s2
--- >>> let c = cpa t1 t2
--- >>> fmap cpaTime c
--- Just 3H9M56.155S
--- >>> fmap cpaDistance c
--- Just 124.2317453km
---
+-- >>> let ownship = Kinematics.Track (Geodetic.s84Pos 20 (-60) Length.zero) (Angle.decimalDegrees 10) (Speed.knots 15)
+-- >>> let intruder = Kinematics.Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 300)
+-- >>> let cpa = Kinematics.cpa ownship intruder
+-- Just (Cpa { timeToCpa = 3H9M56.155S
+--           , distanceAtCpa = 124.231730834km
+--           , cpaOwnshipPosition = 20°46'43.641"N,59°51'11.225"W 0.0m (S84)
+--           , cpaIntruderPosition = 21°24'8.523"N,60°50'48.159"W 0.0m (S84)})
 cpa :: (Spherical a) => Track a -> Track a -> Maybe (Cpa a)
 cpa (Track p1 b1 s1) (Track p2 b2 s2)
     | Geodetic.llEq p1 p2 = Just (Cpa Duration.zero Length.zero p1 p2)
@@ -206,21 +181,15 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 --
 --     * interceptor is "behind" the target
 --
--- If found, 'interceptPosition' is at the altitude of the track.
+-- If found, 'interceptPosition' is at the altitude of the track. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Kinematics
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
--- >>> let ip = s84Pos 20 (-60) zero
--- >>> let i = intercept t ip
--- >>> fmap (toKnots . interceptorSpeed) i
--- Just 52.633367756059
--- >>> fmap (toSeconds . interceptTime) i
--- Just 5993.831
---
+-- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 600)
+-- >>> let ip = Geodetic.s84Pos 20 (-60) Length.zero
+-- >>> Kinematics.intercept t ip
+-- Just (Intercept { timeToIntercept = 1H39M53.831S
+--                 , distanceToIntercept = 162.294627463km
+--                 , interceptPosition = 20°43'42.305"N,61°20'56.848"W 0.0m (S84)
+--                 , interceptorBearing = 300°10'18.053", interceptorSpeed = 97.476999km/h})
 intercept :: (Spherical a) => Track a -> Geodetic.Position a -> Maybe (Intercept a)
 intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept' t p))
 
@@ -233,7 +202,6 @@ intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept' t p))
 --     * interceptor speed is below minimum speed returned by 'intercept'
 --
 -- If found, 'interceptPosition' is at the altitude of the track.
---
 interceptBySpeed :: (Spherical a) => Track a -> Geodetic.Position a -> Speed -> Maybe (Intercept a)
 interceptBySpeed t p s
     | isNothing minInt = Nothing
@@ -247,35 +215,20 @@ interceptBySpeed t p s
 -- after duration @d@. Returns 'Nothing' if given duration is <= 0 or
 -- interceptor and target are at the same position.
 --
--- If found, 'interceptPosition' is at the altitude of the track.
+-- If found, 'interceptPosition' is at the altitude of the track. Contrary to 'intercept' and 'interceptBySpeed'
+-- this function handles cases where the interceptor has to catch up the target.
 --
--- Note: contrary to 'intercept' and 'interceptBySpeed' this function handles
--- cases where the interceptor has to catch up the target.
+-- For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.Kinematics
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
--- >>> let ip = s84Pos 20 (-60) zero
--- >>> let d = seconds 2700
--- >>> let i = interceptByTime t ip d
--- >>> fmap (toKnots . interceptorSpeed) i
--- Just 730.959238
--- >>>
--- >>> fmap interceptorBearing i
--- Just 26°7'11.649"
--- >>>
--- >>> fmap interceptPosition i
--- Just 28°8'12.047"N,55°27'21.411"W 0.0m (S84)
--- >>>
--- >>> fmap interceptDistance i
--- Just 1015.3023506km
--- >>>
--- >>> fmap (toSeconds . interceptTime) i
--- Just 2700
---
+-- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 600)
+-- >>> let ip = Geodetic.s84Pos 20 (-60) Length.zero
+-- >>> let d = Duration.seconds 2700
+-- >>> interceptByTime t ip d
+-- Just (Intercept { timeToIntercept = 0H45M0.000S
+--                 , distanceToIntercept = 1015.302358852km
+--                 , interceptPosition = 28°8'12.046"N,55°27'21.411"W 0.0m (S84)
+--                 , interceptorBearing = 26°7'11.649"
+--                 , interceptorSpeed = 1353.736478km/h})
 interceptByTime ::
        (Spherical a) => Track a -> Geodetic.Position a -> Duration -> Maybe (Intercept a)
 interceptByTime t p d

@@ -68,21 +68,20 @@ params' n = do
     return (Params [tx, ty, tz] s [rx, ry, rz])
 
 generator :: G.Generator Transformation
-generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Transformation"] genTx genAll
+generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Tx"] genTx genAll
 
 genTx :: Transformation -> String
 genTx t
-    | isJust (epoch t) = dynamicTx t
-    | otherwise = staticTx t
+    | isJust (epoch t) = timeDependentTx t
+    | otherwise = fixedTx t
 
-dynamicTx :: Transformation -> String
-dynamicTx t =
+timeDependentTx :: Transformation -> String
+timeDependentTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: Transformation Params15\n" ++
+    " :: Tx Params15\n" ++
     func t ++
-    " =\n    Transformation " ++
-    "\n        " ++
+    " =\n    Tx " ++
     idToString (from t) ++
     "\n        " ++
     idToString (to t) ++
@@ -93,14 +92,13 @@ dynamicTx t =
     "\n             " ++
     tx7ToString (params t) ++ "\n             " ++ ratesToString (rates t) ++ ")"
 
-staticTx :: Transformation -> String
-staticTx t =
+fixedTx :: Transformation -> String
+fixedTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: Transformation Params7\n" ++
+    " :: Tx Params7\n" ++
     func t ++
-    " =\n    Transformation " ++
-    "\n        " ++
+    " =\n    Tx " ++
     idToString (from t) ++
     "\n        " ++ idToString (to t) ++ "\n        " ++ tx7ToString (params t)
 
@@ -131,24 +129,24 @@ epochToString Nothing = error "no epoch"
 epochToString (Just yd) = "(Epoch " ++ show yd ++ ")"
 
 genAll :: [Transformation] -> String
-genAll ts = genStaticTxs s ++ "\n" ++ genDynamicTxs d
+genAll ts = genFixedTxs s ++ "\n" ++ genTimeDependentTxs d
   where
     (d, s) = split ts
 
-genStaticTxs :: [Transformation] -> String
-genStaticTxs ts =
-    "-- | Graph of all static transformations.\n\
-   \staticTransformations :: Graph Params7\n\
-   \staticTransformations =\n\
+genFixedTxs :: [Transformation] -> String
+genFixedTxs ts =
+    "-- | Graph of all transformations between fixed models.\n\
+   \fixed :: Graph Params7\n\
+   \fixed =\n\
    \    graph\n\
    \        [ " ++
     funcs ts ++ "\n        ]\n"
 
-genDynamicTxs :: [Transformation] -> String
-genDynamicTxs ts =
-    "-- | Graph of all dynamic transformations.\n\
-   \dynamicTransformations :: Graph Params15\n\
-   \dynamicTransformations =\n\
+genTimeDependentTxs :: [Transformation] -> String
+genTimeDependentTxs ts =
+    "-- | Graph of all transformations between time-dependent models.\n\
+   \timeDependent :: Graph Params15\n\
+   \timeDependent =\n\
    \    graph\n\
    \        [ " ++
     funcs ts ++ "\n        ]\n"

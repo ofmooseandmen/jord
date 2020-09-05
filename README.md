@@ -42,7 +42,7 @@ import qualified Data.Geo.Jord.Geodesic as Geodesic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Kinematics as Kinematics
 import qualified Data.Geo.Jord.Length as Length
-import qualified Data.Geo.Jord.LocalFrames as LocalFrames
+import qualified Data.Geo.Jord.Local as Local
 import qualified Data.Geo.Jord.Positions as Positions
 import qualified Data.Geo.Jord.Speed as Speed
 ```
@@ -53,7 +53,7 @@ Import data types and models and transformation parameters:
 import Data.Geo.Jord.Angle(Angle)
 import Data.Geo.Jord.Kinematics(Track(..))
 import Data.Geo.Jord.Length(Length)
-import Data.Geo.Jord.LocalFrames(Ned(..), Delta(..))
+import Data.Geo.Jord.Local(Ned(..), Delta(..))
 import Data.Geo.Jord.Models
 import Data.Geo.Jord.Speed(Speed)
 ```
@@ -76,16 +76,16 @@ example1 = do
     let pA = Geodetic.wgs84Pos 1 2 (Length.metres 3)
     let pB = Geodetic.wgs84Pos 4 5 (Length.metres 6)
 
-    let ned = LocalFrames.nedBetween pA pB
+    let ned = Local.nedBetween pA pB
     -- Ned {north = 331.730863099km, east = 332.998501491km, down = 17.39830421km}
 
-    let slantRange = LocalFrames.slantRange ned
+    let slantRange = Local.slantRange ned
     -- 470.357383823km
 
-    let bearing = LocalFrames.bearing ned
+    let bearing = Local.bearing ned
     -- 45°6'33.346"
 
-    let elevation = LocalFrames.elevation ned
+    let elevation = Local.elevation ned
     -- -2°7'11.381"
 
     putStrLn ("NavLab, Example1: A and B to delta\n\
@@ -109,14 +109,14 @@ axis a and flattening f. For WGS-72, use a = 6 378 135 m and f = 1/298.26.*
 example2 :: IO()
 example2 = do
     let frameB =
-            LocalFrames.frameB
+            Local.frameB
                 (Angle.decimalDegrees 40)
                 (Angle.decimalDegrees 20)
                 (Angle.decimalDegrees 30)
     let pB = Geodetic.nvectorHeightPos 1 2 3 (Length.metres 400) WGS72
-    let delta = LocalFrames.deltaMetres 3000 2000 100
+    let delta = Local.deltaMetres 3000 2000 100
 
-    let pC = LocalFrames.destination pB frameB delta
+    let pC = Local.destination pB frameB delta
     -- 53°18'46.839"N,63°29'6.179"E 406.006017m (WGS72)
 
     putStrLn ("NavLab, Example 2: B and delta to C\n\

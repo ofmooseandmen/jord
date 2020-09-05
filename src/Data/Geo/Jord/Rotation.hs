@@ -6,11 +6,18 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- Rotation matrices from/to 3 angles about new axes
+-- Rotation matrices from/to 3 angles about new axes.
+--
+-- In order to use this module you should start with the following imports:
+--
+-- @
+-- import qualified Data.Geo.Jord.Angle as Angle
+-- import Data.Geo.Jord.Math3d (V3(..))
+-- import qualified Data.Geo.Jord.Rotation as Rotation
+-- @
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Position_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
---
 module Data.Geo.Jord.Rotation
     ( r2xyz
     , r2zyx

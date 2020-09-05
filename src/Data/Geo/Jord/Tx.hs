@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.Transformation
+-- Module:      Data.Geo.Jord.Tx
 -- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -7,11 +7,10 @@
 -- Portability: portable
 --
 -- Coordinates transformation parameters.
---
-module Data.Geo.Jord.Transformation
+module Data.Geo.Jord.Tx
     (
     -- * transformation parameters.
-      Transformation(..)
+      Tx(..)
     , inverse
     , Params(..)
     , Params7
@@ -36,16 +35,16 @@ import qualified Data.Geo.Jord.Math3d as Math3d (add, multM, scale)
 import Data.Geo.Jord.Model (Epoch(..), ModelId)
 
 -- | Coordinate transformation between 2 models (A & B).
-data Transformation a =
-    Transformation
+data Tx a =
+    Tx
         { modelA :: ModelId -- ^  model A.
         , modelB :: ModelId -- ^ model B.
         , params :: a -- ^ transformation parameters - i.e. 'modelA'-> 'modelB'
         }
 
 -- | inverse transformation.
-inverse :: (Params a) => Transformation a -> Transformation a
-inverse t = Transformation (modelB t) (modelA t) (inverseParams (params t))
+inverse :: (Params a) => Tx a -> Tx a
+inverse t = Tx (modelB t) (modelA t) (inverseParams (params t))
 
 -- | class for transformation parameters.
 class Params a where
@@ -66,7 +65,7 @@ instance Params Params15 where
     inverseParams (Params15 e p (Rates c s r)) =
         Params15 e (inverseParams p) (Rates (Math3d.scale c (-1.0)) (-s) (Math3d.scale r (-1.0)))
 
--- | Transformation rates for the 15-parameter transformation (Helmert); use 'txRates' to construct.
+-- | Transformation rates for the 15-parameter transformation (Helmert); use 'rates' to construct.
 data Rates =
     Rates !V3 !Double !V3
     deriving (Show)
@@ -98,7 +97,7 @@ mmToMetres (cx, cy, cz) = Math3d.scale (V3 cx cy cz) (1.0 / 1000.0)
 masToRadians :: (Double, Double, Double) -> V3
 masToRadians (rx, ry, rz) = Math3d.scale (V3 rx ry rz) (pi / (3600.0 * 1000.0 * 180.0))
 
--- | @txParamsAt e tx15@ returns the 7-parameter transformation corresponding to the
+-- | @paramsAt e tx15@ returns the 7-parameter transformation corresponding to the
 -- 15-parameter transformation @tx15@ at epoch @e@.
 paramsAt :: Epoch -> Params15 -> Params7
 paramsAt (Epoch e) (Params15 (Epoch pe) (Params7 c s r) (Rates rc rs rr)) = Params7 c' s' r'
@@ -130,12 +129,12 @@ data State =
 data Graph a =
     Graph ![Connection] ![Edge a]
 
--- | @txGraph ts@ returns a transformation graph containing all given direct and inverse
--- (i.e. for each 'Tx': 'txParams' & 'inverseTxParams') transformations.
-graph :: (Params a) => [Transformation a] -> Graph a
+-- | @graph ts@ returns a transformation graph containing all given direct and inverse
+-- (i.e. for each 'Tx': 'params' & 'inverseParams') transformations.
+graph :: (Params a) => [Tx a] -> Graph a
 graph = foldl' addTx emptyGraph
 
--- | @txParamsBetween m0 m1 g@ computes the ordered list of transformation parameters to be
+-- | @paramsBetween m0 m1 g@ computes the ordered list of transformation parameters to be
 -- successively applied when transforming the coordinates of a position in model @m0@ to model @m1@.
 -- The returned list is empty, if either model is not in the graph (i.e. not a vertex)  or if no
 -- such transformation exists (i.e. model @m1@ cannot be reached from model @m0@).
@@ -151,8 +150,8 @@ paramsBetween m0 m1 g
 emptyGraph :: Graph a
 emptyGraph = Graph [] []
 
--- | add 'Transformation' to graph.
-addTx :: (Params a) => Graph a -> Transformation a -> Graph a
+-- | add 'Tx' to graph.
+addTx :: (Params a) => Graph a -> Tx a -> Graph a
 addTx (Graph cs es) t = Graph cs' es'
   where
     ma = modelA t

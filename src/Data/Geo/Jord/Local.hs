@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.LocalFrames
+-- Module:      Data.Geo.Jord.Local
 -- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>
@@ -11,8 +11,8 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
---     import Data.Geo.Jord.Geodetic
---     import Data.Geo.Jord.LocalFrames
+-- import qualified Data.Geo.Jord.Geodetic as Geodetics
+-- import qualified Data.Geo.Jord.Local as Local
 -- @
 --
 -- All functions are implemented using the vector-based approached described in
@@ -24,8 +24,7 @@
 --
 --     * Though the API accept spherical models, doing so defeats the purpose of this module
 --       which is to find exact solutions. Prefer using ellipsoidal models.
---
-module Data.Geo.Jord.LocalFrames
+module Data.Geo.Jord.Local
     (
     -- * Local Reference frame
       LocalFrame(..)
@@ -59,13 +58,10 @@ module Data.Geo.Jord.LocalFrames
     , nedBetween
     , destination
     , destinationN
-    -- * re-exported for convenience
-    , module Data.Geo.Jord.Rotation
     ) where
 
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
-import Data.Geo.Jord.Positions
 import qualified Data.Geo.Jord.Geocentric as Geocentric
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Length (Length)
@@ -73,6 +69,7 @@ import qualified Data.Geo.Jord.Length as Length (metres, toMetres)
 import Data.Geo.Jord.Math3d (V3(..))
 import qualified Data.Geo.Jord.Math3d as Math3d
 import Data.Geo.Jord.Model (Model)
+import Data.Geo.Jord.Positions
 import Data.Geo.Jord.Rotation
 
 -- | class for local reference frames: a reference frame which is location dependant.
@@ -84,7 +81,6 @@ import Data.Geo.Jord.Rotation
 --     * 'FrameL': 'rEF' returns R_EL
 --
 --     * 'FrameN': 'rEF' returns R_EN
---
 class LocalFrame a where
     rEF :: a -> [V3] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
 
@@ -92,11 +88,9 @@ class LocalFrame a where
 --
 --     * Position: The origin is in the vehicle’s reference point.
 --
---     * Orientation: The x-axis points forward, the y-axis to the right (starboard) and the z-axis
--- in the vehicle’s down direction.
+--     * Orientation: The x-axis points forward, the y-axis to the right (starboard) and the z-axis in the vehicle’s down direction.
 --
---      * Comments: The frame is fixed to the vehicle.
---
+--     * Comments: The frame is fixed to the vehicle.
 data FrameB a =
     FrameB
         { yaw :: Angle -- ^ body yaw angle (vertical axis).
@@ -136,7 +130,6 @@ instance LocalFrame (FrameB a) where
 -- difference between the frames is an angle between the x-axis of L and the north direction;
 -- this angle is called the wander azimuth angle. The L-frame is well suited for general
 -- calculations, as it is non-singular.
---
 data FrameL a =
     FrameL
         { wanderAzimuth :: Angle -- ^ wander azimuth: angle between x-axis of the frame L and the north direction.
@@ -171,7 +164,6 @@ frameL = FrameL
 -- will increase, being infinite at the poles. The poles are thus singularities and the direction of
 -- the x- and y-axes are not defined here. Hence, this coordinate frame is not suitable for
 -- general calculations.
---
 data FrameN a =
     FrameN
         { nOrigin :: Geodetic.Position a -- ^ frame origin.
@@ -222,7 +214,6 @@ nedMetres n e d = Ned (Length.metres n) (Length.metres e) (Length.metres d)
 -- | @bearing v@ computes the bearing in compass angle of the NED vector @v@ from north.
 --
 -- Compass angles are clockwise angles from true north: 0 = north, 90 = east, 180 = south, 270 = west.
---
 bearing :: Ned -> Angle
 bearing (Ned n e _) =
     let a = Angle.atan2 (Length.toMetres e) (Length.toMetres n)
@@ -239,19 +230,13 @@ slantRange :: Ned -> Length
 slantRange = Length.metres . Math3d.norm . nedV3
 
 -- | @deltaBetween p1 p2 f@ computes the exact 'Delta' between the two
--- positions @p1@ and @p2@ in local frame @f@.
+-- positions @p1@ and @p2@ in local frame @f@. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.LocalFrames
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = wgs84Pos 1 2 (metres (-3))
--- >>> let p2 = wgs84Pos 4 5 (metres (-6))
--- >>> let w = decimalDegrees 5 -- wander azimuth
--- >>> deltaBetween p1 p2 (frameL w)
--- Delta (Vector3d {vx = 359490.5782, vy = 302818.5225, vz = 17404.2714})
---
+-- >>> let p1 = Geodetic.wgs84Pos 1 2 (Length.metres (-3))
+-- >>> let p2 = Geodetic.wgs84Pos 4 5 (Length.metres (-6))
+-- >>> let w = Angle.decimalDegrees 5 -- wander azimuth
+-- >>> Local.deltaBetween p1 p2 (Local.frameL w)
+-- Delta {dx = 359.490578214km, dy = 302.818522536km, dz = 17.404271362km}
 deltaBetween ::
        (LocalFrame a, Model b)
     => Geodetic.Position b
@@ -268,7 +253,12 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
     d = Math3d.multM de rm
 
 -- | @nedBetween p1 p2@ computes the exact 'Ned' vector between the two
--- positions @p1@ and @p2@, in north, east, and down.
+-- positions @p1@ and @p2@, in north, east, and down. For example:
+--
+-- >>> let p1 = Geodetic.wgs84Pos 1 2 (Length.metres (-3))
+-- >>> let p2 = Geodetic.wgs84Pos 4 5 (Length.metres (-6))
+-- >>> Local.nedBetween p1 p2
+-- Ned {north = 331.730234781km, east = 332.997874989km, down = 17.404271362km}
 --
 -- Resulting 'Ned' delta is relative to @p1@: Due to the curvature of Earth and
 -- different directions to the North Pole, the north, east, and down directions
@@ -278,40 +268,22 @@ deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
 --
 -- This is equivalent to:
 --
--- @
---     'deltaBetween' p1 p2 'frameN'
--- @
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.LocalFrames
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p1 = wgs84Pos 1 2 (metres (-3))
--- >>> let p2 = wgs84Pos 4 5 (metres (-6))
--- >>> nedBetween p1 p2
--- Ned (Vector3d {vx = 331730.2348, vy = 332997.875, vz = 17404.2714})
---
+-- > Local.deltaBetween p1 p2 Local.frameN
 nedBetween :: (Model a) => Geodetic.Position a -> Geodetic.Position a -> Ned
 nedBetween p1 p2 = Ned n e d
   where
     (Delta n e d) = deltaBetween p1 p2 frameN
 
--- | @destination p0 f d@ computes the destination position from position @p0@ and delta @d@ in local frame @f@.
+-- | @destination p0 f d@ computes the destination position from position @p0@ and delta @d@ in local frame @f@. For
+-- example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.LocalFrames
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p0 = wgs84Pos 49.66618 3.45063 zero
--- >>> let y = decimalDegrees 10 -- yaw
--- >>> let r = decimalDegrees 20 -- roll
--- >>> let p = decimalDegrees 30 -- pitch
--- >>> let d = deltaMetres 3000 2000 100
--- >>> target p0 (frameB y r p) d
--- 49°41'30.486"N,3°28'52.561"E 6.0077m (WGS84)
---
+-- >>> let p0 = Geodetic.wgs84Pos 49.66618 3.45063 Length.zero
+-- >>> let y = Angle.decimalDegrees 10 -- yaw
+-- >>> let r = Angle.decimalDegrees 20 -- roll
+-- >>> let p = Angle.decimalDegrees 30 -- pitch
+-- >>> let d = Local.deltaMetres 3000 2000 100
+-- >>> Local.destination p0 (Local.frameB y r p) d
+-- 49°41'30.485"N,3°28'52.561"E 6.007735m (WGS84)
 destination ::
        (LocalFrame a, Model b)
     => Geodetic.Position b
@@ -326,23 +298,14 @@ destination p0 f d = toGeodetic gt
     (V3 x y z) = Math3d.add g0 c
     gt = Geocentric.metresPos x y z (Geodetic.model p0)
 
--- | @destinationN p0 d@ computes the destination position from position @p0@ and north, east, down @d@.
+-- | @destinationN p0 d@ computes the destination position from position @p0@ and north, east, down @d@. For example:
 --
+-- >>> let p0 = Geodetic.wgs84Pos 49.66618 3.45063 Length.zero
+-- >>> Local.destinationN p0 (Local.nedMetres 100 200 300)
+-- 49°40'1.484"N,3°27'12.242"E -299.996086m (WGS84)
 -- This is equivalent to:
 --
--- @
---     'target' p0 'frameN' ('Delta' d)
--- @
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.LocalFrames
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let p0 = wgs84Pos 49.66618 3.45063 zero
--- >>> targetN p0 (nedMeters 100 200 300)
--- 49°40'1.485"N,3°27'12.242"E -299.9961m (WGS84)
---
+-- > Local.destination p0 Local.frameN
 destinationN :: (Model a) => Geodetic.Position a -> Ned -> Geodetic.Position a
 destinationN p0 (Ned n e d) = destination p0 frameN (Delta n e d)
 

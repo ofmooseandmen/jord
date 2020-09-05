@@ -18,8 +18,6 @@
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
---
---
 -- FIXME: add projection, isLeft, turn, discretiseCircle & discretiseArc
 module Data.Geo.Jord.GreatCircle
     (
@@ -306,20 +304,16 @@ interpolated p0 p1 f
     iv = Math3d.unit (Math3d.add nv0 (Math3d.scale (Math3d.subtract nv1 nv0) f))
     ih = lrph h0 h1 f
 
--- | Computes the intersection between the two given minor arcs of great circle.
+-- | Computes the intersection between the two given minor arcs of great circle. For example:
+--
+-- >>> let a1s = Geodetic.s84Pos 51.885 0.235 Length.zero
+-- >>> let a1e = Geodetic.s84Pos 48.269 13.093 Length.zero
+-- >>> let a2s = Geodetic.s84Pos 49.008 2.549 Length.zero
+-- >>> let a2e = Geodetic.s84Pos 56.283 11.304 Length.zero
+-- >>> GreatCircle.intersection <$> (GreatCircle.minorArc a1s a1e) <*> (GreatCircle.minorArc a2s a2e)
+-- Just (Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84))
 --
 -- see also 'intersections'
---
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let a1 = minorArcBetween (s84Pos 51.885 0.235 zero) (s84Pos 48.269 13.093 zero)
--- >>> let a2 = minorArcBetween (s84Pos 49.008 2.549 zero) (s84Pos 56.283 11.304 zero)
--- >>> join (intersection <$> a1 <*> a2)
--- Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84)
---
 intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Geodetic.Position a)
 intersection a1@(MinorArc n1 s1 e1) a2@(MinorArc n2 s2 e2) =
     case intersections' n1 n2 (Geodetic.model s1) of
@@ -344,21 +338,15 @@ intersection a1@(MinorArc n1 s1 e1) a2@(MinorArc n2 s2 e2) =
 
 -- | Computes the intersections between the two given 'GreatCircle's.
 -- Two great circles intersect exactly twice unless there are equal (regardless of orientation),
--- in which case 'Nothing' is returned.
+-- in which case 'Nothing' is returned. For example:
 --
--- ==== __Examples__
---
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let gc1 = greatCircleHeadingOn (s84Pos 51.885 0.235 zero) (decimalDegrees 108.63)
--- >>> let gc2 = greatCircleHeadingOn (s84Pos 49.008 2.549 zero) (decimalDegrees 32.72)
--- >>> intersections gc1 gc2
--- Just (50°54'6.201"N,4°29'39.402"E 0.0m (S84),50°54'6.201"S,175°30'20.598"W 0.0m (S84))
--- >>> let i = intersections gc1 gc2
--- fmap fst i == fmap (antipode . snd) i
--- >>> True
---
+-- >>> let gc1 = GreatCircle.headingOn (Geodetic.s84Pos 51.885 0.235 Length.zero) (Angle.decimalDegrees 108.63)
+-- >>> let gc2 = GreatCircle.headingOn (Geodetic.s84Pos 49.008 2.549 Length.zero) (Angle.decimalDegrees 32.72)
+-- >>> GreatCircle.intersections gc1 gc2
+-- Just (50°54'6.201"N,4°29'39.401"E 0.0m (S84),50°54'6.201"S,175°30'20.598"W 0.0m (S84))
+-- >>> let is = GreatCircle.intersections gc1 gc2
+-- >>> fmap fst is == fmap (Geodetic.antipode . snd) is
+-- True
 intersections ::
        (Spherical a)
     => GreatCircle a
@@ -377,22 +365,18 @@ intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 --
 -- ==== __Examples__
 --
--- >>> import Data.Geo.Jord.GreatCircle
--- >>> import Data.Geo.Jord.Position
--- >>>
--- >>> let malmo = s84Pos 55.6050 13.0038 zero
--- >>> let ystad = s84Pos 55.4295 13.82 zero
--- >>> let lund = s84Pos 55.7047 13.1910 zero
--- >>> let helsingborg = s84Pos 56.0465 12.6945 zero
--- >>> let kristianstad = s84Pos 56.0294 14.1567 zero
+-- >>> let malmo = Geodetic.s84Pos 55.6050 13.0038 Length.zero
+-- >>> let ystad = Geodetic.s84Pos 55.4295 13.82 Length.zero
+-- >>> let lund = Geodetic.s84Pos 55.7047 13.1910 Length.zero
+-- >>> let helsingborg = Geodetic.s84Pos 56.0465 12.6945 Length.zero
+-- >>> let kristianstad = Geodetic.s84Pos 56.0294 14.1567 Length.zero
 -- >>> let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
--- >>> let hoor = s84Pos 55.9295 13.5297 zero
--- >>> let hassleholm = s84Pos 56.1589 13.7668 zero
--- >>> isInsideSurface hoor polygon
+-- >>> let hoor = Geodetic.s84Pos 55.9295 13.5297 Length.zero
+-- >>> let hassleholm = Geodetic.s84Pos 56.1589 13.7668 Length.zero
+-- >>> GreatCircle.insideSurface hoor polygon
 -- True
--- >>> isInsideSurface hassleholm polygon
+-- >>> GreatCircle.insideSurface hassleholm polygon
 -- False
---
 insideSurface :: (Spherical a) => Geodetic.Position a -> [Geodetic.Position a] -> Bool
 insideSurface p ps
     | null ps = False
@@ -418,10 +402,9 @@ insideSurface p ps
 -- Special conditions:
 --
 -- @
---     mean [] = Nothing
---     mean [p] = Just p
---     mean [p1, p2, p3] = Just circumcentre
---     mean [p1, .., antipode p1] = Nothing
+-- mean [] = Nothing
+-- mean [p] = Just p
+-- mean [p1, .., antipode p1] = Nothing
 -- @
 mean :: (Spherical a) => [Geodetic.Position a] -> Maybe (Geodetic.Position a)
 mean [] = Nothing

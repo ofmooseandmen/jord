@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 63a63c4ca3377b740278ad6192ca9862654963b5e457ef2862eb03270682bf1c
+-- hash: 2af282f10c1347b4582739526e734f177ce4ce300e9d0dea9109caf70549d42f
 
 name:           jord
 version:        2.0.0.0
@@ -41,15 +41,15 @@ library
       Data.Geo.Jord.Kinematics
       Data.Geo.Jord.LatLong
       Data.Geo.Jord.Length
-      Data.Geo.Jord.LocalFrames
+      Data.Geo.Jord.Local
       Data.Geo.Jord.Math3d
       Data.Geo.Jord.Model
       Data.Geo.Jord.Models
       Data.Geo.Jord.Positions
       Data.Geo.Jord.Rotation
       Data.Geo.Jord.Speed
-      Data.Geo.Jord.Transformation
-      Data.Geo.Jord.Transformations
+      Data.Geo.Jord.Tx
+      Data.Geo.Jord.Txs
   other-modules:
       Data.Geo.Jord.Parser
   hs-source-dirs:
@@ -101,8 +101,8 @@ test-suite jord-readme
       base >=4.9 && <5
     , jord
     , markdown-unlit
-  build-tool-depends: markdown-unlit:markdown-unlit
   default-language: Haskell2010
+  build-tool-depends: markdown-unlit:markdown-unlit
 
 test-suite jord-test
   type: exitcode-stdio-1.0
@@ -116,7 +116,7 @@ test-suite jord-test
       Data.Geo.Jord.GreatCircleSpec
       Data.Geo.Jord.KinematicsSpec
       Data.Geo.Jord.LengthSpec
-      Data.Geo.Jord.LocalFramesSpec
+      Data.Geo.Jord.LocalSpec
       Data.Geo.Jord.PositionsSpec
       Data.Geo.Jord.RotationSpec
       Data.Geo.Jord.SpeedSpec
@@ -129,5 +129,5 @@ test-suite jord-test
     , base >=4.9 && <5
     , hspec ==2.*
     , jord
-  build-tool-depends: hspec-discover:hspec-discover 
   default-language: Haskell2010
+  build-tool-depends: hspec-discover:hspec-discover

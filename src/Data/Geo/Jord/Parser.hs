@@ -6,8 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- internal 'ReadP' parsers used by "Jord".
---
+-- internal 'ReadP' parsers.
 module Data.Geo.Jord.Parser
     ( digits
     , double

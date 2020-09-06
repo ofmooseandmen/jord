@@ -11,7 +11,7 @@
 -- In order to use this module you should start with the following imports:
 --
 -- @
--- import qualified Data.Geo.Jord.Geodetic as Geodetics
+-- import qualified Data.Geo.Jord.Geodetic as Geodetic
 -- import qualified Data.Geo.Jord.Local as Local
 -- @
 --
@@ -231,8 +231,8 @@ slantRange = Length.metres . Math3d.norm . nedV3
 -- | @deltaBetween p1 p2 f@ computes the exact 'Delta' between the two
 -- positions @p1@ and @p2@ in local frame @f@. For example:
 --
--- >>> let p1 = Geodetic.wgs84Pos 1 2 (Length.metres (-3))
--- >>> let p2 = Geodetic.wgs84Pos 4 5 (Length.metres (-6))
+-- >>> let p1 = Geodetic.latLongHeightPos 1 2 (Length.metres (-3)) WGS84
+-- >>> let p2 = Geodetic.latLongHeightPos 4 5 (Length.metres (-6)) WGS84
 -- >>> let w = Angle.decimalDegrees 5 -- wander azimuth
 -- >>> Local.deltaBetween p1 p2 (Local.frameL w)
 -- Delta {dx = 359.490578214km, dy = 302.818522536km, dz = 17.404271362km}
@@ -254,8 +254,8 @@ deltaBetween p1 p2 f = deltaMetres (Math3d.v3x d) (Math3d.v3y d) (Math3d.v3z d)
 -- | @nedBetween p1 p2@ computes the exact 'Ned' vector between the two
 -- positions @p1@ and @p2@, in north, east, and down. For example:
 --
--- >>> let p1 = Geodetic.wgs84Pos 1 2 (Length.metres (-3))
--- >>> let p2 = Geodetic.wgs84Pos 4 5 (Length.metres (-6))
+-- >>> let p1 = Geodetic.latLongHeightPos 1 2 (Length.metres (-3)) WGS84
+-- >>> let p2 = Geodetic.latLongHeightPos 4 5 (Length.metres (-6)) WGS84
 -- >>> Local.nedBetween p1 p2
 -- Ned {north = 331.730234781km, east = 332.997874989km, down = 17.404271362km}
 --
@@ -276,7 +276,7 @@ nedBetween p1 p2 = Ned n e d
 -- | @destination p0 f d@ computes the destination position from position @p0@ and delta @d@ in local frame @f@. For
 -- example:
 --
--- >>> let p0 = Geodetic.wgs84Pos 49.66618 3.45063 Length.zero
+-- >>> let p0 = Geodetic.latLongHeightPos 49.66618 3.45063 Length.zero WGS84
 -- >>> let y = Angle.decimalDegrees 10 -- yaw
 -- >>> let r = Angle.decimalDegrees 20 -- roll
 -- >>> let p = Angle.decimalDegrees 30 -- pitch
@@ -299,7 +299,7 @@ destination p0 f d = toGeodetic gt
 
 -- | @destinationN p0 d@ computes the destination position from position @p0@ and north, east, down @d@. For example:
 --
--- >>> let p0 = Geodetic.wgs84Pos 49.66618 3.45063 Length.zero
+-- >>> let p0 = Geodetic.latLongHeightPos 49.66618 3.45063 Length.zero WGS84
 -- >>> Local.destinationN p0 (Local.nedMetres 100 200 300)
 -- 49°40'1.484"N,3°27'12.242"E -299.996086m (WGS84)
 -- This is equivalent to:

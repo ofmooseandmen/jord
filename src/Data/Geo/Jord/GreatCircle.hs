@@ -88,8 +88,7 @@ through p1 p2 = fmap (\n -> GreatCircle n (Geodetic.model p1) dscr) (arcNormal p
   where
     dscr = "Great Circle { through " ++ show p1 ++ " & " ++ show p2 ++ " }"
 
--- | @headingOn p b@ returns the 'GreatCircle' passing by position @p@ and
--- heading on bearing @b@. For example:
+-- | @headingOn p b@ returns the 'GreatCircle' passing by position @p@ and heading on bearing @b@. For example:
 --
 -- >>> let p = Geodetic.s84Pos 45.0 (-143.5)
 -- >>> let b = Angle.decimalDegrees 33.0
@@ -106,8 +105,7 @@ headingOn p b = GreatCircle (Math3d.subtract n' e') m dscr
     n' = Math3d.scale n (Angle.sin b / Math3d.norm n)
     dscr = "Great Circle { by " ++ show p ++ " & heading on " ++ show b ++ " }"
 
--- | Oriented minor arc of a great circle between two positions: shortest path between
--- positions on a great circle.
+-- | Oriented minor arc of a great circle between two positions: shortest path between positions on a great circle.
 data MinorArc a =
     MinorArc !V3 (HorizontalPosition a) (HorizontalPosition a)
     deriving (Eq)
@@ -134,10 +132,9 @@ minorArcStart (MinorArc _ s _) = s
 minorArcEnd :: (Spherical a) => MinorArc a -> HorizontalPosition a
 minorArcEnd (MinorArc _ _ e) = e
 
--- | @alongTrackDistance p a@ computes how far position @p@ is along a path described
--- by the minor arc @a@: if a perpendicular is drawn from @p@  to the path, the
--- along-track distance is the signed distance from the start point to where the
--- perpendicular crosses the path. For example:
+-- | @alongTrackDistance p a@ computes how far position @p@ is along a path described by the minor arc @a@: if a
+-- perpendicular is drawn from @p@  to the path, the along-track distance is the signed distance from the start point to
+-- where the perpendicular crosses the path. For example:
 --
 -- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972)
 -- >>> let mas = Geodetic.s84Pos 53.3206 (-1.7297)
@@ -147,10 +144,9 @@ minorArcEnd (MinorArc _ _ e) = e
 alongTrackDistance :: (Spherical a) => HorizontalPosition a -> MinorArc a -> Length
 alongTrackDistance p (MinorArc n s _) = alongTrackDistance'' p s n
 
--- | @alongTrackDistance' p s b@ computes how far Position @p@ is along a path starting
--- at @s@ and heading on bearing @b@: if a perpendicular is drawn from @p@  to the path, the
--- along-track distance is the signed distance from the start point to where the
--- perpendicular crosses the path. For example:
+-- | @alongTrackDistance' p s b@ computes how far Position @p@ is along a path starting at @s@ and heading on
+-- bearing @b@: if a perpendicular is drawn from @p@  to the path, the along-track distance is the signed distance from
+-- the start point to where the perpendicular crosses the path. For example:
 --
 -- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972)
 -- >>> let s = Geodetic.s84Pos 53.3206 (-1.7297)
@@ -164,8 +160,8 @@ alongTrackDistance' p s b = alongTrackDistance'' p s n
     (GreatCircle n _ _) = headingOn s b
 
 -- | @angularDistance p1 p2 n@ computes the angle between the horizontal Points @p1@ and @p2@.
--- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180],
--- signed + if @p1@ is clockwise looking along @n@, - in opposite direction.
+-- If @n@ is 'Nothing', the angle is always in [0..180], otherwise it is in [-180, +180], signed + if @p1@ is clockwis
+-- looking along @n@, - in opposite direction.
 angularDistance ::
        (Spherical a)
     => HorizontalPosition a
@@ -198,8 +194,8 @@ crossTrackDistance p (GreatCircle n _ _) =
   where
     a = angleBetween n (Geodetic.nvector p)
 
--- | @crossTrackDistance' p s b@ computes the signed distance from horizontal Position @p@ to the
--- great circle passing by @s@ and heading on bearing @b@.
+-- | @crossTrackDistance' p s b@ computes the signed distance from horizontal Position @p@ to the great circle passing
+-- by @s@ and heading on bearing @b@.
 --
 -- This is equivalent to:
 --
@@ -208,9 +204,8 @@ crossTrackDistance' ::
        (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Angle -> Length
 crossTrackDistance' p s b = crossTrackDistance p (headingOn s b)
 
--- | @destination p b d@ computes the position along the great circle, reached from
--- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass
--- angle) @b@. For example:
+-- | @destination p b d@ computes the position along the great circle, reached from position @p@ having travelled the
+-- distance @d@ on the initial bearing (compass angle) @b@. For example:
 --
 -- >>> let p = Geodetic.s84Pos 54 154
 -- >>> GreatCircle.destination p (Angle.decimalDegrees 33) (Length.kilometres 1000)
@@ -231,8 +226,7 @@ destination p b d
     de = Math3d.add (Math3d.scale nd (Angle.cos b)) (Math3d.scale ed (Angle.sin b)) -- unit vector in the direction of the azimuth
     nvd = Math3d.add (Math3d.scale nv (Angle.cos ta)) (Math3d.scale de (Angle.sin ta))
 
--- | @distance p1 p2@ computes the surface distance on the great circle between the
--- positions @p1@ and @p2@. For example:
+-- | @distance p1 p2@ computes the surface distance on the great circle between the positions @p1@ and @p2@. For example:
 --
 -- >>> GreatCircle.distance (Geodetic.northPole S84) (Geodetic.southPole S84)
 -- 20015.114352233km
@@ -243,8 +237,7 @@ distance p1 p2 = Angle.arcLength a (radius p1)
   where
     a = angleBetween (Geodetic.nvector p1) (Geodetic.nvector p2)
 
--- | @enclosedBy p ps@ determines whether position @p@ is enclosed by the polygon defined by horizontal
--- positions @ps@.
+-- | @enclosedBy p ps@ determines whether position @p@ is enclosed by the polygon defined by horizontal positions @ps@.
 -- The polygon can be opened or closed (i.e. if @head ps /= last ps@).
 --
 -- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
@@ -373,8 +366,8 @@ intersection a1@(MinorArc n1 s1 e1) a2@(MinorArc n2 s2 e2) =
                           else i2
 
 -- | Computes the intersections between the two given 'GreatCircle's.
--- Two great circles intersect exactly twice unless there are equal (regardless of orientation),
--- in which case 'Nothing' is returned. For example:
+-- Two great circles intersect exactly twice unless there are equal (regardless of orientation), in which case 'Nothing'
+-- is returned. For example:
 --
 -- >>> let gc1 = GreatCircle.headingOn (Geodetic.s84Pos 51.885 0.235) (Angle.decimalDegrees 108.63)
 -- >>> let gc2 = GreatCircle.headingOn (Geodetic.s84Pos 49.008 2.549) (Angle.decimalDegrees 32.72)
@@ -390,7 +383,15 @@ intersections ::
     -> Maybe (HorizontalPosition a, HorizontalPosition a)
 intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 
--- | @mean ps@ computes the geographic mean horizontal position of @ps@, if it is defined.
+-- | @mean ps@ computes the geographic mean horizontal position of @ps@, if it is defined. For example:
+--
+-- >>> let ps =
+--             [ Geodetic.s84Pos 90 0
+--             , Geodetic.s84Pos 60 10
+--             , Geodetic.s84Pos 50 (-20)
+--             ]
+-- >>> GreatCircle.mean ps
+-- Just 67°14'10.150"N,6°55'3.040"W (S84)
 --
 -- The geographic mean is not defined for antipodals positions (since they
 -- cancel each other).

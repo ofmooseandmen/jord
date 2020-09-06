@@ -76,21 +76,18 @@ import Data.Geo.Jord.Models (S84(..), WGS84(..))
 data HCoords =
     HCoords Angle Angle !Math3d.V3
 
--- | Geodetic coordinates (geodetic latitude, longitude) of an horizontal position
--- in a specified 'Model'.
+-- | Geodetic coordinates (geodetic latitude, longitude) of an horizontal position in a specified 'Model'.
 --
 -- The coordinates are also given as a /n/-vector: the normal vector to the surface.
 -- /n/-vector orientation:
 --     * z-axis points to the North Pole along the body's rotation axis,
 --     * x-axis points towards the point where latitude = longitude = 0
 --
--- The "show" instance gives position in degrees, minutes, seconds,
--- milliseconds ('Angle' "show" instance), height ('Length' "show" instance)
--- and the model ('Model' "show" instance).
+-- The "show" instance gives position in degrees, minutes, seconds, milliseconds ('Angle' "show" instance), and the
+-- model ('Model' "show" instance).
 --
--- The "eq" instance returns True if and only if, both positions have the same
--- latitude, longitude and model. Note: two positions in different models
--- may represent the same location but are not considered equal.
+-- The "eq" instance returns True if and only if, both positions have the same latitude, longitude and model.
+-- Note: two positions in different models may represent the same location but are not considered equal.
 data HorizontalPosition a =
     HorizontalPosition HCoords a
 
@@ -98,15 +95,14 @@ data HorizontalPosition a =
 model :: (Model a) => HorizontalPosition a -> a
 model (HorizontalPosition _ m) = m
 
--- | Geodetic coordinates (geodetic latitude, longitude and height) of a position in
--- a specified model.
+-- | Geodetic coordinates (geodetic latitude, longitude and height) of a position in a specified model.
 --
--- The "show" instance gives position in degrees, minutes, seconds,
--- milliseconds (HorizontalPosition "show" instance), height ('Length' "show" instance)
--- and the model ('Model' "show" instance).
+-- The "show" instance gives position in degrees, minutes, seconds, milliseconds (HorizontalPosition "show" instance),
+-- height ('Length' "show" instance) and the model ('Model' "show" instance).
 --
--- The "eq" instance returns True if and only if, both positions have the same
--- horizontal coordinates and height.
+-- The "eq" instance returns True if and only if, both positions have the same horizontal coordinates and height.
+--
+-- see 'HorizontalPosition'.
 data Position a =
     Position HCoords Length a
 
@@ -154,11 +150,10 @@ instance (Model a) => Show (Position a) where
 instance (Model a) => Eq (Position a) where
     p1 == p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2 && height p1 == height p2
 
--- | 'HorizontalPosition' from given geodetic latitude & longitude in __decimal degrees__ in
--- the given model.
+-- | 'HorizontalPosition' from given geodetic latitude & longitude in __decimal degrees__ in the given model.
 --
--- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
--- with the rest of the API, then wrapped to their respective range.
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution with the rest of the
+-- API, then wrapped to their respective range.
 latLongPos :: (Model a) => Double -> Double -> a -> HorizontalPosition a
 latLongPos lat lon = latLongPos' (Angle.decimalDegrees lat) (Angle.decimalDegrees lon)
 
@@ -171,11 +166,10 @@ latLongPos' lat lon m = HorizontalPosition (HCoords lat' lon' nv) m
     nv = nvectorFromLatLong (lat, lon)
     (lat', lon') = wrap lat lon nv m
 
--- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height
--- in the given model
+-- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ and height in the given model
 --
--- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
--- with the rest of the API, then wrapped to their respective range.
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution with the rest of the
+-- API, then wrapped to their respective range.
 latLongHeightPos :: (Model a) => Double -> Double -> Length -> a -> Position a
 latLongHeightPos lat lon = latLongHeightPos' (Angle.decimalDegrees lat) (Angle.decimalDegrees lon)
 
@@ -184,11 +178,10 @@ latLongHeightPos lat lon = latLongHeightPos' (Angle.decimalDegrees lat) (Angle.d
 latLongHeightPos' :: (Model a) => Angle -> Angle -> Length -> a -> Position a
 latLongHeightPos' lat lon h m = atHeight (latLongPos' lat lon m) h
 
--- | 'HorizontalPosition' from given geodetic latitude & longitude in __decimal degrees__ in
--- the WGS84 datum.
+-- | 'HorizontalPosition' from given geodetic latitude & longitude in __decimal degrees__ in the WGS84 datum.
 --
--- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
--- with the rest of the API, then wrapped to their respective range.
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution with the rest of the
+-- API, then wrapped to their respective range.
 --
 -- This is equivalent to:
 --
@@ -197,6 +190,7 @@ wgs84Pos :: Double -> Double -> HorizontalPosition WGS84
 wgs84Pos lat lon = latLongPos lat lon WGS84
 
 -- | 'HorizontalPosition' from given geodetic latitude & longitude and height in the WGS84 datum.
+--
 -- Latitude & longitude values are wrapped to their respective range.
 --
 -- This is equivalent to:
@@ -205,11 +199,10 @@ wgs84Pos lat lon = latLongPos lat lon WGS84
 wgs84Pos' :: Angle -> Angle -> HorizontalPosition WGS84
 wgs84Pos' lat lon = latLongPos' lat lon WGS84
 
--- | 'HorizontalPosition' from given latitude & longitude in __decimal degrees__ in the
--- spherical datum derived from WGS84.
+-- | 'HorizontalPosition' from given latitude & longitude in __decimal degrees__ in the spherical datum derived from WGS84.
 --
--- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution
--- with the rest of the API, then wrapped to their respective range.
+-- Latitude & longitude values are first converted to 'Angle' to ensure a consistent resolution with the rest of the
+-- API, then wrapped to their respective range.
 --
 -- This is equivalent to:
 --
@@ -217,8 +210,9 @@ wgs84Pos' lat lon = latLongPos' lat lon WGS84
 s84Pos :: Double -> Double -> HorizontalPosition S84
 s84Pos lat lon = latLongPos lat lon S84
 
--- | 'Position' from given latitude & longitude in the spherical datum derived
--- from WGS84. Latitude & longitude values are wrapped to their respective range.
+-- | 'Position' from given latitude & longitude in the spherical datum derived from WGS84.
+--
+-- Latitude & longitude values are wrapped to their respective range.
 --
 -- This is equivalent to:
 --
@@ -227,8 +221,8 @@ s84Pos' :: Angle -> Angle -> HorizontalPosition S84
 s84Pos' lat lon = latLongPos' lat lon S84
 
 -- | 'Position' from given /n/-vector x, y, z coordinates in the given model.
--- (x, y, z) will be converted to latitude & longitude to ensure a consistent resolution
--- with the rest of the API.
+--
+-- (x, y, z) will be converted first to latitude & longitude to ensure a consistent resolution with the rest of the API.
 --
 -- This is equivalent to:
 --
@@ -237,8 +231,8 @@ nvectorPos :: (Model a) => Double -> Double -> Double -> a -> HorizontalPosition
 nvectorPos x y z = nvectorPos' (Math3d.vec3 x y z)
 
 -- | 'HorizontalPosition' from given /n/-vector x, y, z coordinates in the given model.
--- (x, y, z) will be converted to latitude & longitude to ensure a consistent resolution
--- with the rest of the API.
+--
+-- (x, y, z) will be converted first to latitude & longitude to ensure a consistent resolution with the rest of the API.
 nvectorPos' :: (Model a) => Math3d.V3 -> a -> HorizontalPosition a
 nvectorPos' v = HorizontalPosition (HCoords lat lon nv)
   where
@@ -246,8 +240,8 @@ nvectorPos' v = HorizontalPosition (HCoords lat lon nv)
     nv = nvectorFromLatLong ll
 
 -- | 'Position' from given /n/-vector x, y, z coordinates and height in the given model.
--- (x, y, z) will be converted to latitude & longitude to ensure a consistent resolution
--- with the rest of the API.
+--
+-- (x, y, z) will be converted first to latitude & longitude to ensure a consistent resolution with the rest of the API.
 -- This is equivalent to:
 --
 -- > Geodetic.nvectorHeightPos' (Math3d.vec3 x y z) h
@@ -255,8 +249,8 @@ nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Po
 nvectorHeightPos x y z = nvectorHeightPos' (Math3d.vec3 x y z)
 
 -- | 'Position' from given /n/-vector x, y, z coordinates and height in the given model.
--- (x, y, z) will be converted to latitude & longitude to ensure a consistent resolution
--- with the rest of the API.
+--
+-- (x, y, z) will be converted first to latitude & longitude to ensure a consistent resolution with the rest of the API.
 nvectorHeightPos' :: (Model a) => Math3d.V3 -> Length -> a -> Position a
 nvectorHeightPos' v h m = atHeight (nvectorPos' v m) h
 
@@ -268,7 +262,7 @@ atHeight (HorizontalPosition c m) h = Position c h m
 atSurface :: (Model a) => Position a -> HorizontalPosition a
 atSurface (Position c _ m) = HorizontalPosition c m
 
--- | Reads a 'Position' from the given string using horizontalPosition, for example:
+-- | Reads an 'HorizontalPosition, from the given string using 'horizontalPosition', for example:
 --
 -- >>> Geodetic.readHorizontalPosition "55°36'21''N 013°00'02''E" WGS84
 -- Just 55°36'21.000"N,13°0'2.000"E (WGS84)
@@ -300,8 +294,8 @@ horizontalPosition m = do
     (lat, lon) <- LL.latLongDms m
     return (latLongPos' lat lon m)
 
--- | Parses and returns a 'Position': the begining of the string is parsed by 'horizontalPosition'
--- and additionally the string may end by a valid 'Length'.
+-- | Parses and returns a 'Position': the beginning of the string is parsed by 'horizontalPosition' and additionally the
+-- string may end by a valid 'Length'.
 position :: (Model a) => a -> ReadP (Position a)
 position m = do
     hp <- horizontalPosition m
@@ -329,13 +323,12 @@ nvectorFromLatLong (lat, lon) = Math3d.vec3 x y z
     y = cl * Angle.sin lon
     z = Angle.sin lat
 
--- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically
--- opposite to @p@.
+-- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically opposite to @p@.
 antipode :: (Model a) => HorizontalPosition a -> HorizontalPosition a
 antipode p = nvectorPos' (anti . nvector $ p) (model p)
 
--- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically
--- opposite to @p@ at the same height.
+-- | @antipode p@ computes the antipodal position of @p@: the position which is diametrically opposite to @p@ at the
+-- same height.
 antipode' :: (Model a) => Position a -> Position a
 antipode' p = nvectorHeightPos' (anti . nvector $ p) (height p) (model' p)
 

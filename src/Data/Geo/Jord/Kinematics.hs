@@ -69,10 +69,10 @@ import Data.Geo.Jord.Model (Spherical, surface)
 import Data.Geo.Jord.Speed (Speed)
 import qualified Data.Geo.Jord.Speed as Speed (average, toMetresPerSecond)
 
--- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
+-- | 'Track' represents the state of a vehicle by its current horizontal position, bearing and speed.
 data Track a =
     Track
-        { trackPosition :: HorizontalPosition a -- ^ position of the track.
+        { trackPosition :: HorizontalPosition a -- ^ horizontal position of the track.
         , trackBearing :: Angle -- ^ bearing of the track.
         , trackSpeed :: Speed -- ^ speed of the track.
         }
@@ -88,8 +88,8 @@ data Cpa a =
     Cpa
         { timeToCpa :: Duration -- ^ time to CPA.
         , distanceAtCpa :: Length -- ^ distance at CPA.
-        , cpaOwnshipPosition :: HorizontalPosition a -- ^ position of ownship CPA.
-        , cpaIntruderPosition :: HorizontalPosition a -- ^ position of intruder at CPA.
+        , cpaOwnshipPosition :: HorizontalPosition a -- ^ horizontal position of ownship CPA.
+        , cpaIntruderPosition :: HorizontalPosition a -- ^ horizontal position of intruder at CPA.
         }
     deriving (Eq, Show)
 
@@ -98,7 +98,7 @@ data Intercept a =
     Intercept
         { timeToIntercept :: Duration -- ^ time to intercept.
         , distanceToIntercept :: Length -- ^ distance travelled to intercept.
-        , interceptPosition :: HorizontalPosition a -- ^ position of intercept.
+        , interceptPosition :: HorizontalPosition a -- ^ horizontal position of intercept.
         , interceptorBearing :: Angle -- ^ initial bearing of interceptor.
         , interceptorSpeed :: Speed -- ^ speed of interceptor.
         }
@@ -112,8 +112,8 @@ course p b = Course (Math3d.vec3 (Math3d.v3z (head r)) (Math3d.v3z (r !! 1)) (Ma
     lon = Geodetic.longitude p
     r = Math3d.dotM (Math3d.dotM (rz (Angle.negate lon)) (ry lat)) (rx b)
 
--- | @positionAfter p b s d@ computes the position of a vehicle currently at position @p@
--- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed. For example:
+-- | @positionAfter p b s d@ computes the horizontal position of a vehicle currently at position @p@ following
+-- bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed. For example:
 --
 -- >>> let p = Geodetic.s84Pos 53.321 (-1.729)
 -- >>> let b = Angle.decimalDegrees 96.0217
@@ -128,14 +128,13 @@ positionAfter ::
        (Spherical a) => HorizontalPosition a -> Angle -> Speed -> Duration -> HorizontalPosition a
 positionAfter p b s d = position' p (course p b) s (Duration.toSeconds d)
 
--- | @positionAfter p c s d@ computes the position of a vehicle currently at position @p@
--- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed.
+-- | @positionAfter p c s d@ computes the horizontal position of a vehicle currently at position @p@ on course @c@ and
+-- travelling at speed @s@ after duration @d@ has elapsed.
 positionAfter' ::
        (Spherical a) => HorizontalPosition a -> Course -> Speed -> Duration -> HorizontalPosition a
 positionAfter' p c s d = position' p c s (Duration.toSeconds d)
 
--- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has
--- elapsed. For example:
+-- | @trackPositionAfter t d@ computes the horizontal position of a track @t@ after duration @d@ has elapsed. For example:
 --
 -- >>> let p = Geodetic.s84Pos 53.321 (-1.729)
 -- >>> let b = Angle.decimalDegrees 96.0217
@@ -168,16 +167,9 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
     cp2 = position' p2 c2 s2 t
     d = GreatCircle.distance cp1 cp2
 
--- | @intercept t p@ computes the __minimum__ speed of interceptor at
--- position @p@ needed for an intercept with target track @t@ to take place.
--- Intercept time, position, distance and interceptor bearing are derived from
--- this minimum speed. Returns 'Nothing' if intercept cannot be achieved e.g.:
---
---     * interceptor and target are at the same position
---
---     * interceptor is "behind" the target
---
--- If found, 'interceptPosition' is at the altitude of the track. For example:
+-- | @intercept t p@ computes the __minimum__ speed of interceptor at position @p@ needed for an intercept with target
+-- track @t@ to take place. Intercept time, position, distance and interceptor bearing are derived from this minimum
+-- speed. For example:
 --
 -- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50)) (Angle.decimalDegrees 220) (Speed.knots 600)
 -- >>> let ip = Geodetic.s84Pos 20 (-60)
@@ -187,18 +179,24 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 --                 , interceptPosition = 20°43'42.305"N,61°20'56.848"W (S84)
 --                 , interceptorBearing = 300°10'18.053"
 --                 , interceptorSpeed = 97.476999km/h})
+--
+-- Returns 'Nothing' if intercept cannot be achieved e.g.:
+--
+--     * interceptor and target are at the same position
+--
+--     * interceptor is "behind" the target
+--
 intercept :: (Spherical a) => Track a -> HorizontalPosition a -> Maybe (Intercept a)
 intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept' t p))
 
--- | @interceptBySpeed t p s@ computes the time needed by interceptor at
--- position @p@ and travelling at speed @s@ to intercept target track @t@.
+-- | @interceptBySpeed t p s@ computes the time needed by interceptor at position @p@ and travelling at speed @s@ to
+-- intercept target track @t@.
+--
 -- Returns 'Nothing' if intercept cannot be achieved e.g.:
 --
 --     * interceptor and target are at the same position
 --
 --     * interceptor speed is below minimum speed returned by 'intercept'
---
--- If found, 'interceptPosition' is at the altitude of the track.
 interceptBySpeed :: (Spherical a) => Track a -> HorizontalPosition a -> Speed -> Maybe (Intercept a)
 interceptBySpeed t p s
     | isNothing minInt = Nothing
@@ -207,15 +205,8 @@ interceptBySpeed t p s
   where
     minInt = intercept t p
 
--- | @interceptByTime t p d@ computes the speed of interceptor at
--- position @p@ needed for an intercept with target track @t@ to take place
--- after duration @d@. Returns 'Nothing' if given duration is <= 0 or
--- interceptor and target are at the same position.
---
--- If found, 'interceptPosition' is at the altitude of the track. Contrary to 'intercept' and 'interceptBySpeed'
--- this function handles cases where the interceptor has to catch up the target.
---
--- For example:
+-- | @interceptByTime t p d@ computes the speed of interceptor at position @p@ needed for an intercept with target
+-- track @t@ to take place after duration @d@.For example:
 --
 -- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50)) (Angle.decimalDegrees 220) (Speed.knots 600)
 -- >>> let ip = Geodetic.s84Pos 20 (-60)
@@ -226,6 +217,9 @@ interceptBySpeed t p s
 --                 , interceptPosition = 28°8'12.046"N,55°27'21.411"W (S84)
 --                 , interceptorBearing = 26°7'11.649"
 --                 , interceptorSpeed = 1353.736478km/h})
+--
+-- Returns 'Nothing' if given duration is <= 0 or interceptor and target are at the same position. Contrary to
+-- 'intercept' and 'interceptBySpeed' this function handles cases where the interceptor has to catch up the target.
 interceptByTime ::
        (Spherical a) => Track a -> HorizontalPosition a -> Duration -> Maybe (Intercept a)
 interceptByTime t p d

@@ -8,6 +8,12 @@
 --
 -- Types and functions for working with (signed) durations.
 --
+-- In order to use this module you should start with the following imports:
+--
+-- @
+-- import Data.Geo.Jord.Duration (Duration)
+-- import qualified Data.Geo.Jord.Duration as Duration
+-- @
 module Data.Geo.Jord.Duration
     (
     -- * The 'Duration' type
@@ -24,16 +30,20 @@ module Data.Geo.Jord.Duration
     , toMinutes
     , toSeconds
     -- * Read
-    , durationP
-    , readDuration
+    , duration
+    , read
+    -- * Misc
+    , add
+    , subtract
+    , zero
     ) where
 
+import Prelude hiding (read, subtract)
 import Text.ParserCombinators.ReadP (ReadP, char, option, readP_to_S)
 import Text.Printf (printf)
 import Text.Read (readMaybe)
 
 import Data.Geo.Jord.Parser
-import Data.Geo.Jord.Quantity
 
 -- | A duration with a resolution of 1 millisecond.
 newtype Duration =
@@ -42,9 +52,9 @@ newtype Duration =
         }
     deriving (Eq)
 
--- | See 'durationP'.
+-- | See 'duration'.
 instance Read Duration where
-    readsPrec _ = readP_to_S durationP
+    readsPrec _ = readP_to_S duration
 
 -- | Show 'Duration' as @(-)nHnMn.nS@.
 instance Show Duration where
@@ -59,11 +69,17 @@ instance Show Duration where
 instance Ord Duration where
     (<=) (Duration d1) (Duration d2) = d1 <= d2
 
--- | Add/Subtract Durations.
-instance Quantity Duration where
-    add a b = Duration (toMilliseconds a + toMilliseconds b)
-    sub a b = Duration (toMilliseconds a - toMilliseconds b)
-    zero = Duration 0
+-- | Adds 2 durations.
+add :: Duration -> Duration -> Duration
+add a b = Duration (toMilliseconds a + toMilliseconds b)
+
+-- | Subtracts 2 durations.
+subtract :: Duration -> Duration -> Duration
+subtract a b = Duration (toMilliseconds a - toMilliseconds b)
+
+-- | 0 duration.
+zero :: Duration
+zero = Duration 0
 
 -- | 'Duration' from hours minutes and decimal seconds.
 hms :: Int -> Int -> Double -> Duration
@@ -97,13 +113,13 @@ toMinutes (Duration ms) = fromIntegral ms / 60000.0 :: Double
 toSeconds :: Duration -> Double
 toSeconds (Duration ms) = fromIntegral ms / 1000.0 :: Double
 
--- | Reads an a 'Duration' from the given string using 'durationP'.
-readDuration :: String -> Maybe Duration
-readDuration s = readMaybe s :: (Maybe Duration)
+-- | Reads a 'Duration' from the given string using 'duration'.
+read :: String -> Maybe Duration
+read s = readMaybe s :: (Maybe Duration)
 
 -- | Parses and returns an 'Duration' formatted @(-)nHnMn.nS@.
-durationP :: ReadP Duration
-durationP = do
+duration :: ReadP Duration
+duration = do
     h <- option 0 hoursP
     m <- option 0 minutesP
     s <- option 0.0 secondsP

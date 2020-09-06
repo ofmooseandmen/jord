@@ -1,13 +1,13 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 89db63c7df323abf3398639af8d4eb13af79fde4795eff4f7a6e295089f4dd68
+-- hash: 706e75e053a9230e762c9dfaa856f4e2691a231f87dbf0b81fe980f87572d6db
 
 name:           jord
-version:        1.0.0.1
+version:        2.0.0.0
 synopsis:       Geographical Position Calculations
 description:    Please see the README on GitHub at <https://github.com/ofmooseandmen/jord#readme>
 category:       Geography
@@ -30,30 +30,28 @@ source-repository head
 
 library
   exposed-modules:
-      Data.Geo.Jord
       Data.Geo.Jord.Angle
       Data.Geo.Jord.Duration
       Data.Geo.Jord.Ellipsoid
       Data.Geo.Jord.Ellipsoids
+      Data.Geo.Jord.Geocentric
+      Data.Geo.Jord.Geodetic
       Data.Geo.Jord.Geodesic
       Data.Geo.Jord.GreatCircle
       Data.Geo.Jord.Kinematics
       Data.Geo.Jord.LatLong
       Data.Geo.Jord.Length
-      Data.Geo.Jord.LocalFrames
+      Data.Geo.Jord.Local
+      Data.Geo.Jord.Math3d
       Data.Geo.Jord.Model
       Data.Geo.Jord.Models
-      Data.Geo.Jord.Position
-      Data.Geo.Jord.Quantity
+      Data.Geo.Jord.Positions
       Data.Geo.Jord.Rotation
       Data.Geo.Jord.Speed
-      Data.Geo.Jord.Transformation
-      Data.Geo.Jord.Txs
       Data.Geo.Jord.Tx
-      Data.Geo.Jord.Vector3d
+      Data.Geo.Jord.Txs
   other-modules:
       Data.Geo.Jord.Parser
-      Data.Geo.Jord.Internal
   hs-source-dirs:
       src
   ghc-options: -Wall
@@ -64,10 +62,11 @@ library
 executable jord-benchmarks
   main-is: Main.hs
   other-modules:
+      PositionsBG
       GeodesicBG
+      GeodeticBG
       GreatCircleBG
       KinematicsBG
-      PositionBG
   hs-source-dirs:
       benchmarks
   ghc-options: -Wall
@@ -92,6 +91,19 @@ executable jord-gen
       base >=4.9 && <5
   default-language: Haskell2010
 
+test-suite jord-readme
+  type: exitcode-stdio-1.0
+  main-is: README.lhs
+  other-modules:
+      Paths_jord
+  ghc-options: -Wall -pgmL markdown-unlit
+  build-depends:
+      base >=4.9 && <5
+    , jord
+    , markdown-unlit
+  default-language: Haskell2010
+  build-tool-depends: markdown-unlit:markdown-unlit
+
 test-suite jord-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
@@ -99,17 +111,16 @@ test-suite jord-test
       Data.Geo.Jord.AngleSpec
       Data.Geo.Jord.DurationSpec
       Data.Geo.Jord.EllipsoidSpec
+      Data.Geo.Jord.GeocentricSpec
       Data.Geo.Jord.GeodesicSpec
+      Data.Geo.Jord.GeodeticSpec
       Data.Geo.Jord.GreatCircleSpec
       Data.Geo.Jord.KinematicsSpec
       Data.Geo.Jord.LengthSpec
-      Data.Geo.Jord.LocalFramesSpec
-      Data.Geo.Jord.PositionSpec
-      Data.Geo.Jord.ReadPositionSpec
+      Data.Geo.Jord.LocalSpec
+      Data.Geo.Jord.PositionsSpec
       Data.Geo.Jord.RotationSpec
-      Data.Geo.Jord.ShowPositionSpec
       Data.Geo.Jord.SpeedSpec
-      Data.Geo.Jord.TransformationSpec
       Paths_jord
   hs-source-dirs:
       test
@@ -120,3 +131,4 @@ test-suite jord-test
     , hspec ==2.*
     , jord
   default-language: Haskell2010
+  build-tool-depends: hspec-discover:hspec-discover

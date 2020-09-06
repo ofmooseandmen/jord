@@ -9,7 +9,6 @@
 -- Common ellipsoidal and spherical models.
 --
 -- This module has been generated.
---
 module Data.Geo.Jord.Models where
 
 import Data.Geo.Jord.Ellipsoids

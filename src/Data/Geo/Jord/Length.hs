@@ -8,6 +8,13 @@
 --
 -- Types and functions for working with (signed) lengths in metres, kilometres, nautical miles or feet.
 --
+-- In order to use this module you should start with the following imports:
+--
+-- @
+-- import Data.Geo.Jord.Length (Length)
+-- import qualified Data.Geo.Jord.Length as Length
+-- @
+--
 module Data.Geo.Jord.Length
     (
     -- * The 'Length' type
@@ -18,22 +25,26 @@ module Data.Geo.Jord.Length
     , metres
     , nauticalMiles
     -- * Read
-    , lengthP
-    , readLength
+    , length
+    , read
     -- * Conversions
     , toFeet
     , toKilometres
     , toMetres
     , toMillimetres
     , toNauticalMiles
+    -- * Misc
+    , add
+    , subtract
+    , zero
     ) where
 
 import Control.Applicative ((<|>))
+import Prelude hiding (length, read, subtract)
 import Text.ParserCombinators.ReadP (ReadP, pfail, readP_to_S, skipSpaces, string)
 import Text.Read (readMaybe)
 
 import Data.Geo.Jord.Parser
-import Data.Geo.Jord.Quantity
 
 -- | A length with a resolution of 1 micrometre.
 newtype Length =
@@ -42,24 +53,30 @@ newtype Length =
         }
     deriving (Eq)
 
--- | See 'lengthP'.
+-- | See 'length'.
 instance Read Length where
-    readsPrec _ = readP_to_S lengthP
+    readsPrec _ = readP_to_S length
 
 -- | Length is shown in metres when absolute value is <= 10 km and in kilometres otherwise.
 instance Show Length where
     show l
-        | abs' l <= (kilometres 10) = show (toMetres l) ++ "m"
+        | abs' l <= kilometres 10 = show (toMetres l) ++ "m"
         | otherwise = show (toKilometres l) ++ "km"
 
 instance Ord Length where
     (<=) (Length l1) (Length l2) = l1 <= l2
 
--- | Add/Subtract 'Length's.
-instance Quantity Length where
-    add a b = Length (micrometre a + micrometre b)
-    sub a b = Length (micrometre a - micrometre b)
-    zero = Length 0
+-- | Adds 2 lengths.
+add :: Length -> Length -> Length
+add a b = Length (micrometre a + micrometre b)
+
+-- | Subtracts 2 lengths.
+subtract :: Length -> Length -> Length
+subtract a b = Length (micrometre a - micrometre b)
+
+-- | 0 length.
+zero :: Length
+zero = Length 0
 
 -- | 'Length' from given amount of feet.
 feet :: Double -> Length
@@ -77,9 +94,9 @@ metres m = Length (round (m * m2um))
 nauticalMiles :: Double -> Length
 nauticalMiles nm = Length (round (nm * 1852.0 * m2um))
 
--- | Reads an a 'Length' from the given string using 'lengthP'.
-readLength :: String -> Maybe Length
-readLength s = readMaybe s :: (Maybe Length)
+-- | Reads a 'Length' from the given string using 'length'.
+read :: String -> Maybe Length
+read s = readMaybe s :: (Maybe Length)
 
 -- | @toFeet l@ converts @l@ to feet.
 toFeet :: Length -> Double
@@ -104,8 +121,8 @@ toNauticalMiles (Length l) = fromIntegral l / (1852.0 * m2um)
 -- | Parses and returns a 'Length' formatted as (-)float[m|km|nm|ft].
 -- e.g. 3000m, 2.5km, -154nm or 10000ft.
 --
-lengthP :: ReadP Length
-lengthP = do
+length :: ReadP Length
+length = do
     v <- number
     skipSpaces
     u <- string "m" <|> string "km" <|> string "nm" <|> string "ft"

@@ -9,7 +9,6 @@
 -- Definition of celestial body models.
 --
 -- see "Data.Geo.Jord.Models" for supported models.
---
 module Data.Geo.Jord.Model
     ( LongitudeRange(..)
     , ModelId(..)
@@ -29,7 +28,7 @@ data LongitudeRange
 
 -- | Epoch (decimal years) such as 2018.60: the 219th day of the year or August 7, 2018
 -- in the Gregorian calendar.
-data Epoch =
+newtype Epoch =
     Epoch Double
     deriving (Eq, Show)
 

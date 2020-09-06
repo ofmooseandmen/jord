@@ -20,7 +20,7 @@ generate h (Generator imports genElt genAll) elts =
     "module " ++
     module' h ++
     " where\n\n" ++
-    unlines (map (\i -> "import " ++ i) imports) ++ "\n" ++ unlines (map (\e -> genElt e ++ "\n") elts) ++ genAll elts
+    unlines (map ("import " ++) imports) ++ "\n" ++ unlines (map (\e -> genElt e ++ "\n") elts) ++ genAll elts
 
 header :: Header -> String
 header h =
@@ -36,12 +36,11 @@ header h =
     \--\n" ++
     genComment (comment h) ++
     "--\n\
-    \-- This module has been generated.\n\
-    \--\n"
+    \-- This module has been generated.\n"
 
 documentation :: [String] -> String
 documentation [] = ""
-documentation (c:cs) = ("-- |" ++ c ++ "\n") ++ (genComment cs)
+documentation (c:cs) = ("-- |" ++ c ++ "\n") ++ genComment cs
 
 genComment :: [String] -> String
-genComment cs = unlines (map (\s -> "--" ++ s) cs)
+genComment cs = unlines (map ("--" ++) cs)

@@ -9,7 +9,6 @@
 -- Common ellipsoids of different celestial bodies.
 --
 -- This module has been generated.
---
 module Data.Geo.Jord.Ellipsoids where
 
 import Data.Geo.Jord.Ellipsoid

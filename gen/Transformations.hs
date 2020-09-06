@@ -72,31 +72,31 @@ generator = G.Generator ["Data.Geo.Jord.Model", "Data.Geo.Jord.Tx"] genTx genAll
 
 genTx :: Transformation -> String
 genTx t
-    | isJust (epoch t) = dynamicTx t
-    | otherwise = staticTx t
+    | isJust (epoch t) = timeDependentTx t
+    | otherwise = fixedTx t
 
-dynamicTx :: Transformation -> String
-dynamicTx t =
+timeDependentTx :: Transformation -> String
+timeDependentTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: Tx TxParams15\n" ++
+    " :: Tx Params15\n" ++
     func t ++
     " =\n    Tx " ++
     idToString (from t) ++
     "\n        " ++
     idToString (to t) ++
     "\n        " ++
-    "(TxParams15" ++
+    "(Params15" ++
     "\n             " ++
     epochToString (epoch t) ++
     "\n             " ++
     tx7ToString (params t) ++ "\n             " ++ ratesToString (rates t) ++ ")"
 
-staticTx :: Transformation -> String
-staticTx t =
+fixedTx :: Transformation -> String
+fixedTx t =
     G.documentation (comment t) ++
     func t ++
-    " :: Tx TxParams7\n" ++
+    " :: Tx Params7\n" ++
     func t ++
     " =\n    Tx " ++
     idToString (from t) ++
@@ -107,11 +107,11 @@ idToString s = "(ModelId \"" ++ s ++ "\")"
 
 tx7ToString :: Params -> String
 tx7ToString (Params t s r) =
-    "(txParams7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+    "(params7 " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 ratesToString :: Params -> String
 ratesToString (Params t s r) =
-    "(txRates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
+    "(rates " ++ dsToString t ++ " " ++ dToString s ++ " " ++ dsToString r ++ ")"
 
 dsToString :: [Double] -> String
 dsToString ds = "(" ++ intercalate ", " (map show ds) ++ ")"
@@ -129,25 +129,25 @@ epochToString Nothing = error "no epoch"
 epochToString (Just yd) = "(Epoch " ++ show yd ++ ")"
 
 genAll :: [Transformation] -> String
-genAll ts = genStaticTxs s ++ "\n" ++ genDynamicTxs d
+genAll ts = genFixedTxs s ++ "\n" ++ genTimeDependentTxs d
   where
     (d, s) = split ts
 
-genStaticTxs :: [Transformation] -> String
-genStaticTxs ts =
-    "-- | Graph of all static transformations.\n\
-   \staticTxs :: TxGraph TxParams7\n\
-   \staticTxs =\n\
-   \    txGraph\n\
+genFixedTxs :: [Transformation] -> String
+genFixedTxs ts =
+    "-- | Graph of all transformations between fixed models.\n\
+   \fixed :: Graph Params7\n\
+   \fixed =\n\
+   \    graph\n\
    \        [ " ++
     funcs ts ++ "\n        ]\n"
 
-genDynamicTxs :: [Transformation] -> String
-genDynamicTxs ts =
-    "-- | Graph of all dynamic transformations.\n\
-   \dynamicTxs :: TxGraph TxParams15\n\
-   \dynamicTxs =\n\
-   \    txGraph\n\
+genTimeDependentTxs :: [Transformation] -> String
+genTimeDependentTxs ts =
+    "-- | Graph of all transformations between time-dependent models.\n\
+   \timeDependent :: Graph Params15\n\
+   \timeDependent =\n\
+   \    graph\n\
    \        [ " ++
     funcs ts ++ "\n        ]\n"
 

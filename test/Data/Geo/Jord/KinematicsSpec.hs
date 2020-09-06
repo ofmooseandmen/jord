@@ -6,206 +6,289 @@ import Data.Maybe (fromJust)
 
 import Test.Hspec
 
-import Data.Geo.Jord.GreatCircle
-import Data.Geo.Jord.Kinematics
-import Data.Geo.Jord.Position
+import qualified Data.Geo.Jord.Angle as Angle
+import qualified Data.Geo.Jord.Duration as Duration
+import qualified Data.Geo.Jord.Geodetic as Geodetic
+import qualified Data.Geo.Jord.GreatCircle as GreatCircle
+import Data.Geo.Jord.Kinematics (Track(..))
+import qualified Data.Geo.Jord.Kinematics as Kinematics
+import qualified Data.Geo.Jord.Length as Length
+import Data.Geo.Jord.Models (S84(..))
+import qualified Data.Geo.Jord.Speed as Speed
 
 spec :: Spec
 spec =
     describe "kinematics" $ do
         describe "trackPositionAfter" $ do
             it "computes position at t from p0, bearing and speed" $ do
-                let p0 = s84Pos 53.320556 (-1.729722) (metres 15000)
-                let p1 = s84Pos 53.18826954833333 0.13327449083333334 (metres 15000)
-                let t = Track p0 (decimalDegrees 96.0217) (kilometresPerHour 124.8)
-                trackPositionAfter t (hours 1) `shouldBe` p1
+                let p0 = Geodetic.s84Pos 53.320556 (-1.729722) (Length.metres 15000)
+                let p1 = Geodetic.s84Pos 53.18826954833333 0.13327449083333334 (Length.metres 15000)
+                let t = Track p0 (Angle.decimalDegrees 96.0217) (Speed.kilometresPerHour 124.8)
+                Kinematics.trackPositionAfter t (Duration.hours 1) `shouldBe` p1
             it "handles crossing the date line" $
                 -- distance at equator between 2 positions separated by 180 degrees assuming a spherical
                 -- earth (from WGS84) = 20015.114352233km
                 -- track at 0N1E travelling at 20015.114352233km/h and 90 degrees reaches 0N179W after 1 hour.
              do
-                let p0 = s84Pos 0 1 zero
-                let t = Track p0 (decimalDegrees 90) (kilometresPerHour 20015.114352233)
-                let p1 = trackPositionAfter t (hours 1)
-                surfaceDistance p1 (s84Pos 0 (-179) zero) < metres 0.001 `shouldBe` True
+                let p0 = Geodetic.s84Pos 0 1 Length.zero
+                let t = Track p0 (Angle.decimalDegrees 90) (Speed.kilometresPerHour 20015.114352233)
+                let p1 = Kinematics.trackPositionAfter t (Duration.hours 1)
+                GreatCircle.surfaceDistance p1 (Geodetic.s84Pos 0 (-179) Length.zero) <
+                    Length.metres 0.001 `shouldBe` True
             it "handles poles" $
                 -- distance between poles assuming a spherical earth (from WGS84) = 20015.114352233km
                 -- track at north pole travelling at 20015.114352233km/h and true north reaches the
                 -- south pole after 1 hour.
              do
-                let t = Track (northPole S84) zero (kilometresPerHour 20015.114352233)
-                let p1 = trackPositionAfter t (hours 1)
-                surfaceDistance p1 (southPole S84) < metres 0.001 `shouldBe` True
+                let t =
+                        Track
+                            (Geodetic.northPole S84)
+                            Angle.zero
+                            (Speed.kilometresPerHour 20015.114352233)
+                let p1 = Kinematics.trackPositionAfter t (Duration.hours 1)
+                GreatCircle.surfaceDistance p1 (Geodetic.southPole S84) <
+                    Length.metres 0.001 `shouldBe` True
             it "return p0 if speed is 0" $ do
-                let p0 = s84Pos 53.320556 (-1.729722) (metres 15000)
-                let t = Track p0 (decimalDegrees 96.0217) zero
-                trackPositionAfter t (hours 1) `shouldBe` p0
+                let p0 = Geodetic.s84Pos 53.320556 (-1.729722) (Length.metres 15000)
+                let t = Track p0 (Angle.decimalDegrees 96.0217) Speed.zero
+                Kinematics.trackPositionAfter t (Duration.hours 1) `shouldBe` p0
             it "return p0 if duration is 0" $ do
-                let p0 = s84Pos 53.320556 (-1.729722) (metres 15000)
-                let t = Track p0 (decimalDegrees 96.0217) (kilometresPerHour 124.8)
-                trackPositionAfter t zero `shouldBe` p0
+                let p0 = Geodetic.s84Pos 53.320556 (-1.729722) (Length.metres 15000)
+                let t = Track p0 (Angle.decimalDegrees 96.0217) (Speed.kilometresPerHour 124.8)
+                Kinematics.trackPositionAfter t Duration.zero `shouldBe` p0
         describe "cpa" $ do
             it "returns nothing for trailing tracks at same speed" $ do
-                let p1 = s84Pos 20 30 zero
-                let px = destination p1 (decimalDegrees 20) (kilometres 1)
-                let p2 = interpolate p1 px 0.25
-                let b1 = fromJust (initialBearing p1 px)
-                let b2 = fromJust (initialBearing p2 px)
-                let t1 = Track p1 b1 (knots 400)
-                let t2 = Track p2 b2 (knots 400)
-                cpa t1 t2 `shouldBe` Nothing
+                let p1 = Geodetic.s84Pos 20 30 Length.zero
+                let px = GreatCircle.destination p1 (Angle.decimalDegrees 20) (Length.kilometres 1)
+                let p2 = GreatCircle.interpolated p1 px 0.25
+                let b1 = fromJust (GreatCircle.initialBearing p1 px)
+                let b2 = fromJust (GreatCircle.initialBearing p2 px)
+                let ownship = Track p1 b1 (Speed.knots 400)
+                let intruder = Track p2 b2 (Speed.knots 400)
+                Kinematics.cpa ownship intruder `shouldBe` Nothing
             it "returns nothing for trailing tracks with track ahead escaping" $ do
-                let p1 = s84Pos 20 30 zero
-                let px = destination p1 (decimalDegrees 20) (kilometres 1)
-                let p2 = interpolate p1 px 0.25
-                let b1 = fromJust (initialBearing p1 px)
-                let b2 = fromJust (initialBearing p2 px)
-                let t1 = Track p1 b1 (knots 400)
-                let t2 = Track p2 b2 (knots 401)
-                cpa t1 t2 `shouldBe` Nothing
+                let p1 = Geodetic.s84Pos 20 30 Length.zero
+                let px = GreatCircle.destination p1 (Angle.decimalDegrees 20) (Length.kilometres 1)
+                let p2 = GreatCircle.interpolated p1 px 0.25
+                let b1 = fromJust (GreatCircle.initialBearing p1 px)
+                let b2 = fromJust (GreatCircle.initialBearing p2 px)
+                let ownship = Track p1 b1 (Speed.knots 400)
+                let intruder = Track p2 b2 (Speed.knots 401)
+                Kinematics.cpa ownship intruder `shouldBe` Nothing
             it "handles trailing tracks with track behind catching up" $ do
-                let p1 = s84Pos 20 30 zero
-                let px = destination p1 (decimalDegrees 20) (kilometres 1)
-                let p2 = interpolate p1 px 0.25
-                let b1 = fromJust (initialBearing p1 px)
-                let b2 = fromJust (initialBearing p2 px)
-                let t1 = Track p1 b1 (knots 401)
-                let t2 = Track p2 b2 (knots 400)
-                let c = cpa t1 t2
-                fmap cpaTime c `shouldBe` Just (seconds 485.953)
-                fmap cpaDistance c `shouldBe` Just (metres 4.293e-3) -- close to 0
+                let p1 = Geodetic.s84Pos 20 30 Length.zero
+                let px = GreatCircle.destination p1 (Angle.decimalDegrees 20) (Length.kilometres 1)
+                let p2 = GreatCircle.interpolated p1 px 0.25
+                let b1 = fromJust (GreatCircle.initialBearing p1 px)
+                let b2 = fromJust (GreatCircle.initialBearing p2 px)
+                let ownship = Track p1 b1 (Speed.knots 402)
+                let intruder = Track p2 b2 (Speed.knots 400)
+                let cpa = Kinematics.cpa ownship intruder
+                fmap Kinematics.timeToCpa cpa `shouldBe` Just (Duration.seconds 242.981)
+                fmap Kinematics.distanceAtCpa cpa `shouldBe` Just (Length.metres 5.25e-4) -- close to 0
             it "handles heading tracks" $ do
-                let p1 = s84Pos 20 30 zero
-                let p2 = s84Pos 21 31 zero
-                let b1 = fromJust (initialBearing p1 p2)
-                let b2 = fromJust (initialBearing p2 p1)
-                let t1 = Track p1 b1 (knots 400)
-                let t2 = Track p2 b2 (knots 400)
-                let c = cpa t1 t2
+                let p1 = Geodetic.s84Pos 20 30 Length.zero
+                let p2 = Geodetic.s84Pos 21 31 Length.zero
+                let b1 = fromJust (GreatCircle.initialBearing p1 p2)
+                let b2 = fromJust (GreatCircle.initialBearing p2 p1)
+                let ownship = Track p1 b1 (Speed.knots 400)
+                let intruder = Track p2 b2 (Speed.knots 400)
+                let cpa = Kinematics.cpa ownship intruder
                 -- distance between p1 and p2 = 152.354309 km
                 -- speed = 740.8 km/h
                 -- time = 152.354309 / 740.8 / 2
-                fmap cpaTime c `shouldBe` Just (milliseconds 370191)
-                fmap cpaDistance c `shouldBe` Just zero
+                fmap Kinematics.timeToCpa cpa `shouldBe` Just (Duration.milliseconds 370191)
+                fmap Kinematics.distanceAtCpa cpa `shouldBe` Just Length.zero
             it "handles tracks at the same position" $ do
-                let p = s84Pos 20 30 zero
-                let t1 = Track p (decimalDegrees 45) (knots 300)
-                let t2 = Track p (decimalDegrees 135) (knots 500)
-                let c = cpa t1 t2
-                fmap cpaTime c `shouldBe` Just zero
-                fmap cpaDistance c `shouldBe` Just zero
+                let p = Geodetic.s84Pos 20 30 Length.zero
+                let ownship = Track p (Angle.decimalDegrees 45) (Speed.knots 300)
+                let intruder = Track p (Angle.decimalDegrees 135) (Speed.knots 500)
+                let cpa = Kinematics.cpa ownship intruder
+                fmap Kinematics.timeToCpa cpa `shouldBe` Just Duration.zero
+                fmap Kinematics.distanceAtCpa cpa `shouldBe` Just Length.zero
             it "computes time to CPA, positions and distance at CPA" $ do
-                let p1 = s84Pos 20 (-60) zero
-                let b1 = decimalDegrees 10
-                let s1 = knots 15
-                let p2 = s84Pos 34 (-50) (metres 10000)
-                let b2 = decimalDegrees 220
-                let s2 = knots 300
-                let t1 = Track p1 b1 s1
-                let t2 = Track p2 b2 s2
-                let c = cpa t1 t2
-                fmap cpaTime c `shouldBe` Just (milliseconds 11396155)
-                fmap cpaDistance c `shouldBe` Just (kilometres 124.231730834)
-                fmap cpaPosition1 c `shouldBe` Just (s84Pos 20.778789303333333 (-59.85311827861111) zero)
-                fmap cpaPosition2 c `shouldBe` Just (s84Pos 21.402367759166665 (-60.846710862222224) (metres 10000))
+                let p1 = Geodetic.s84Pos 20 (-60) Length.zero
+                let b1 = Angle.decimalDegrees 10
+                let s1 = Speed.knots 15
+                let p2 = Geodetic.s84Pos 34 (-50) (Length.metres 10000)
+                let b2 = Angle.decimalDegrees 220
+                let s2 = Speed.knots 300
+                let ownship = Track p1 b1 s1
+                let intruder = Track p2 b2 s2
+                let cpa = Kinematics.cpa ownship intruder
+                fmap Kinematics.timeToCpa cpa `shouldBe` Just (Duration.milliseconds 11396155)
+                fmap Kinematics.distanceAtCpa cpa `shouldBe` Just (Length.kilometres 124.231730834)
+                fmap Kinematics.cpaOwnshipPosition cpa `shouldBe`
+                    Just (Geodetic.s84Pos 20.778789303333333 (-59.85311827861111) Length.zero)
+                fmap Kinematics.cpaIntruderPosition cpa `shouldBe`
+                    Just
+                        (Geodetic.s84Pos
+                             21.402367759166665
+                             (-60.846710862222224)
+                             (Length.metres 10000))
             it "returns Nothing if time to CPA is in the past" $ do
-                let t1 = Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400)
-                let t2 = Track (s84Pos 30.01 30 zero) (decimalDegrees 315) (knots 400)
-                cpa t1 t2 `shouldBe` Nothing
+                let ownship =
+                        Track
+                            (Geodetic.s84Pos 30 30 Length.zero)
+                            (Angle.decimalDegrees 45)
+                            (Speed.knots 400)
+                let intruder =
+                        Track
+                            (Geodetic.s84Pos 30.01 30 Length.zero)
+                            (Angle.decimalDegrees 315)
+                            (Speed.knots 400)
+                Kinematics.cpa ownship intruder `shouldBe` Nothing
         describe "intercept" $ do
             it "returns Nothing if target and interceptor are at the same position" $
-                intercept (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400)) (s84Pos 30 30 zero) `shouldBe`
+                Kinematics.intercept
+                    (Track
+                         (Geodetic.s84Pos 30 30 Length.zero)
+                         (Angle.decimalDegrees 45)
+                         (Speed.knots 400))
+                    (Geodetic.s84Pos 30 30 Length.zero) `shouldBe`
                 Nothing
             it "returns Nothing if interceptor is behind target" $ do
-                let t = Track (s84Pos 45 67 zero) (decimalDegrees 54) (knots 400)
-                let ip = s84Pos 44 66 zero
-                intercept t ip `shouldBe` Nothing
+                let t =
+                        Track
+                            (Geodetic.s84Pos 45 67 Length.zero)
+                            (Angle.decimalDegrees 54)
+                            (Speed.knots 400)
+                let ip = Geodetic.s84Pos 44 66 Length.zero
+                Kinematics.intercept t ip `shouldBe` Nothing
             it "handles interceptor on the great circle of target and in front" $ do
-                let tp = s84Pos 20 30 zero
-                let b = decimalDegrees 12
-                let t = Track tp b (knots 400)
-                let ip = trackPositionAfter t (minutes 1)
-                let i = intercept t ip
-                fmap interceptorSpeed i `shouldBe` Just zero
-                fmap interceptDistance i `shouldBe` Just zero
-                fmap interceptPosition i `shouldBe` Just ip
-                fmap interceptTime i `shouldBe` Just (minutes 1)
+                let tp = Geodetic.s84Pos 20 30 Length.zero
+                let b = Angle.decimalDegrees 12
+                let t = Track tp b (Speed.knots 400)
+                let ip = Kinematics.trackPositionAfter t (Duration.minutes 1)
+                let i = Kinematics.intercept t ip
+                fmap Kinematics.interceptorSpeed i `shouldBe` Just Speed.zero
+                fmap Kinematics.distanceToIntercept i `shouldBe` Just Length.zero
+                fmap Kinematics.interceptPosition i `shouldBe` Just ip
+                fmap Kinematics.timeToIntercept i `shouldBe` Just (Duration.minutes 1)
             it "returns the minimum speed required for intercept to take place" $ do
-                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
-                let ip = s84Pos 20 (-60) zero
-                let i = intercept t ip
-                fmap interceptorSpeed i `shouldBe` Just (knots 52.63336879049676)
-                fmap interceptTime i `shouldBe` Just (seconds 5993.831)
-                let interceptor = Track ip (fromJust (fmap interceptorBearing i)) (fromJust (fmap interceptorSpeed i))
-                let ep = trackPositionAfter interceptor (fromJust (fmap interceptTime i))
-                let ap = fmap interceptPosition i
-                let d = fmap (surfaceDistance ep) ap
-                fmap (<= metres 0.001) d `shouldBe` Just True
+                let t =
+                        Track
+                            (Geodetic.s84Pos 34 (-50) Length.zero)
+                            (Angle.decimalDegrees 220)
+                            (Speed.knots 600)
+                let ip = Geodetic.s84Pos 20 (-60) Length.zero
+                let i = Kinematics.intercept t ip
+                fmap Kinematics.interceptorSpeed i `shouldBe` Just (Speed.knots 52.63336879049676)
+                fmap Kinematics.timeToIntercept i `shouldBe` Just (Duration.seconds 5993.831)
+                let interceptor =
+                        Track
+                            ip
+                            (Kinematics.interceptorBearing (fromJust i))
+                            (Kinematics.interceptorSpeed (fromJust i))
+                let ep =
+                        Kinematics.trackPositionAfter
+                            interceptor
+                            (Kinematics.timeToIntercept (fromJust i))
+                let ap = fmap Kinematics.interceptPosition i
+                let d = fmap (GreatCircle.surfaceDistance ep) ap
+                fmap (<= Length.metres 0.001) d `shouldBe` Just True
         describe "interceptBySpeed" $ do
             it "returns Nothing if target and interceptor are at the same position" $
-                interceptBySpeed
-                    (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400))
-                    (s84Pos 30 30 zero)
-                    (knots 400) `shouldBe`
+                Kinematics.interceptBySpeed
+                    (Track
+                         (Geodetic.s84Pos 30 30 Length.zero)
+                         (Angle.decimalDegrees 45)
+                         (Speed.knots 400))
+                    (Geodetic.s84Pos 30 30 Length.zero)
+                    (Speed.knots 400) `shouldBe`
                 Nothing
             it "returns Nothing if interceptor speed is below minimum speed" $ do
-                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
-                let ip = s84Pos 20 (-60) zero
-                interceptBySpeed t ip (knots 50) `shouldBe` Nothing
-            it "returns the speed needed for intercept to take place" $ do
-                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
-                let ip = s84Pos 20 (-60) zero
-                let i = interceptBySpeed t ip (knots 700)
-                fmap interceptTime i `shouldBe` Just (seconds 2764.692)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 25.93541248472222)
-                fmap interceptDistance i `shouldBe` Just (kilometres 995.596069189)
+                let t =
+                        Track
+                            (Geodetic.s84Pos 34 (-50) Length.zero)
+                            (Angle.decimalDegrees 220)
+                            (Speed.knots 600)
+                let ip = Geodetic.s84Pos 20 (-60) Length.zero
+                Kinematics.interceptBySpeed t ip (Speed.knots 50) `shouldBe` Nothing
+            it "returns the time needed for intercept to take place" $ do
+                let t =
+                        Track
+                            (Geodetic.s84Pos 34 (-50) Length.zero)
+                            (Angle.decimalDegrees 220)
+                            (Speed.knots 600)
+                let ip = Geodetic.s84Pos 20 (-60) Length.zero
+                let i = Kinematics.interceptBySpeed t ip (Speed.knots 700)
+                fmap Kinematics.timeToIntercept i `shouldBe` Just (Duration.seconds 2764.692)
+                fmap Kinematics.interceptorBearing i `shouldBe`
+                    Just (Angle.decimalDegrees 25.935412485277777)
+                fmap Kinematics.distanceToIntercept i `shouldBe`
+                    Just (Length.kilometres 995.596069189)
             it "returns the same as intercept when called with minimum speed" $ do
-                let t = Track (s84Pos 45 50 zero) (decimalDegrees 54) (knots 500)
-                let ip = s84Pos 70 30 zero
-                let mi = intercept t ip
-                let i = interceptBySpeed t ip (fromJust (fmap interceptorSpeed mi))
-                fmap interceptTime i `shouldBe` fmap interceptTime mi
+                let t =
+                        Track
+                            (Geodetic.s84Pos 45 50 Length.zero)
+                            (Angle.decimalDegrees 54)
+                            (Speed.knots 500)
+                let ip = Geodetic.s84Pos 70 30 Length.zero
+                let mi = Kinematics.intercept t ip
+                let i = Kinematics.interceptBySpeed t ip (Kinematics.interceptorSpeed (fromJust mi))
+                fmap Kinematics.timeToIntercept i `shouldBe` fmap Kinematics.timeToIntercept mi
         describe "interceptByTime" $ do
-            it "returns Nothing if duration is zero" $
-                interceptByTime (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400)) (s84Pos 34 (-50) zero) zero `shouldBe`
+            it "returns Nothing if duration is 0" $
+                Kinematics.interceptByTime
+                    (Track
+                         (Geodetic.s84Pos 30 30 Length.zero)
+                         (Angle.decimalDegrees 45)
+                         (Speed.knots 400))
+                    (Geodetic.s84Pos 34 (-50) Length.zero)
+                    Duration.zero `shouldBe`
                 Nothing
             it "returns Nothing if duration is negative" $
-                interceptByTime
-                    (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400))
-                    (s84Pos 34 (-50) zero)
-                    (seconds (-1)) `shouldBe`
+                Kinematics.interceptByTime
+                    (Track
+                         (Geodetic.s84Pos 30 30 Length.zero)
+                         (Angle.decimalDegrees 45)
+                         (Speed.knots 400))
+                    (Geodetic.s84Pos 34 (-50) Length.zero)
+                    (Duration.seconds (-1)) `shouldBe`
                 Nothing
             it "returns Nothing if target and interceptor are at the same position" $
-                interceptByTime
-                    (Track (s84Pos 30 30 zero) (decimalDegrees 45) (knots 400))
-                    (s84Pos 30 30 zero)
-                    (seconds 10) `shouldBe`
+                Kinematics.interceptByTime
+                    (Track
+                         (Geodetic.s84Pos 30 30 Length.zero)
+                         (Angle.decimalDegrees 45)
+                         (Speed.knots 400))
+                    (Geodetic.s84Pos 30 30 Length.zero)
+                    (Duration.seconds 10) `shouldBe`
                 Nothing
             it "returns the speed needed for intercept to take place" $ do
-                let t = Track (s84Pos 34 (-50) zero) (decimalDegrees 220) (knots 600)
-                let ip = s84Pos 20 (-60) zero
-                let d = seconds 2700
-                let i = interceptByTime t ip d
-                fmap interceptorSpeed i `shouldBe` Just (knots 730.9592213822895)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 26.119902564166665)
-                fmap interceptPosition i `shouldBe` Just (s84Pos 28.136679674444444 (-55.455947612222225) zero)
-                fmap interceptDistance i `shouldBe` Just (kilometres 1015.302358852)
-                fmap interceptTime i `shouldBe` Just (seconds 2700)
+                let t =
+                        Track
+                            (Geodetic.s84Pos 34 (-50) Length.zero)
+                            (Angle.decimalDegrees 220)
+                            (Speed.knots 600)
+                let ip = Geodetic.s84Pos 20 (-60) Length.zero
+                let d = Duration.seconds 2700
+                let i = Kinematics.interceptByTime t ip d
+                fmap Kinematics.interceptorSpeed i `shouldBe` Just (Speed.knots 730.9592213822895)
+                fmap Kinematics.interceptorBearing i `shouldBe`
+                    Just (Angle.decimalDegrees 26.11990256388889)
+                fmap Kinematics.interceptPosition i `shouldBe`
+                    Just (Geodetic.s84Pos 28.136679674444444 (-55.455947612222225) Length.zero)
+                fmap Kinematics.distanceToIntercept i `shouldBe`
+                    Just (Length.kilometres 1015.302358852)
+                fmap Kinematics.timeToIntercept i `shouldBe` Just (Duration.seconds 2700)
             it "handles the poles" $
                 -- distance between poles assuming a spherical earth (WGS84) = 20015.114352200002km
                 -- target at north pole travelling at 500km/h and true north can be intercepted from
-                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 0 degrees.
+                -- the south pole by an interceptor travelling at ~ 19515.114352200002km/h and 180 degrees.
              do
-                let t = Track (northPole S84) zero (kilometresPerHour 500)
-                let ip = southPole S84
-                let i = interceptByTime t ip (seconds 3600)
-                fmap interceptorSpeed i `shouldBe` Just (kilometresPerHour 19515.114352)
-                fmap interceptorBearing i `shouldBe` Just (decimalDegrees 0)
+                let t = Track (Geodetic.northPole S84) Angle.zero (Speed.kilometresPerHour 500)
+                let ip = Geodetic.southPole S84
+                let i = Kinematics.interceptByTime t ip (Duration.seconds 3600)
+                fmap Kinematics.interceptorSpeed i `shouldBe`
+                    Just (Speed.kilometresPerHour 19515.114352)
+                fmap Kinematics.interceptorBearing i `shouldBe` Just (Angle.decimalDegrees 180)
             it "handles the interceptor being at the intercept position at t" $ do
-                let tp = s84Pos 34 (-50) zero
-                let t = Track tp (decimalDegrees 220) (knots 600)
-                let d = seconds 3600
-                let ip = trackPositionAfter t d
-                let i = interceptByTime t ip d
-                fmap interceptorSpeed i `shouldBe` Just zero
-                fmap interceptorBearing i `shouldBe` initialBearing ip tp
+                let tp = Geodetic.s84Pos 34 (-50) Length.zero
+                let t = Track tp (Angle.decimalDegrees 220) (Speed.knots 600)
+                let d = Duration.seconds 3600
+                let ip = Kinematics.trackPositionAfter t d
+                let i = Kinematics.interceptByTime t ip d
+                fmap Kinematics.interceptorSpeed i `shouldBe` Just Speed.zero
+                fmap Kinematics.interceptorBearing i `shouldBe` GreatCircle.initialBearing ip tp

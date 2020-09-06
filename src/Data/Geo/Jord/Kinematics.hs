@@ -63,7 +63,6 @@ import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle (initialBearing, surfaceDistance)
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (toMetres, zero)
-import Data.Geo.Jord.Math3d (V3(..))
 import qualified Data.Geo.Jord.Math3d as Math3d
 import Data.Geo.Jord.Model (Spherical, surface)
 import Data.Geo.Jord.Speed (Speed)
@@ -80,7 +79,7 @@ data Track a =
 
 -- | 'Course' represents the cardinal direction in which the vehicle is to be steered.
 newtype Course =
-    Course V3
+    Course Math3d.V3
     deriving (Eq, Show)
 
 -- | Time to, and distance at, closest point of approach (CPA) as well as position of both tracks at CPA.
@@ -106,7 +105,7 @@ data Intercept a =
 
 -- | @course p b@ computes the course of a vehicle currently at position @p@ and following bearing @b@.
 course :: (Spherical a) => Geodetic.Position a -> Angle -> Course
-course p b = Course (V3 (vz (head r)) (vz (r !! 1)) (vz (r !! 2)))
+course p b = Course (Math3d.vec3 (Math3d.v3z (head r)) (Math3d.v3z (r !! 1)) (Math3d.v3z (r !! 2)))
   where
     lat = Geodetic.latitude p
     lon = Geodetic.longitude p
@@ -254,7 +253,7 @@ position' p0 (Course c) s sec = Geodetic.nvectorHeightPos' v1 h0 (Geodetic.model
     v1 = position'' nv0 c s sec (radiusM p0)
 
 -- | position from course, speed and seconds.
-position'' :: V3 -> V3 -> Speed -> Double -> Double -> V3
+position'' :: Math3d.V3 -> Math3d.V3 -> Speed -> Double -> Double -> Math3d.V3
 position'' v0 c s sec rm = v1
   where
     a = Speed.toMetresPerSecond s / rm * sec
@@ -308,37 +307,37 @@ timeToInterceptSpeed (Track p2 b2 s2) p1 s1 =
     w2 = Speed.toMetresPerSecond s2 / rm
     t0 = 0.1
 
-rx :: Angle -> [V3]
-rx a = [V3 1 0 0, V3 0 c s, V3 0 (-s) c]
+rx :: Angle -> [Math3d.V3]
+rx a = [Math3d.vec3 1 0 0, Math3d.vec3 0 c s, Math3d.vec3 0 (-s) c]
   where
     c = Angle.cos a
     s = Angle.sin a
 
-ry :: Angle -> [V3]
-ry a = [V3 c 0 (-s), V3 0 1 0, V3 s 0 c]
+ry :: Angle -> [Math3d.V3]
+ry a = [Math3d.vec3 c 0 (-s), Math3d.vec3 0 1 0, Math3d.vec3 s 0 c]
   where
     c = Angle.cos a
     s = Angle.sin a
 
-rz :: Angle -> [V3]
-rz a = [V3 c s 0, V3 (-s) c 0, V3 0 0 1]
+rz :: Angle -> [Math3d.V3]
+rz a = [Math3d.vec3 c s 0, Math3d.vec3 (-s) c 0, Math3d.vec3 0 0 1]
   where
     c = Angle.cos a
     s = Angle.sin a
 
-cpaA :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaA :: Math3d.V3 -> Math3d.V3 -> Double -> Math3d.V3 -> Math3d.V3 -> Double -> Double
 cpaA v10 c10 w1 v20 c20 w2 =
     negate (Math3d.dot (Math3d.scale v10 w1) c20 + Math3d.dot (Math3d.scale v20 w2) c10)
 
-cpaB :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaB :: Math3d.V3 -> Math3d.V3 -> Double -> Math3d.V3 -> Math3d.V3 -> Double -> Double
 cpaB v10 c10 w1 v20 c20 w2 =
     Math3d.dot (Math3d.scale c10 w1) v20 + Math3d.dot (Math3d.scale c20 w2) v10
 
-cpaC :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaC :: Math3d.V3 -> Math3d.V3 -> Double -> Math3d.V3 -> Math3d.V3 -> Double -> Double
 cpaC v10 c10 w1 v20 c20 w2 =
     negate (Math3d.dot (Math3d.scale v10 w1) v20 - Math3d.dot (Math3d.scale c20 w2) c10)
 
-cpaD :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double
+cpaD :: Math3d.V3 -> Math3d.V3 -> Double -> Math3d.V3 -> Math3d.V3 -> Double -> Double
 cpaD v10 c10 w1 v20 c20 w2 =
     Math3d.dot (Math3d.scale c10 w1) c20 - Math3d.dot (Math3d.scale v20 w2) v10
 
@@ -363,7 +362,7 @@ cpaDft w1 w2 cw1t cw2t sw1t sw2t a b c d =
     (a * w2 - b * w1) * sw1t * cw2t -
     (b * w2 - a * w1) * cw1t * sw2t
 
-cpaStep :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double -> Double
+cpaStep :: Math3d.V3 -> Math3d.V3 -> Double -> Math3d.V3 -> Math3d.V3 -> Double -> Double -> Double
 cpaStep v10 c10 w1 v20 c20 w2 t =
     cpaFt cw1t cw2t sw1t sw2t a b c d / cpaDft w1 w2 cw1t cw2t sw1t sw2t a b c d
   where
@@ -377,7 +376,16 @@ cpaStep v10 c10 w1 v20 c20 w2 t =
     d = cpaD v10 c10 w1 v20 c20 w2
 
 -- | Newton-Raphson for CPA time.
-cpaNrRec :: V3 -> V3 -> Double -> V3 -> V3 -> Double -> Double -> Int -> Double
+cpaNrRec ::
+       Math3d.V3
+    -> Math3d.V3
+    -> Double
+    -> Math3d.V3
+    -> Math3d.V3
+    -> Double
+    -> Double
+    -> Int
+    -> Double
 cpaNrRec v10 c10 w1 v20 c20 w2 ti i
     | i == 50 = -1.0 -- no convergence
     | abs fi < 1e-11 = ti1
@@ -425,7 +433,7 @@ intSpdNrRec v10v20 v10c2 w1 w2 st ti i
 
 -- | angular separation in radians at ti between v10 and track with initial position v20,
 -- course c2 and speed s2.
-sep :: V3 -> V3 -> V3 -> Speed -> Double -> Double -> Double
+sep :: Math3d.V3 -> Math3d.V3 -> Math3d.V3 -> Speed -> Double -> Double -> Double
 sep v10 v20 c2 s2 r ti = angleBetweenRadians v10 (position'' v20 c2 s2 ti r)
 
 -- | reference sphere radius.
@@ -439,7 +447,7 @@ radiusM = Length.toMetres . radius
 -- angle between 2 vectors in radians - this is duplicated with GreatCircle but
 -- does not return an Angle - truncating to microarcsecond resolution can be
 -- detrimental to the convergence of Newtow-Raphson.
-angleBetweenRadians :: V3 -> V3 -> Double
+angleBetweenRadians :: Math3d.V3 -> Math3d.V3 -> Double
 angleBetweenRadians v1 v2 = atan2 sinO cosO
   where
     sinO = Math3d.norm (Math3d.cross v1 v2)

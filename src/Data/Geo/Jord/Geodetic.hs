@@ -64,8 +64,7 @@ import qualified Data.Geo.Jord.Angle as Angle (add, atan2, cos, decimalDegrees, 
 import qualified Data.Geo.Jord.LatLong as LL (isValidLatLong, latLongDms, showLatLong)
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (length, zero)
-import Data.Geo.Jord.Math3d (V3(..))
-import qualified Data.Geo.Jord.Math3d as Math3d (scale)
+import qualified Data.Geo.Jord.Math3d as Math3d (V3, scale, v3x, v3y, v3z, vec3)
 import Data.Geo.Jord.Model
 import Data.Geo.Jord.Models (S84(..), WGS84(..))
 
@@ -90,7 +89,7 @@ data Position a =
         { latitude :: Angle -- ^ geodetic latitude
         , longitude :: Angle -- ^ longitude
         , height :: Length -- ^ height above the surface of the celestial body
-        , nvector :: !V3 -- ^ /n/-vector; normal vector to the surface of a celestial body.
+        , nvector :: !Math3d.V3 -- ^ /n/-vector; normal vector to the surface of a celestial body.
         , model :: !a -- ^ model (e.g. WGS84)
         }
 
@@ -106,7 +105,6 @@ instance (Model a) => Eq (Position a) where
 -- | both position have same latitude and longitude irrespective of height ?
 llEq :: (Model a) => Position a -> Position a -> Bool
 llEq p1 p2 = latitude p1 == latitude p2 && longitude p1 == longitude p2
-
 
 -- | 'Position' from given geodetic latitude & longitude in __decimal degrees__ at
 -- the surface of the given model.
@@ -195,18 +193,18 @@ s84Pos' lat lon h = latLongHeightPos' lat lon h S84
 --
 -- This is equivalent to:
 --
--- > Geodetic.nvectorPos' (V3 x y z)
+-- > Geodetic.nvectorPos' (Math3d.vec3 x y z)
 nvectorPos :: (Model a) => Double -> Double -> Double -> a -> Position a
-nvectorPos x y z = nvectorPos' (V3 x y z)
+nvectorPos x y z = nvectorPos' (Math3d.vec3 x y z)
 
 -- | 'Position' from given /n/-vector x, y, z coordinates and height in the given model.
 -- (x, y, z) will be converted to latitude & longitude to ensure a consistent resolution
 -- with the rest of the API.
 -- This is equivalent to:
 --
--- > Geodetic.nvectorHeightPos' (V3 x y z) h
+-- > Geodetic.nvectorHeightPos' (Math3d.vec3 x y z) h
 nvectorHeightPos :: (Model a) => Double -> Double -> Double -> Length -> a -> Position a
-nvectorHeightPos x y z = nvectorHeightPos' (V3 x y z)
+nvectorHeightPos x y z = nvectorHeightPos' (Math3d.vec3 x y z)
 
 -- | 'Position' from given /n/-vector x, y, z coordinates in the given model.
 -- (x, y, z) will be converted to latitude & longitude to ensure a consistent resolution
@@ -215,13 +213,13 @@ nvectorHeightPos x y z = nvectorHeightPos' (V3 x y z)
 -- This is equivalent to:
 --
 -- > Geodetic.nvectorHeightPos' lat lon Length.zero model
-nvectorPos' :: (Model a) => V3 -> a -> Position a
+nvectorPos' :: (Model a) => Math3d.V3 -> a -> Position a
 nvectorPos' v = nvectorHeightPos' v Length.zero
 
 -- | 'Position' from given /n/-vector x, y, z coordinates and height in the given model.
 -- (x, y, z) will be converted to latitude & longitude to ensure a consistent resolution
 -- with the rest of the API.
-nvectorHeightPos' :: (Model a) => V3 -> Length -> a -> Position a
+nvectorHeightPos' :: (Model a) => Math3d.V3 -> Length -> a -> Position a
 nvectorHeightPos' v h = Position lat lon h nv
   where
     ll@(lat, lon) = nvectorToLatLong v
@@ -260,15 +258,18 @@ position m = do
 
 -- | @nvectorToLatLong nv@ returns (latitude, longitude) pair equivalent to the given /n/-vector @nv@.
 -- Latitude is always in [-90°, 90°] and longitude in [-180°, 180°].
-nvectorToLatLong :: V3 -> (Angle, Angle)
-nvectorToLatLong (V3 x y z) = (lat, lon)
+nvectorToLatLong :: Math3d.V3 -> (Angle, Angle)
+nvectorToLatLong v = (lat, lon)
   where
+    x = Math3d.v3x v
+    y = Math3d.v3y v
+    z = Math3d.v3z v
     lat = Angle.atan2 z (sqrt (x * x + y * y))
     lon = Angle.atan2 y x
 
 -- | @nvectorFromLatLong ll@ returns /n/-vector equivalent to the given (latitude, longitude) pair @ll@.
-nvectorFromLatLong :: (Angle, Angle) -> V3
-nvectorFromLatLong (lat, lon) = V3 x y z
+nvectorFromLatLong :: (Angle, Angle) -> Math3d.V3
+nvectorFromLatLong (lat, lon) = Math3d.vec3 x y z
   where
     cl = Angle.cos lat
     x = cl * Angle.cos lon
@@ -291,13 +292,13 @@ northPole = latLongHeightPos 90 0 Length.zero
 southPole :: (Model a) => a -> Position a
 southPole = latLongHeightPos (-90) 0 Length.zero
 
-wrap :: (Model a) => Angle -> Angle -> V3 -> a -> (Angle, Angle)
+wrap :: (Model a) => Angle -> Angle -> Math3d.V3 -> a -> (Angle, Angle)
 wrap lat lon nv m =
     if LL.isValidLatLong lat lon m
         then (lat, lon)
         else llWrapped nv (longitudeRange m)
 
-llWrapped :: V3 -> LongitudeRange -> (Angle, Angle)
+llWrapped :: Math3d.V3 -> LongitudeRange -> (Angle, Angle)
 llWrapped nv lr = (lat, lon')
   where
     (lat, lon) = nvectorToLatLong nv

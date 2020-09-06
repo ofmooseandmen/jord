@@ -66,7 +66,6 @@ import qualified Data.Geo.Jord.Geocentric as Geocentric
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (metres, toMetres)
-import Data.Geo.Jord.Math3d (V3(..))
 import qualified Data.Geo.Jord.Math3d as Math3d
 import Data.Geo.Jord.Model (Model)
 import Data.Geo.Jord.Positions
@@ -82,7 +81,7 @@ import Data.Geo.Jord.Rotation
 --
 --     * 'FrameN': 'rEF' returns R_EN
 class Frame a where
-    rEF :: a -> [V3] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
+    rEF :: a -> [Math3d.V3] -- ^ rotation matrix to transform vectors decomposed in frame @a@ to vectors decomposed Earth-Fixed frame.
 
 -- | Body frame (typically of a vehicle).
 --
@@ -97,7 +96,7 @@ data FrameB a =
         , pitch :: Angle -- ^ body pitch angle (transverse axis).
         , roll :: Angle -- ^ body roll angle (longitudinal axis).
         , bOrigin :: Geodetic.Position a -- ^ frame origin.
-        , bNorth :: V3 -- ^ position of the north pole as /n/-vector.
+        , bNorth :: Math3d.V3 -- ^ position of the north pole as /n/-vector.
         }
     deriving (Eq, Show)
 
@@ -144,7 +143,7 @@ instance Frame (FrameL m) where
         lat = Geodetic.latitude o
         lon = Geodetic.longitude o
         r = xyz2r lon (Angle.negate lat) w
-        rEe' = [V3 0 0 (-1), V3 0 1 0, V3 1 0 0]
+        rEe' = [Math3d.vec3 0 0 (-1), Math3d.vec3 0 1 0, Math3d.vec3 1 0 0]
         rm = Math3d.dotM rEe' r
 
 -- | 'FrameL' from given wander azimuth, position (origin).
@@ -167,7 +166,7 @@ frameL = FrameL
 data FrameN a =
     FrameN
         { nOrigin :: Geodetic.Position a -- ^ frame origin.
-        , nNorth :: V3 -- ^ position of the north pole as /n/-vector.
+        , nNorth :: Math3d.V3 -- ^ position of the north pole as /n/-vector.
         }
     deriving (Eq, Show)
 
@@ -221,7 +220,7 @@ bearing (Ned n e _) =
 
 -- | @elevation v@ computes the elevation of the NED vector @v@ from horizontal (ie tangent to ellipsoid surface).
 elevation :: Ned -> Angle
-elevation n = Angle.negate (Angle.asin (vz v / Math3d.norm v))
+elevation n = Angle.negate (Angle.asin (Math3d.v3z v / Math3d.norm v))
   where
     v = nedV3 n
 
@@ -243,7 +242,7 @@ deltaBetween ::
     -> Geodetic.Position b
     -> (Geodetic.Position b -> a)
     -> Delta
-deltaBetween p1 p2 f = deltaMetres (vx d) (vy d) (vz d)
+deltaBetween p1 p2 f = deltaMetres (Math3d.v3x d) (Math3d.v3y d) (Math3d.v3z d)
   where
     g1 = Geocentric.metresCoords . toGeocentric $ p1
     g2 = Geocentric.metresCoords . toGeocentric $ p2
@@ -295,8 +294,8 @@ destination p0 f d = toGeodetic gt
     g0 = Geocentric.metresCoords . toGeocentric $ p0
     rm = rEF (f p0)
     c = Math3d.multM (deltaV3 d) rm
-    (V3 x y z) = Math3d.add g0 c
-    gt = Geocentric.metresPos x y z (Geodetic.model p0)
+    v = Math3d.add g0 c
+    gt = Geocentric.metresPos' v (Geodetic.model p0)
 
 -- | @destinationN p0 d@ computes the destination position from position @p0@ and north, east, down @d@. For example:
 --
@@ -309,8 +308,9 @@ destination p0 f d = toGeodetic gt
 destinationN :: (Model a) => Geodetic.Position a -> Ned -> Geodetic.Position a
 destinationN p0 (Ned n e d) = destination p0 frameN (Delta n e d)
 
-nedV3 :: Ned -> V3
-nedV3 (Ned n e d) = V3 (Length.toMetres n) (Length.toMetres e) (Length.toMetres d)
+nedV3 :: Ned -> Math3d.V3
+nedV3 (Ned n e d) = Math3d.vec3 (Length.toMetres n) (Length.toMetres e) (Length.toMetres d)
 
-deltaV3 :: Delta -> V3
-deltaV3 (Delta x' y' z') = V3 (Length.toMetres x') (Length.toMetres y') (Length.toMetres z')
+deltaV3 :: Delta -> Math3d.V3
+deltaV3 (Delta x' y' z') =
+    Math3d.vec3 (Length.toMetres x') (Length.toMetres y') (Length.toMetres z')

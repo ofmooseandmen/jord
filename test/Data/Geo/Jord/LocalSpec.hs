@@ -9,7 +9,7 @@ import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.Length as Length
 import Data.Geo.Jord.Local (Ned(..))
 import qualified Data.Geo.Jord.Local as Local
-import Data.Geo.Jord.Math3d (V3(..))
+import qualified Data.Geo.Jord.Math3d as Math3d
 
 spec :: Spec
 spec = do
@@ -57,13 +57,10 @@ spec = do
                 Local.destinationN p1 (Local.nedBetween p1 p2) `shouldBe` p2
         describe "rotation matrix to/from earth-fixed frame" $ do
             it "computes rEN (frame N to earth-fixed frame)" $ do
-                let p = Geodetic.wgs84Pos 49.66618 3.45063 Length.zero
+                let p = Geodetic.wgs84Pos 0.0 0.0 Length.zero
                 let f = Local.frameN p
                 Local.rEF f `shouldBe`
-                    [ V3 (-0.7609044147683025) (-6.018845511258954e-2) (-0.646066421861767)
-                    , V3 (-4.5880841733693466e-2) 0.9981870315082038 (-3.895636649699221e-2)
-                    , V3 0.6472398473115779 3.6854799449628455e-18 (-0.7622864160222752)
-                    ]
+                    [Math3d.vec3 0.0 0.0 (-1.0), Math3d.vec3 0.0 1.0 0.0, Math3d.vec3 1.0 0.0 0.0]
             it "computes rEB (frame B to earth-fixed frame)" $ do
                 let p = Geodetic.wgs84Pos 49.66618 3.45063 Length.zero
                 let f =
@@ -73,9 +70,12 @@ spec = do
                             (Angle.decimalDegrees 30)
                             p
                 Local.rEF f `shouldBe`
-                    [ V3 (-0.49300713580470057) (-0.37038991706707025) (-0.7872453705044535)
-                    , V3 0.1337450488624887 0.8618333991596926 (-0.4892396692804258)
-                    , V3 0.8596837941652826 (-0.3464888186188679) (-0.375352198104241)
+                    [ Math3d.vec3
+                          (-0.49300713580470057)
+                          (-0.37038991706707025)
+                          (-0.7872453705044535)
+                    , Math3d.vec3 0.1337450488624887 0.8618333991596926 (-0.4892396692804258)
+                    , Math3d.vec3 0.8596837941652826 (-0.3464888186188679) (-0.375352198104241)
                     ]
     describe "North, East, Down delta" $ do
         describe "slantRange" $

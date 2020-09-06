@@ -66,7 +66,6 @@ instance Show Length where
 instance Ord Length where
     (<=) (Length l1) (Length l2) = l1 <= l2
 
-
 -- | Adds 2 lengths.
 add :: Length -> Length -> Length
 add a b = Length (micrometre a + micrometre b)
@@ -95,7 +94,7 @@ metres m = Length (round (m * m2um))
 nauticalMiles :: Double -> Length
 nauticalMiles nm = Length (round (nm * 1852.0 * m2um))
 
--- | Reads an a 'Length' from the given string using 'length'.
+-- | Reads a 'Length' from the given string using 'length'.
 read :: String -> Maybe Length
 read s = readMaybe s :: (Maybe Length)
 

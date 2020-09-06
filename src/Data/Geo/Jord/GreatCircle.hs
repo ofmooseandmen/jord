@@ -18,7 +18,6 @@
 --
 -- All functions are implemented using the vector-based approached described in
 -- <http://www.navlab.net/Publications/A_Nonsingular_Horizontal_Point_Representation.pdf Gade, K. (2010). A Non-singular Horizontal Position Representation>
--- FIXME: add projection, isLeft, turn, discretiseCircle & discretiseArc
 module Data.Geo.Jord.GreatCircle
     (
     -- * The 'GreatCircle' type
@@ -83,8 +82,7 @@ instance (Spherical a) => Show (GreatCircle a) where
 -- Just Great Circle { through 45°0'0.000"N,143°30'0.000"W 1500.0m (S84) & 46°0'0.000"N,14°30'0.000"E 3000.0m (S84) }
 --
 -- Returns 'Nothing' if given positions are equal.
-through ::
-       (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (GreatCircle a)
+through :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (GreatCircle a)
 through p1 p2 = fmap (\n -> GreatCircle n (Geodetic.model p1) dscr) (arcNormal p1 p2)
   where
     dscr = "Great Circle { through " ++ show p1 ++ " & " ++ show p2 ++ " }"

@@ -102,7 +102,7 @@ data FrameB a =
 
 -- | 'FrameB' from given yaw, pitch, roll, position (origin).
 frameB :: (Model a) => Angle -> Angle -> Angle -> Geodetic.Position a -> FrameB a
-frameB y p r o = FrameB y p r o (Geodetic.nvector . Geodetic.northPole $ Geodetic.model o)
+frameB y p r o = FrameB y p r o (northPole o)
 
 -- | R_EB: frame B to Earth
 instance Frame (FrameB a) where
@@ -182,7 +182,7 @@ instance Frame (FrameN a) where
 
 -- | 'FrameN' from given position (origin).
 frameN :: (Model a) => Geodetic.Position a -> FrameN a
-frameN p = FrameN p (Geodetic.nvector . Geodetic.northPole $ Geodetic.model p)
+frameN p = FrameN p (northPole p)
 
 -- | delta between position in one of the reference frames.
 data Delta =
@@ -295,7 +295,7 @@ destination p0 f d = toGeodetic gt
     rm = rEF (f p0)
     c = Math3d.multM (deltaV3 d) rm
     v = Math3d.add g0 c
-    gt = Geocentric.metresPos' v (Geodetic.model p0)
+    gt = Geocentric.metresPos' v (Geodetic.model' p0)
 
 -- | @destinationN p0 d@ computes the destination position from position @p0@ and north, east, down @d@. For example:
 --
@@ -314,3 +314,6 @@ nedV3 (Ned n e d) = Math3d.vec3 (Length.toMetres n) (Length.toMetres e) (Length.
 deltaV3 :: Delta -> Math3d.V3
 deltaV3 (Delta x' y' z') =
     Math3d.vec3 (Length.toMetres x') (Length.toMetres y') (Length.toMetres z')
+
+northPole :: (Model a) => Geodetic.Position a -> Math3d.V3
+northPole = Geodetic.nvector . Geodetic.northPole . Geodetic.model'

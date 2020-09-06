@@ -5,10 +5,10 @@ module KinematicsBG
 import Criterion.Types
 import qualified Data.Geo.Jord.Angle as Angle (decimalDegrees)
 import qualified Data.Geo.Jord.Duration as Duration (seconds)
+import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Kinematics (Track(..))
 import qualified Data.Geo.Jord.Kinematics as Kinematics
-import qualified Data.Geo.Jord.Length as Length (zero)
 import Data.Geo.Jord.Models (S84(..))
 import qualified Data.Geo.Jord.Speed as Speed (knots)
 
@@ -31,22 +31,22 @@ benchmark =
         ]
 
 t1 :: Track S84
-t1 = Track (Geodetic.s84Pos 20 (-60) Length.zero) (Angle.decimalDegrees 10) (Speed.knots 15)
+t1 = Track (Geodetic.s84Pos 20 (-60)) (Angle.decimalDegrees 10) (Speed.knots 15)
 
 t1' :: Track S84
-t1' = Track (Geodetic.s84Pos 20 (-60) Length.zero) (Angle.decimalDegrees 10) (Speed.knots 15)
+t1' = Track (Geodetic.s84Pos 20 (-60)) (Angle.decimalDegrees 10) (Speed.knots 15)
 
 t2 :: Track S84
-t2 = Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 300)
+t2 = Track (Geodetic.s84Pos 34 (-50)) (Angle.decimalDegrees 220) (Speed.knots 300)
 
 t3 :: Track S84
-t3 = Track (Geodetic.s84Pos 30 30 Length.zero) (Angle.decimalDegrees 45) (Speed.knots 400)
+t3 = Track (Geodetic.s84Pos 30 30) (Angle.decimalDegrees 45) (Speed.knots 400)
 
 t4 :: Track S84
-t4 = Track (Geodetic.s84Pos 30.01 30 Length.zero) (Angle.decimalDegrees 315) (Speed.knots 400)
+t4 = Track (Geodetic.s84Pos 30.01 30) (Angle.decimalDegrees 315) (Speed.knots 400)
 
 t5 :: Track S84
-t5 = Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 600)
+t5 = Track (Geodetic.s84Pos 34 (-50)) (Angle.decimalDegrees 220) (Speed.knots 600)
 
-ip1 :: Geodetic.Position S84
-ip1 = Geodetic.s84Pos 20 (-60) Length.zero
+ip1 :: HorizontalPosition S84
+ip1 = Geodetic.s84Pos 20 (-60)

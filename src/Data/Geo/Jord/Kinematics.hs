@@ -59,8 +59,9 @@ import qualified Data.Geo.Jord.Angle as Angle
 import Data.Geo.Jord.Duration (Duration)
 import qualified Data.Geo.Jord.Duration as Duration (seconds, toMilliseconds, toSeconds, zero)
 import Data.Geo.Jord.Ellipsoid (equatorialRadius)
+import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import qualified Data.Geo.Jord.Geodetic as Geodetic
-import qualified Data.Geo.Jord.GreatCircle as GreatCircle (initialBearing, surfaceDistance)
+import qualified Data.Geo.Jord.GreatCircle as GreatCircle (distance, initialBearing)
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length (toMetres, zero)
 import qualified Data.Geo.Jord.Math3d as Math3d
@@ -71,7 +72,7 @@ import qualified Data.Geo.Jord.Speed as Speed (average, toMetresPerSecond)
 -- | 'Track' represents the state of a vehicle by its current position, bearing and speed.
 data Track a =
     Track
-        { trackPosition :: Geodetic.Position a -- ^ position of the track.
+        { trackPosition :: HorizontalPosition a -- ^ position of the track.
         , trackBearing :: Angle -- ^ bearing of the track.
         , trackSpeed :: Speed -- ^ speed of the track.
         }
@@ -87,8 +88,8 @@ data Cpa a =
     Cpa
         { timeToCpa :: Duration -- ^ time to CPA.
         , distanceAtCpa :: Length -- ^ distance at CPA.
-        , cpaOwnshipPosition :: Geodetic.Position a -- ^ position of ownship CPA.
-        , cpaIntruderPosition :: Geodetic.Position a -- ^ position of intruder at CPA.
+        , cpaOwnshipPosition :: HorizontalPosition a -- ^ position of ownship CPA.
+        , cpaIntruderPosition :: HorizontalPosition a -- ^ position of intruder at CPA.
         }
     deriving (Eq, Show)
 
@@ -97,14 +98,14 @@ data Intercept a =
     Intercept
         { timeToIntercept :: Duration -- ^ time to intercept.
         , distanceToIntercept :: Length -- ^ distance travelled to intercept.
-        , interceptPosition :: Geodetic.Position a -- ^ position of intercept.
+        , interceptPosition :: HorizontalPosition a -- ^ position of intercept.
         , interceptorBearing :: Angle -- ^ initial bearing of interceptor.
         , interceptorSpeed :: Speed -- ^ speed of interceptor.
         }
     deriving (Eq, Show)
 
 -- | @course p b@ computes the course of a vehicle currently at position @p@ and following bearing @b@.
-course :: (Spherical a) => Geodetic.Position a -> Angle -> Course
+course :: (Spherical a) => HorizontalPosition a -> Angle -> Course
 course p b = Course (Math3d.vec3 (Math3d.v3z (head r)) (Math3d.v3z (r !! 1)) (Math3d.v3z (r !! 2)))
   where
     lat = Geodetic.latitude p
@@ -112,55 +113,51 @@ course p b = Course (Math3d.vec3 (Math3d.v3z (head r)) (Math3d.v3z (r !! 1)) (Ma
     r = Math3d.dotM (Math3d.dotM (rz (Angle.negate lon)) (ry lat)) (rx b)
 
 -- | @positionAfter p b s d@ computes the position of a vehicle currently at position @p@
--- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed assuming
--- the vehicle maintains a __constant__ altitude. For example:
+-- following bearing @b@ and travelling at speed @s@ after duration @d@ has elapsed. For example:
 --
--- >>> let p = Geodetic.s84Pos 53.321 (-1.729) (Length.metres 15000)
+-- >>> let p = Geodetic.s84Pos 53.321 (-1.729)
 -- >>> let b = Angle.decimalDegrees 96.0217
 -- >>> let s = Speed.kilometresPerHour 124.8
 -- >>> Kinematics.positionAfter p b s (Duration.hours 1)
--- 53°11'19.367"N,0°8'2.456"E 15.0km (S84)
+-- 53°11'19.367"N,0°8'2.456"E (S84)
 --
 -- This is equivalent to:
 --
 -- > Kinematics.positionAfter' (Kinematics.course p b) s d
 positionAfter ::
-       (Spherical a) => Geodetic.Position a -> Angle -> Speed -> Duration -> Geodetic.Position a
+       (Spherical a) => HorizontalPosition a -> Angle -> Speed -> Duration -> HorizontalPosition a
 positionAfter p b s d = position' p (course p b) s (Duration.toSeconds d)
 
 -- | @positionAfter p c s d@ computes the position of a vehicle currently at position @p@
--- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed assuming
--- the vehicle maintains a __constant__ altitude.
+-- on course @c@ and travelling at speed @s@ after duration @d@ has elapsed.
 positionAfter' ::
-       (Spherical a) => Geodetic.Position a -> Course -> Speed -> Duration -> Geodetic.Position a
+       (Spherical a) => HorizontalPosition a -> Course -> Speed -> Duration -> HorizontalPosition a
 positionAfter' p c s d = position' p c s (Duration.toSeconds d)
 
--- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has elapsed
--- assuming the vehicle maintains a __constant__ altitude. For example:
+-- | @trackPositionAfter t d@ computes the position of a track @t@ after duration @d@ has
+-- elapsed. For example:
 --
--- >>> let p = Geodetic.s84Pos 53.321 (-1.729) (Length.metres 15000)
+-- >>> let p = Geodetic.s84Pos 53.321 (-1.729)
 -- >>> let b = Angle.decimalDegrees 96.0217
 -- >>> let s = Speed.kilometresPerHour 124.8
 -- >>> Kinematics.trackPositionAfter (Kinematics.Track p b s) (Duration.hours 1)
--- 53°11'19.367"N,0°8'2.456"E 15.0km (S84)
-trackPositionAfter :: (Spherical a) => Track a -> Duration -> Geodetic.Position a
+-- 53°11'19.367"N,0°8'2.456"E (S84)
+trackPositionAfter :: (Spherical a) => Track a -> Duration -> HorizontalPosition a
 trackPositionAfter (Track p b s) = positionAfter' p (course p b) s
 
--- | @cpa ownship intruder@ computes the closest point of approach between tracks @ownship@ and @intruder@ disregarding
--- their respective altitude.
--- If a closest point of approach is found, height of 'cpaOwnshipPosition' - respectively 'cpaIntruderPosition',
--- will be the altitude of the ownship - respectively intruder, track. For example:
+-- | @cpa ownship intruder@ computes the closest point of approach between tracks @ownship@ and @intruder@.
+-- The closest point of approach is calculated assuming both ships maintain a constant course and speed.
 --
--- >>> let ownship = Kinematics.Track (Geodetic.s84Pos 20 (-60) Length.zero) (Angle.decimalDegrees 10) (Speed.knots 15)
--- >>> let intruder = Kinematics.Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 300)
+-- >>> let ownship = Kinematics.Track (Geodetic.s84Pos 20 (-60)) (Angle.decimalDegrees 10) (Speed.knots 15)
+-- >>> let intruder = Kinematics.Track (Geodetic.s84Pos 34 (-50)) (Angle.decimalDegrees 220) (Speed.knots 300)
 -- >>> let cpa = Kinematics.cpa ownship intruder
 -- Just (Cpa { timeToCpa = 3H9M56.155S
 --           , distanceAtCpa = 124.231730834km
---           , cpaOwnshipPosition = 20°46'43.641"N,59°51'11.225"W 0.0m (S84)
---           , cpaIntruderPosition = 21°24'8.523"N,60°50'48.159"W 0.0m (S84)})
+--           , cpaOwnshipPosition = 20°46'43.641"N,59°51'11.225"W (S84)
+--           , cpaIntruderPosition = 21°24'8.523"N,60°50'48.159"W (S84)})
 cpa :: (Spherical a) => Track a -> Track a -> Maybe (Cpa a)
 cpa (Track p1 b1 s1) (Track p2 b2 s2)
-    | Geodetic.llEq p1 p2 = Just (Cpa Duration.zero Length.zero p1 p2)
+    | p1 == p2 = Just (Cpa Duration.zero Length.zero p1 p2)
     | t < 0 = Nothing
     | otherwise = Just (Cpa (Duration.seconds t) d cp1 cp2)
   where
@@ -169,7 +166,7 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
     t = timeToCpa' p1 c1 s1 p2 c2 s2
     cp1 = position' p1 c1 s1 t
     cp2 = position' p2 c2 s2 t
-    d = GreatCircle.surfaceDistance cp1 cp2
+    d = GreatCircle.distance cp1 cp2
 
 -- | @intercept t p@ computes the __minimum__ speed of interceptor at
 -- position @p@ needed for an intercept with target track @t@ to take place.
@@ -182,14 +179,15 @@ cpa (Track p1 b1 s1) (Track p2 b2 s2)
 --
 -- If found, 'interceptPosition' is at the altitude of the track. For example:
 --
--- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 600)
--- >>> let ip = Geodetic.s84Pos 20 (-60) Length.zero
+-- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50)) (Angle.decimalDegrees 220) (Speed.knots 600)
+-- >>> let ip = Geodetic.s84Pos 20 (-60)
 -- >>> Kinematics.intercept t ip
 -- Just (Intercept { timeToIntercept = 1H39M53.831S
 --                 , distanceToIntercept = 162.294627463km
---                 , interceptPosition = 20°43'42.305"N,61°20'56.848"W 0.0m (S84)
---                 , interceptorBearing = 300°10'18.053", interceptorSpeed = 97.476999km/h})
-intercept :: (Spherical a) => Track a -> Geodetic.Position a -> Maybe (Intercept a)
+--                 , interceptPosition = 20°43'42.305"N,61°20'56.848"W (S84)
+--                 , interceptorBearing = 300°10'18.053"
+--                 , interceptorSpeed = 97.476999km/h})
+intercept :: (Spherical a) => Track a -> HorizontalPosition a -> Maybe (Intercept a)
 intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept' t p))
 
 -- | @interceptBySpeed t p s@ computes the time needed by interceptor at
@@ -201,7 +199,7 @@ intercept t p = interceptByTime t p (Duration.seconds (timeToIntercept' t p))
 --     * interceptor speed is below minimum speed returned by 'intercept'
 --
 -- If found, 'interceptPosition' is at the altitude of the track.
-interceptBySpeed :: (Spherical a) => Track a -> Geodetic.Position a -> Speed -> Maybe (Intercept a)
+interceptBySpeed :: (Spherical a) => Track a -> HorizontalPosition a -> Speed -> Maybe (Intercept a)
 interceptBySpeed t p s
     | isNothing minInt = Nothing
     | fmap interceptorSpeed minInt == Just s = minInt
@@ -219,37 +217,36 @@ interceptBySpeed t p s
 --
 -- For example:
 --
--- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50) Length.zero) (Angle.decimalDegrees 220) (Speed.knots 600)
--- >>> let ip = Geodetic.s84Pos 20 (-60) Length.zero
+-- >>> let t = Kinematics.Track (Geodetic.s84Pos 34 (-50)) (Angle.decimalDegrees 220) (Speed.knots 600)
+-- >>> let ip = Geodetic.s84Pos 20 (-60)
 -- >>> let d = Duration.seconds 2700
 -- >>> interceptByTime t ip d
 -- Just (Intercept { timeToIntercept = 0H45M0.000S
 --                 , distanceToIntercept = 1015.302358852km
---                 , interceptPosition = 28°8'12.046"N,55°27'21.411"W 0.0m (S84)
+--                 , interceptPosition = 28°8'12.046"N,55°27'21.411"W (S84)
 --                 , interceptorBearing = 26°7'11.649"
 --                 , interceptorSpeed = 1353.736478km/h})
 interceptByTime ::
-       (Spherical a) => Track a -> Geodetic.Position a -> Duration -> Maybe (Intercept a)
+       (Spherical a) => Track a -> HorizontalPosition a -> Duration -> Maybe (Intercept a)
 interceptByTime t p d
     | Duration.toMilliseconds d <= 0 = Nothing
-    | Geodetic.llEq (trackPosition t) p = Nothing
+    | trackPosition t == p = Nothing
     | isNothing ib = Nothing
     | otherwise =
         let is = Speed.average idist d
          in Just (Intercept d idist ipos (fromJust ib) is)
   where
     ipos = trackPositionAfter t d
-    idist = GreatCircle.surfaceDistance p ipos
+    idist = GreatCircle.distance p ipos
     ib = GreatCircle.initialBearing p ipos <|> GreatCircle.initialBearing p (trackPosition t)
 
 -- private
 -- | position from speed course and seconds.
 position' ::
-       (Spherical a) => Geodetic.Position a -> Course -> Speed -> Double -> Geodetic.Position a
-position' p0 (Course c) s sec = Geodetic.nvectorHeightPos' v1 h0 (Geodetic.model p0)
+       (Spherical a) => HorizontalPosition a -> Course -> Speed -> Double -> HorizontalPosition a
+position' p0 (Course c) s sec = Geodetic.nvectorPos' v1 (Geodetic.model p0)
   where
     nv0 = Geodetic.nvector p0
-    h0 = Geodetic.height p0
     v1 = position'' nv0 c s sec (radiusM p0)
 
 -- | position from course, speed and seconds.
@@ -262,10 +259,10 @@ position'' v0 c s sec rm = v1
 -- | time to CPA.
 timeToCpa' ::
        (Spherical a)
-    => Geodetic.Position a
+    => HorizontalPosition a
     -> Course
     -> Speed
-    -> Geodetic.Position a
+    -> HorizontalPosition a
     -> Course
     -> Speed
     -> Double
@@ -278,7 +275,7 @@ timeToCpa' p1 (Course c10) s1 p2 (Course c20) s2 = cpaNrRec v10 c10 w1 v20 c20 w
     w2 = Speed.toMetresPerSecond s2 / rm
 
 -- | time to intercept with minimum speed
-timeToIntercept' :: (Spherical a) => Track a -> Geodetic.Position a -> Double
+timeToIntercept' :: (Spherical a) => Track a -> HorizontalPosition a -> Double
 timeToIntercept' (Track p2 b2 s2) p1 = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 c2 s2 rm) t0 0
   where
     v10 = Geodetic.nvector p1
@@ -293,7 +290,7 @@ timeToIntercept' (Track p2 b2 s2) p1 = intMinNrRec v10v20 v10c2 w2 (sep v10 v20 
     t0 = rm * s0 / s2mps -- assume target is travelling towards interceptor
 
 -- | time to intercept with speed.
-timeToInterceptSpeed :: (Spherical a) => Track a -> Geodetic.Position a -> Speed -> Double
+timeToInterceptSpeed :: (Spherical a) => Track a -> HorizontalPosition a -> Speed -> Double
 timeToInterceptSpeed (Track p2 b2 s2) p1 s1 =
     intSpdNrRec v10v20 v10c2 w1 w2 (sep v10 v20 c2 s2 rm) t0 0
   where
@@ -437,11 +434,11 @@ sep :: Math3d.V3 -> Math3d.V3 -> Math3d.V3 -> Speed -> Double -> Double -> Doubl
 sep v10 v20 c2 s2 r ti = angleBetweenRadians v10 (position'' v20 c2 s2 ti r)
 
 -- | reference sphere radius.
-radius :: (Spherical a) => Geodetic.Position a -> Length
+radius :: (Spherical a) => HorizontalPosition a -> Length
 radius = equatorialRadius . surface . Geodetic.model
 
 -- | reference sphere radius in metres.
-radiusM :: (Spherical a) => Geodetic.Position a -> Double
+radiusM :: (Spherical a) => HorizontalPosition a -> Double
 radiusM = Length.toMetres . radius
 
 -- angle between 2 vectors in radians - this is duplicated with GreatCircle but

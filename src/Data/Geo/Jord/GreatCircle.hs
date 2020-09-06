@@ -36,14 +36,14 @@ module Data.Geo.Jord.GreatCircle
     , crossTrackDistance
     , crossTrackDistance'
     , destination
+    , distance
+    , enclosedBy
     , finalBearing
     , initialBearing
-    , insideSurface
     , interpolated
     , intersection
     , intersections
     , mean
-    , surfaceDistance
     ) where
 
 import Data.Fixed (Nano)
@@ -52,6 +52,7 @@ import Data.List (subsequences)
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
 import Data.Geo.Jord.Ellipsoid (equatorialRadius)
+import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length
@@ -59,7 +60,7 @@ import Data.Geo.Jord.Math3d (V3)
 import qualified Data.Geo.Jord.Math3d as Math3d
 import Data.Geo.Jord.Model (Spherical, surface)
 
--- | A circle on the __surface__ of a __sphere__ which lies in a plane
+-- | A circle on the surface of a __sphere__ which lies in a plane
 -- passing through the sphere centre. Every two distinct and non-antipodal points
 -- define a unique Great Circle.
 --
@@ -72,29 +73,29 @@ data GreatCircle a =
 instance (Spherical a) => Show (GreatCircle a) where
     show (GreatCircle _ _ s) = s
 
--- | @greatCircleThrough p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@.
+-- | @through p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@.
 -- If positions are antipodal, any great circle passing through those positions will be returned.
 -- For example:
 --
--- >>> let p1 = Geodetic.latLongHeightPos 45.0 (-143.5) (Length.metres 1500) S84
--- >>> let p2 = Geodetic.latLongHeightPos 46.0 14.5 (Length.metres 3000) S84
--- >>> GreatCircle.through p1 p2 -- heights are ignored, great circle is always at surface.
--- Just Great Circle { through 45°0'0.000"N,143°30'0.000"W 1500.0m (S84) & 46°0'0.000"N,14°30'0.000"E 3000.0m (S84) }
+-- >>> let p1 = Geodetic.s84Pos 45.0 (-143.5)
+-- >>> let p2 = Geodetic.s84Pos 46.0 14.5
+-- >>> GreatCircle.through p1 p2
+-- Just Great Circle { through 45°0'0.000"N,143°30'0.000"W (S84) & 46°0'0.000"N,14°30'0.000"E (S84) }
 --
 -- Returns 'Nothing' if given positions are equal.
-through :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (GreatCircle a)
+through :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Maybe (GreatCircle a)
 through p1 p2 = fmap (\n -> GreatCircle n (Geodetic.model p1) dscr) (arcNormal p1 p2)
   where
     dscr = "Great Circle { through " ++ show p1 ++ " & " ++ show p2 ++ " }"
 
--- | @greatCircleHeadingOn p b@ returns the 'GreatCircle' passing by position @p@ and
+-- | @headingOn p b@ returns the 'GreatCircle' passing by position @p@ and
 -- heading on bearing @b@. For example:
 --
--- >>> let p = Geodetic.latLongPos 45.0 (-143.5) S84
+-- >>> let p = Geodetic.s84Pos 45.0 (-143.5)
 -- >>> let b = Angle.decimalDegrees 33.0
 -- >>> GreatCircle.headingOn p b
--- Great Circle { by 45°0'0.000"N,143°30'0.000"W 0.0m (S84) & heading on 33°0'0.000" }
-headingOn :: (Spherical a) => Geodetic.Position a -> Angle -> GreatCircle a
+-- Great Circle { by 45°0'0.000"N,143°30'0.000"W (S84) & heading on 33°0'0.000" }
+headingOn :: (Spherical a) => HorizontalPosition a -> Angle -> GreatCircle a
 headingOn p b = GreatCircle (Math3d.subtract n' e') m dscr
   where
     m = Geodetic.model p
@@ -108,7 +109,7 @@ headingOn p b = GreatCircle (Math3d.subtract n' e') m dscr
 -- | Oriented minor arc of a great circle between two positions: shortest path between
 -- positions on a great circle.
 data MinorArc a =
-    MinorArc !V3 (Geodetic.Position a) (Geodetic.Position a)
+    MinorArc !V3 (HorizontalPosition a) (HorizontalPosition a)
     deriving (Eq)
 
 instance (Spherical a) => Show (MinorArc a) where
@@ -116,34 +117,34 @@ instance (Spherical a) => Show (MinorArc a) where
 
 -- | @minorArc p1 p2@ returns the 'MinorArc' from @p1@ to @p2@.  For example:
 --
--- >>> let p1 = Geodetic.latLongHeightPos 45.0 (-143.5) (Length.metres 1500) S84
--- >>> let p2 = Geodetic.latLongHeightPos 46.0 14.5 (Length.metres 3000) S84
+-- >>> let p1 = Geodetic.s84Pos 45.0 (-143.5)
+-- >>> let p2 = Geodetic.s84Pos 46.0 14.5
 -- >>> GreatCircle.minorArc p1 p2
--- Just Minor Arc { from: 45°0'0.000"N,143°30'0.000"W 1500.0m (S84), to: 46°0'0.000"N,14°30'0.000"E 3000.0m (S84) }
+-- Just Minor Arc { from: 45°0'0.000"N,143°30'0.000"W (S84), to: 46°0'0.000"N,14°30'0.000"E (S84) }
 --
 -- Returns 'Nothing' if given positions are equal.
-minorArc :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (MinorArc a)
+minorArc :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Maybe (MinorArc a)
 minorArc p1 p2 = fmap (\n -> MinorArc n p1 p2) (arcNormal p1 p2)
 
 -- | @minorArcStart ma@ returns the start position of minor arc @ma@.
-minorArcStart :: (Spherical a) => MinorArc a -> Geodetic.Position a
+minorArcStart :: (Spherical a) => MinorArc a -> HorizontalPosition a
 minorArcStart (MinorArc _ s _) = s
 
 -- | @minorArcEnd ma@ returns the end position of minor arc @ma@.
-minorArcEnd :: (Spherical a) => MinorArc a -> Geodetic.Position a
+minorArcEnd :: (Spherical a) => MinorArc a -> HorizontalPosition a
 minorArcEnd (MinorArc _ _ e) = e
 
--- | @alongTrackDistance p a@ computes how far Position @p@ is along a path described
+-- | @alongTrackDistance p a@ computes how far position @p@ is along a path described
 -- by the minor arc @a@: if a perpendicular is drawn from @p@  to the path, the
 -- along-track distance is the signed distance from the start point to where the
 -- perpendicular crosses the path. For example:
 --
--- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972) Length.zero
--- >>> let mas = Geodetic.s84Pos 53.3206 (-1.7297) Length.zero
--- >>> let mae = Geodetic.s84Pos 53.1887 0.1334 Length.zero
+-- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972)
+-- >>> let mas = Geodetic.s84Pos 53.3206 (-1.7297)
+-- >>> let mae = Geodetic.s84Pos 53.1887 0.1334
 -- >>> fmap (GreatCircle.alongTrackDistance p) (GreatCircle.minorArc mas mae)
 -- Just 62.3315791km
-alongTrackDistance :: (Spherical a) => Geodetic.Position a -> MinorArc a -> Length
+alongTrackDistance :: (Spherical a) => HorizontalPosition a -> MinorArc a -> Length
 alongTrackDistance p (MinorArc n s _) = alongTrackDistance'' p s n
 
 -- | @alongTrackDistance' p s b@ computes how far Position @p@ is along a path starting
@@ -151,13 +152,13 @@ alongTrackDistance p (MinorArc n s _) = alongTrackDistance'' p s n
 -- along-track distance is the signed distance from the start point to where the
 -- perpendicular crosses the path. For example:
 --
--- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972) Length.zero
--- >>> let s = Geodetic.s84Pos 53.3206 (-1.7297) Length.zero
+-- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972)
+-- >>> let s = Geodetic.s84Pos 53.3206 (-1.7297)
 -- >>> let b = Angle.decimalDegrees 96.0017325
 -- >>> GreatCircle.alongTrackDistance' p s b
 -- 62.3315791km
 alongTrackDistance' ::
-       (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Angle -> Length
+       (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Angle -> Length
 alongTrackDistance' p s b = alongTrackDistance'' p s n
   where
     (GreatCircle n _ _) = headingOn s b
@@ -167,9 +168,9 @@ alongTrackDistance' p s b = alongTrackDistance'' p s n
 -- signed + if @p1@ is clockwise looking along @n@, - in opposite direction.
 angularDistance ::
        (Spherical a)
-    => Geodetic.Position a
-    -> Geodetic.Position a
-    -> Maybe (Geodetic.Position a)
+    => HorizontalPosition a
+    -> HorizontalPosition a
+    -> Maybe (HorizontalPosition a)
     -> Angle
 angularDistance p1 p2 n = signedAngleBetween v1 v2 vn
   where
@@ -181,17 +182,17 @@ angularDistance p1 p2 n = signedAngleBetween v1 v2 vn
 -- Returns a negative 'Length' if Position is left of great circle, positive 'Length' if Position is right
 -- of great circle; the orientation of the great circle is therefore important. For example:
 --
--- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972) Length.zero
--- >>> let gc1 = GreatCircle.through (Geodetic.s84Pos 51 0 Length.zero) (Geodetic.s84Pos 52 1 Length.zero)
+-- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972)
+-- >>> let gc1 = GreatCircle.through (Geodetic.s84Pos 51 0) (Geodetic.s84Pos 52 1)
 -- >>> fmap (GreatCircle.crossTrackDistance p) gc1
 -- Just -176.756870526km
--- >>> let gc2 = GreatCircle.through (Geodetic.s84Pos 52 1 Length.zero) (Geodetic.s84Pos 51 0 Length.zero)
+-- >>> let gc2 = GreatCircle.through (Geodetic.s84Pos 52 1) (Geodetic.s84Pos 51 0)
 -- >>> fmap (GreatCircle.crossTrackDistance p) gc2
 -- Just 176.7568725km
--- >>> let gc3 = GreatCircle.headingOn (Geodetic.s84Pos 53.3206 (-1.7297) Length.zero) (Angle.decimalDegrees 96.0)
+-- >>> let gc3 = GreatCircle.headingOn (Geodetic.s84Pos 53.3206 (-1.7297)) (Angle.decimalDegrees 96.0)
 -- >>> GreatCircle.crossTrackDistance p gc3
 -- -305.665267m metres
-crossTrackDistance :: (Spherical a) => Geodetic.Position a -> GreatCircle a -> Length
+crossTrackDistance :: (Spherical a) => HorizontalPosition a -> GreatCircle a -> Length
 crossTrackDistance p (GreatCircle n _ _) =
     Angle.arcLength (Angle.subtract a (Angle.decimalDegrees 90)) (radius p)
   where
@@ -204,22 +205,22 @@ crossTrackDistance p (GreatCircle n _ _) =
 --
 -- > GreatCircle.crossTrackDistance p (GreatCircle.headingOn s b)
 crossTrackDistance' ::
-       (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Angle -> Length
+       (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Angle -> Length
 crossTrackDistance' p s b = crossTrackDistance p (headingOn s b)
 
 -- | @destination p b d@ computes the position along the great circle, reached from
--- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass angle) @b@
--- at __constant__ height. For example:
+-- position @p@ having travelled the __surface__ distance @d@ on the initial bearing (compass
+-- angle) @b@. For example:
 --
--- >>> let p = Geodetic.s84Pos 54 154 (Length.metres 15000)
+-- >>> let p = Geodetic.s84Pos 54 154
 -- >>> GreatCircle.destination p (Angle.decimalDegrees 33) (Length.kilometres 1000)
--- 61°10'44.188"N,164°10'19.254"E 15.0km (S84)
+-- 61°10'44.188"N,164°10'19.254"E (S84)
 --
 -- Note that the bearing will normally vary before destination is reached.
-destination :: (Spherical a) => Geodetic.Position a -> Angle -> Length -> Geodetic.Position a
+destination :: (Spherical a) => HorizontalPosition a -> Angle -> Length -> HorizontalPosition a
 destination p b d
     | d == Length.zero = p
-    | otherwise = Geodetic.nvectorHeightPos' nvd (Geodetic.height p) m
+    | otherwise = Geodetic.nvectorPos' nvd m
   where
     m = Geodetic.model p
     nv = Geodetic.nvector p
@@ -230,55 +231,95 @@ destination p b d
     de = Math3d.add (Math3d.scale nd (Angle.cos b)) (Math3d.scale ed (Angle.sin b)) -- unit vector in the direction of the azimuth
     nvd = Math3d.add (Math3d.scale nv (Angle.cos ta)) (Math3d.scale de (Angle.sin ta))
 
--- | @surfaceDistance p1 p2@ computes the surface distance on the great circle between the
+-- | @distance p1 p2@ computes the surface distance on the great circle between the
 -- positions @p1@ and @p2@. For example:
 --
--- >>> GreatCircle.surfaceDistance (Geodetic.northPole S84) (Geodetic.southPole S84)
+-- >>> GreatCircle.distance (Geodetic.northPole S84) (Geodetic.southPole S84)
 -- 20015.114352233km
--- >>> GreatCircle.surfaceDistance (Geodetic.northPole S84) (Geodetic.northPole S84)
+-- >>> GreatCircle.distance (Geodetic.northPole S84) (Geodetic.northPole S84)
 -- 0.0m
-surfaceDistance :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Length
-surfaceDistance p1 p2 = Angle.arcLength a (radius p1)
+distance :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Length
+distance p1 p2 = Angle.arcLength a (radius p1)
   where
     a = angleBetween (Geodetic.nvector p1) (Geodetic.nvector p2)
+
+-- | @enclosedBy p ps@ determines whether position @p@ is enclosed by the polygon defined by horizontal
+-- positions @ps@.
+-- The polygon can be opened or closed (i.e. if @head ps /= last ps@).
+--
+-- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
+-- will sum to less than 360°, and exterior point angles will be small but non-zero.
+--
+-- Always returns 'False' if @ps@ does not at least defines a triangle or if @p@ is any of the @ps@.
+--
+-- ==== __Examples__
+--
+-- >>> let malmo = Geodetic.s84Pos 55.6050 13.0038
+-- >>> let ystad = Geodetic.s84Pos 55.4295 13.82
+-- >>> let lund = Geodetic.s84Pos 55.7047 13.1910
+-- >>> let helsingborg = Geodetic.s84Pos 56.0465 12.6945
+-- >>> let kristianstad = Geodetic.s84Pos 56.0294 14.1567
+-- >>> let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
+-- >>> let hoor = Geodetic.s84Pos 55.9295 13.5297
+-- >>> let hassleholm = Geodetic.s84Pos 56.1589 13.7668
+-- >>> GreatCircle.enclosedBy hoor polygon
+-- True
+-- >>> GreatCircle.enclosedBy hassleholm polygon
+-- False
+enclosedBy :: (Spherical a) => HorizontalPosition a -> [HorizontalPosition a] -> Bool
+enclosedBy p ps
+    | null ps = False
+    | p `elem` ps = False
+    | head ps == last ps = enclosedBy p (init ps)
+    | length ps < 3 = False
+    | otherwise =
+        let aSum =
+                foldl
+                    (\a v' -> Angle.add a (uncurry signedAngleBetween v' (Just v)))
+                    Angle.zero
+                    (egdes (map (Math3d.subtract v) vs))
+         in abs (Angle.toDecimalDegrees aSum) > 180.0
+  where
+    v = Geodetic.nvector p
+    vs = fmap Geodetic.nvector ps
 
 -- | @finalBearing p1 p2@ computes the final bearing arriving at @p2@ from @p1@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
 -- For example:
 --
--- >>> let p1 = Geodetic.s84Pos 0 1 Length.zero
--- >>> let p2 = Geodetic.s84Pos 0 0 Length.zero
+-- >>> let p1 = Geodetic.s84Pos 0 1
+-- >>> let p2 = Geodetic.s84Pos 0 0
 -- >>> GreatCircle.finalBearing p1 p2
 -- Just 270°0'0.000"
 --
 -- Returns 'Nothing' if both positions are equals.
-finalBearing :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe Angle
+finalBearing :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Maybe Angle
 finalBearing p1 p2
-    | Geodetic.llEq p1 p2 = Nothing
+    | p1 == p2 = Nothing
     | otherwise = Just (Angle.normalise (initialBearing' p2 p1) (Angle.decimalDegrees 180))
 
 -- | @initialBearing p1 p2@ computes the initial bearing from @p1@ to @p2@ in compass angle.
 -- Compass angles are clockwise angles from true north: 0° = north, 90° = east, 180° = south, 270° = west.
 -- For example:
 --
--- >>> let p1 = Geodetic.s84Pos 58.643889 (-5.714722) Length.zero
--- >>> let p2 = Geodetic.s84Pos 50.066389 (-5.714722) Length.zero
+-- >>> let p1 = Geodetic.s84Pos 58.643889 (-5.714722)
+-- >>> let p2 = Geodetic.s84Pos 50.066389 (-5.714722)
 -- >>> GreatCircle.initialBearing p1 p2
 -- Just 180°0'0.000"
 --
 -- Returns 'Nothing' if both positions are equals.
-initialBearing :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe Angle
+initialBearing :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Maybe Angle
 initialBearing p1 p2
-    | Geodetic.llEq p1 p2 = Nothing
+    | p1 == p2 = Nothing
     | otherwise = Just (initialBearing' p1 p2)
 
 -- | @interpolated p0 p1 f# computes the position at fraction @f@ between the @p0@ and @p1@. For example:
 --
--- >>> let p1 = Geodetic.s84Pos 53.479444 (-2.245278) (Length.metres 10000)
--- >>> let p2 = Geodetic.s84Pos 55.605833 13.035833 (Length.metres 20000)
+-- >>> let p1 = Geodetic.s84Pos 53.479444 (-2.245278)
+-- >>> let p2 = Geodetic.s84Pos 55.605833 13.035833
 -- >>> GreatCircle.interpolated p1 p2 0.5
--- 54°47'0.805"N,5°11'41.947"E 15.0km (S84)
+-- 54°47'0.805"N,5°11'41.947"E (S84)
 --
 -- Special conditions:
 --
@@ -288,31 +329,28 @@ initialBearing p1 p2
 -- 'error's if @f < 0 || f > 1@
 -- @
 interpolated ::
-       (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Double -> Geodetic.Position a
+       (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Double -> HorizontalPosition a
 interpolated p0 p1 f
     | f < 0 || f > 1 = error ("fraction must be in range [0..1], was " ++ show f)
     | f == 0 = p0
     | f == 1 = p1
-    | otherwise = Geodetic.nvectorHeightPos' iv ih (Geodetic.model p0)
+    | otherwise = Geodetic.nvectorPos' iv (Geodetic.model p0)
   where
     nv0 = Geodetic.nvector p0
-    h0 = Geodetic.height p0
     nv1 = Geodetic.nvector p1
-    h1 = Geodetic.height p1
     iv = Math3d.unit (Math3d.add nv0 (Math3d.scale (Math3d.subtract nv1 nv0) f))
-    ih = lrph h0 h1 f
 
 -- | Computes the intersection between the two given minor arcs of great circle. For example:
 --
--- >>> let a1s = Geodetic.s84Pos 51.885 0.235 Length.zero
--- >>> let a1e = Geodetic.s84Pos 48.269 13.093 Length.zero
--- >>> let a2s = Geodetic.s84Pos 49.008 2.549 Length.zero
--- >>> let a2e = Geodetic.s84Pos 56.283 11.304 Length.zero
+-- >>> let a1s = Geodetic.s84Pos 51.885 0.235
+-- >>> let a1e = Geodetic.s84Pos 48.269 13.093
+-- >>> let a2s = Geodetic.s84Pos 49.008 2.549
+-- >>> let a2e = Geodetic.s84Pos 56.283 11.304
 -- >>> GreatCircle.intersection <$> (GreatCircle.minorArc a1s a1e) <*> (GreatCircle.minorArc a2s a2e)
--- Just (Just 50°54'6.260"N,4°29'39.052"E 0.0m (S84))
+-- Just (Just 50°54'6.260"N,4°29'39.052"E (S84))
 --
 -- see also 'intersections'
-intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (Geodetic.Position a)
+intersection :: (Spherical a) => MinorArc a -> MinorArc a -> Maybe (HorizontalPosition a)
 intersection a1@(MinorArc n1 s1 e1) a2@(MinorArc n2 s2 e2) =
     case intersections' n1 n2 (Geodetic.model s1) of
         Nothing -> Nothing
@@ -338,10 +376,10 @@ intersection a1@(MinorArc n1 s1 e1) a2@(MinorArc n2 s2 e2) =
 -- Two great circles intersect exactly twice unless there are equal (regardless of orientation),
 -- in which case 'Nothing' is returned. For example:
 --
--- >>> let gc1 = GreatCircle.headingOn (Geodetic.s84Pos 51.885 0.235 Length.zero) (Angle.decimalDegrees 108.63)
--- >>> let gc2 = GreatCircle.headingOn (Geodetic.s84Pos 49.008 2.549 Length.zero) (Angle.decimalDegrees 32.72)
+-- >>> let gc1 = GreatCircle.headingOn (Geodetic.s84Pos 51.885 0.235) (Angle.decimalDegrees 108.63)
+-- >>> let gc2 = GreatCircle.headingOn (Geodetic.s84Pos 49.008 2.549) (Angle.decimalDegrees 32.72)
 -- >>> GreatCircle.intersections gc1 gc2
--- Just (50°54'6.201"N,4°29'39.401"E 0.0m (S84),50°54'6.201"S,175°30'20.598"W 0.0m (S84))
+-- Just (50°54'6.201"N,4°29'39.401"E (S84),50°54'6.201"S,175°30'20.598"W (S84))
 -- >>> let is = GreatCircle.intersections gc1 gc2
 -- >>> fmap fst is == fmap (Geodetic.antipode . snd) is
 -- True
@@ -349,50 +387,10 @@ intersections ::
        (Spherical a)
     => GreatCircle a
     -> GreatCircle a
-    -> Maybe (Geodetic.Position a, Geodetic.Position a)
+    -> Maybe (HorizontalPosition a, HorizontalPosition a)
 intersections (GreatCircle n1 m _) (GreatCircle n2 _ _) = intersections' n1 n2 m
 
--- | @insideSurface p ps@ determines whether position @p@ is inside the __surface__ polygon defined by
--- positions @ps@ (i.e. ignoring the height of the positions).
--- The polygon can be opened or closed (i.e. if @head ps /= last ps@).
---
--- Uses the angle summation test: on a sphere, due to spherical excess, enclosed point angles
--- will sum to less than 360°, and exterior point angles will be small but non-zero.
---
--- Always returns 'False' if @ps@ does not at least defines a triangle or if @p@ is any of the @ps@.
---
--- ==== __Examples__
---
--- >>> let malmo = Geodetic.s84Pos 55.6050 13.0038 Length.zero
--- >>> let ystad = Geodetic.s84Pos 55.4295 13.82 Length.zero
--- >>> let lund = Geodetic.s84Pos 55.7047 13.1910 Length.zero
--- >>> let helsingborg = Geodetic.s84Pos 56.0465 12.6945 Length.zero
--- >>> let kristianstad = Geodetic.s84Pos 56.0294 14.1567 Length.zero
--- >>> let polygon = [malmo, ystad, kristianstad, helsingborg, lund]
--- >>> let hoor = Geodetic.s84Pos 55.9295 13.5297 Length.zero
--- >>> let hassleholm = Geodetic.s84Pos 56.1589 13.7668 Length.zero
--- >>> GreatCircle.insideSurface hoor polygon
--- True
--- >>> GreatCircle.insideSurface hassleholm polygon
--- False
-insideSurface :: (Spherical a) => Geodetic.Position a -> [Geodetic.Position a] -> Bool
-insideSurface p ps
-    | null ps = False
-    | any (Geodetic.llEq p) ps = False
-    | Geodetic.llEq (head ps) (last ps) = insideSurface p (init ps)
-    | length ps < 3 = False
-    | otherwise =
-        let aSum =
-                foldl
-                    (\a v' -> Angle.add a (uncurry signedAngleBetween v' (Just v)))
-                    Angle.zero
-                    (egdes (map (Math3d.subtract v) vs))
-         in abs (Angle.toDecimalDegrees aSum) > 180.0
-  where
-    v = Geodetic.nvector p
-    vs = fmap Geodetic.nvector ps
-
--- | @mean ps@ computes the geographic mean surface position of @ps@, if it is defined.
+-- | @mean ps@ computes the geographic mean horizontal position of @ps@, if it is defined.
 --
 -- The geographic mean is not defined for antipodals positions (since they
 -- cancel each other).
@@ -404,7 +402,7 @@ insideSurface p ps
 -- mean [p] = Just p
 -- mean [p1, .., antipode p1] = Nothing
 -- @
-mean :: (Spherical a) => [Geodetic.Position a] -> Maybe (Geodetic.Position a)
+mean :: (Spherical a) => [HorizontalPosition a] -> Maybe (HorizontalPosition a)
 mean [] = Nothing
 mean [p] = Just p
 mean ps =
@@ -421,7 +419,7 @@ mean ps =
     nv = Math3d.unit $ foldl Math3d.add Math3d.zero vs
 
 -- private
-alongTrackDistance'' :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> V3 -> Length
+alongTrackDistance'' :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> V3 -> Length
 alongTrackDistance'' p s n = Angle.arcLength a (radius s)
   where
     a =
@@ -434,14 +432,7 @@ alongTrackDistance'' p s n = Angle.arcLength a (radius s)
 egdes :: [V3] -> [(V3, V3)]
 egdes ps = zip ps (tail ps ++ [head ps])
 
-lrph :: Length -> Length -> Double -> Length
-lrph h0 h1 f = Length.metres h
-  where
-    h0' = Length.toMetres h0
-    h1' = Length.toMetres h1
-    h = h0' + (h1' - h0') * f
-
-intersections' :: (Spherical a) => V3 -> V3 -> a -> Maybe (Geodetic.Position a, Geodetic.Position a)
+intersections' :: (Spherical a) => V3 -> V3 -> a -> Maybe (HorizontalPosition a, HorizontalPosition a)
 intersections' n1 n2 s
     | (Math3d.norm i :: Double) == 0.0 = Nothing
     | otherwise
@@ -449,7 +440,7 @@ intersections' n1 n2 s
   where
     i = Math3d.cross n1 n2
 
-initialBearing' :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Angle
+initialBearing' :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Angle
 initialBearing' p1 p2 = Angle.normalise a (Angle.decimalDegrees 360)
   where
     m = Geodetic.model p1
@@ -459,17 +450,17 @@ initialBearing' p1 p2 = Angle.normalise a (Angle.decimalDegrees 360)
     gc2 = Math3d.cross v1 (Geodetic.nvector . Geodetic.northPole $ m) -- great circle through p1 & north pole
     a = signedAngleBetween gc1 gc2 (Just v1)
 
-arcNormal :: (Spherical a) => Geodetic.Position a -> Geodetic.Position a -> Maybe V3
+arcNormal :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Maybe V3
 arcNormal p1 p2
-    | Geodetic.llEq p1 p2 = Nothing
-    | Geodetic.llEq (Geodetic.antipode p1) p2 = Nothing
+    | p1 == p2 = Nothing
+    | Geodetic.antipode p1 == p2 = Nothing
     | otherwise = Just (Math3d.cross (Geodetic.nvector p1) (Geodetic.nvector p2))
 
 -- | @onMinorArc p a@ determines whether position @p@ is on the minor arc @a@.
 -- Warning: this function assumes that @p@ is on great circle of the minor arc.
 -- return true if chord lengths between (p, start) & (p, end) are both less than
 -- chord length between (start, end)
-onMinorArc :: (Spherical a) => Geodetic.Position a -> MinorArc a -> Bool
+onMinorArc :: (Spherical a) => HorizontalPosition a -> MinorArc a -> Bool
 onMinorArc p (MinorArc _ s e) =
     Math3d.squaredDistance v0 v1 <= l && Math3d.squaredDistance v0 v2 <= l
   where
@@ -479,7 +470,7 @@ onMinorArc p (MinorArc _ s e) =
     l = Math3d.squaredDistance v1 v2
 
 -- | reference sphere radius.
-radius :: (Spherical a) => Geodetic.Position a -> Length
+radius :: (Spherical a) => HorizontalPosition a -> Length
 radius = equatorialRadius . surface . Geodetic.model
 
 -- | angle between 2 vectors.

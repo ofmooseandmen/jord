@@ -39,16 +39,16 @@ import qualified Data.Geo.Jord.Tx as Tx
 
 -- | @toGeodetic p@ converts the geodetic coordinates of position @p@ to geocentric coordinates.
 toGeodetic :: (Model m) => Geocentric.Position m -> Geodetic.Position m
-toGeodetic p = Geodetic.nvectorHeightPos' nv h (Geocentric.model p)
+toGeodetic p = Geodetic.atHeight (Geodetic.nvectorPos' nv (Geocentric.model p)) h
   where
     (nv, h) = nvectorFromGeocentric (Geocentric.metresCoords p) (surface . Geocentric.model $ p)
 
 -- | @toGeocentric p@ converts the geocentric coordinates of position @p@ to geodetic coordinates.
 toGeocentric :: (Model m) => Geodetic.Position m -> Geocentric.Position m
 toGeocentric p =
-    Geocentric.metresPos (Math3d.v3x c) (Math3d.v3y c) (Math3d.v3z c) (Geodetic.model p)
+    Geocentric.metresPos (Math3d.v3x c) (Math3d.v3y c) (Math3d.v3z c) (Geodetic.model' $ p)
   where
-    c = nvectorToGeocentric (Geodetic.nvector p, Geodetic.height p) (surface . Geodetic.model $ p)
+    c = nvectorToGeocentric (Geodetic.nvector p, Geodetic.height p) (surface . Geodetic.model' $ p)
 
 -- | @transform p1 m2 g@ transforms the coordinates of the position @p1@ from its coordinate
 -- system into the coordinate system defined by the model @m2@ using the graph @g@ to find the

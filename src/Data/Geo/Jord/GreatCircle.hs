@@ -323,7 +323,11 @@ initialBearing p1 p2
 -- 'error's if @f < 0 || f > 1@
 -- @
 interpolated ::
-       (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Double -> HorizontalPosition a
+       (Spherical a)
+    => HorizontalPosition a
+    -> HorizontalPosition a
+    -> Double
+    -> HorizontalPosition a
 interpolated p0 p1 f
     | f < 0 || f > 1 = error ("fraction must be in range [0..1], was " ++ show f)
     | f == 0 = p0
@@ -352,10 +356,7 @@ intersection a1@(MinorArc n1 s1 e1) a2@(MinorArc n2 s2 e2) =
             | onMinorArc pot a1 && onMinorArc pot a2 -> Just pot
             | otherwise -> Nothing
             where mid =
-                      Math3d.unit $
-                      foldl
-                          Math3d.add
-                          Math3d.zero
+                      meanV
                           [ Geodetic.nvector s1
                           , Geodetic.nvector e1
                           , Geodetic.nvector s2
@@ -409,7 +410,7 @@ mean [] = Nothing
 mean [p] = Just p
 mean ps =
     if null antipodals
-        then Just (Geodetic.nvectorPos' nv (Geodetic.model . head $ ps))
+        then Just (Geodetic.nvectorPos' (meanV vs) (Geodetic.model . head $ ps))
         else Nothing
   where
     vs = fmap Geodetic.nvector ps
@@ -418,7 +419,6 @@ mean ps =
         filter
             (\t -> (realToFrac (Math3d.norm (Math3d.add (head t) (last t)) :: Double) :: Nano) == 0)
             ts
-    nv = Math3d.unit $ foldl Math3d.add Math3d.zero vs
 
 -- | @projection p ma@ computes the projection of the position @p@ on the minor arc @ma@. Returns 'Nothing' if the
 -- position @p@ is the normal of the minor arc or if the projection is not within the minor arc @ma@ (including start
@@ -426,10 +426,37 @@ mean ps =
 --
 -- >>> TODO
 projection :: (Spherical a) => HorizontalPosition a -> MinorArc a -> Maybe (HorizontalPosition a)
-projection p ma = Nothing
+projection p ma@(MinorArc na mas mae) =
+    case mnb of
+        Nothing -> Nothing
+        (Just nb) ->
+            case is of
+                Nothing -> Nothing
+                (Just (i1, i2)) ->
+                    if onMinorArc pot ma
+                        then Just pot
+                        else Nothing
+                    where mid =
+                              meanV
+                                  [ Geodetic.nvector mas
+                                  , Geodetic.nvector mae
+                                  , Geodetic.nvector nap
+                                  , Geodetic.nvector nbp
+                                  ]
+                          pot =
+                              if Math3d.dot mid (Geodetic.nvector i1) > 0
+                                  then i1
+                                  else i2
+            where nbp = Geodetic.nvectorPos' nb m -- ensure resolution of lat, lon
+                  is = intersections' (Geodetic.nvector nap) (Geodetic.nvector nbp) m
+  where
+    m = Geodetic.model p
+    nap = Geodetic.nvectorPos' na m -- ensure resolution of lat, lon
+    mnb = arcNormal nap p -- normal to great circle (na, p) - if na is p or antipode of p, then projection is not possible.
 
 -- private
-alongTrackDistance'' :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> V3 -> Length
+alongTrackDistance'' ::
+       (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> V3 -> Length
 alongTrackDistance'' p s n = Angle.arcLength a (radius s)
   where
     a =
@@ -442,7 +469,8 @@ alongTrackDistance'' p s n = Angle.arcLength a (radius s)
 egdes :: [V3] -> [(V3, V3)]
 egdes ps = zip ps (tail ps ++ [head ps])
 
-intersections' :: (Spherical a) => V3 -> V3 -> a -> Maybe (HorizontalPosition a, HorizontalPosition a)
+intersections' ::
+       (Spherical a) => V3 -> V3 -> a -> Maybe (HorizontalPosition a, HorizontalPosition a)
 intersections' n1 n2 s
     | (Math3d.norm i :: Double) == 0.0 = Nothing
     | otherwise
@@ -496,3 +524,6 @@ signedAngleBetween v1 v2 n = Angle.atan2 sinO cosO
     sign = maybe 1 (signum . Math3d.dot (Math3d.cross v1 v2)) n
     sinO = sign * Math3d.norm (Math3d.cross v1 v2)
     cosO = Math3d.dot v1 v2
+
+meanV :: [Math3d.V3] -> V3
+meanV vs = Math3d.unit $ foldl Math3d.add Math3d.zero vs

@@ -41,6 +41,7 @@ import Prelude hiding (length)
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
 import Data.Geo.Jord.Ellipsoid
+import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length
@@ -53,8 +54,8 @@ import Data.Geo.Jord.Model (Ellipsoidal, surface)
 -- The final bearing will differ from the initial bearing by varying degrees according to distance and latitude.
 data Geodesic a =
     Geodesic
-        { startPosition :: Geodetic.Position a -- ^ geodesic start position.
-        , endPosition :: Geodetic.Position a -- ^ geodesic end position.
+        { startPosition :: HorizontalPosition a -- ^ geodesic start position.
+        , endPosition :: HorizontalPosition a -- ^ geodesic end position.
         , initialBearing :: Maybe Angle -- ^ initial bearing from @startPosition@ to @endPosition@, if both are different.
         , finalBearing :: Maybe Angle -- ^ final bearing from @startPosition@ to @endPosition@, if both are different.
         , length :: Length -- ^ length of the geodesic: the surface distance between @startPosition@ to @endPosition@.
@@ -67,15 +68,15 @@ data Geodesic a =
 -- at the reached position. For example:
 --
 -- >>> Geodesic.direct (Geodetic.northPole WGS84) Angle.zero (Length.kilometres 20003.931458623)
--- Just (Geodesic { startPosition = 90°0'0.000"N,0°0'0.000"E 0.0m (WGS84)
---                , endPosition = 90°0'0.000"S,180°0'0.000"E 0.0m (WGS84)
+-- Just (Geodesic { startPosition = 90°0'0.000"N,0°0'0.000"E (WGS84)
+--                , endPosition = 90°0'0.000"S,180°0'0.000"E (WGS84)
 --                , initialBearing = Just 0°0'0.000"
 --                , finalBearing = Just 180°0'0.000"
 --                , length = 20003.931458623km})
 --
 -- The Vincenty formula for the direct problem should always converge, however this function returns
 -- 'Nothing' if it would ever fail to do so (probably thus indicating a bug in the implementation).
-direct :: (Ellipsoidal a) => Geodetic.Position a -> Angle -> Length -> Maybe (Geodesic a)
+direct :: (Ellipsoidal a) => HorizontalPosition a -> Angle -> Length -> Maybe (Geodesic a)
 direct p1 b1 d
     | d == Length.zero = Just (Geodesic p1 p1 (Just b1) (Just b1) Length.zero)
     | otherwise =
@@ -99,10 +100,9 @@ direct p1 b1 d
                               (Angle.radians (atan2 sinAlpha (-x)))
                               (Angle.decimalDegrees 360.0)
                       p2 =
-                          Geodetic.latLongHeightPos'
+                          Geodetic.latLongPos'
                               (Angle.radians lat2)
                               (Angle.radians lon2)
-                              (Geodetic.height p1)
                               (Geodetic.model p1)
   where
     lat1 = Angle.toRadians . Geodetic.latitude $ p1
@@ -138,9 +138,9 @@ direct p1 b1 d
 --
 -- >>> Geodesic.inverse (Geodetic.latLongPos 0 0 WGS84) (Geodetic.latLongPos 0.5 179.7 WGS84)
 -- Nothing
-inverse :: (Ellipsoidal a) => Geodetic.Position a -> Geodetic.Position a -> Maybe (Geodesic a)
+inverse :: (Ellipsoidal a) => HorizontalPosition a -> HorizontalPosition a -> Maybe (Geodesic a)
 inverse p1 p2
-    | Geodetic.llEq p1 p2 = Just (Geodesic p1 p2 Nothing Nothing Length.zero)
+    | p1 == p2 = Just (Geodesic p1 p2 Nothing Nothing Length.zero)
     | otherwise =
         case rec of
             Nothing -> Nothing

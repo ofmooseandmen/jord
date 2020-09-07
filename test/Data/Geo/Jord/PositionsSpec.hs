@@ -19,7 +19,7 @@ spec :: Spec
 spec = do
     describe "Geodetic <=> Geocentric (Ellipsoidal)" $ do
         it "n-vector <=> Geocentric" $ do
-            let p = Geodetic.nvectorPos 0.5 0.5 0.7071067811865475 WGS84
+            let p = Geodetic.nvectorHeightPos 0.5 0.5 0.7071067811865475 Length.zero WGS84
             let g = Geocentric.metresPos 3194419.145061 3194419.145061 4487348.408866 WGS84
             Positions.toGeocentric p `shouldBe` g
             Positions.toGeodetic g `shouldBe` p
@@ -42,7 +42,7 @@ spec = do
             fmap Positions.toGeodetic refGeocentrics `shouldBe` refLlh
     describe "Geodetic <=> Geocentric (Spherical)" $ do
         it "n-vector <=> Geocentric" $ do
-            let p = Geodetic.nvectorPos 0.5 0.5 0.7071 S84
+            let p = Geodetic.nvectorHeightPos 0.5 0.5 0.7071 Length.zero S84
             let g = Geocentric.metresPos 3185519.660307 3185519.660307 4504961.903617 S84
             Positions.toGeocentric p `shouldBe` g
             Positions.toGeodetic g `shouldBe` p
@@ -102,7 +102,8 @@ spec = do
             Positions.transformAt' (Positions.transformAt' pITRF2014 e ETRF2000 tx) e ITRF2014 itx `shouldBe`
                 pITRF2014
         it "returns the initial coordinates when using chained conversion round-trip" $ do
-            let pNAD83 = Positions.toGeocentric (Geodetic.latLongPos 0 0 NAD83_CORS96)
+            let pNAD83 =
+                    Positions.toGeocentric (Geodetic.latLongHeightPos 0 0 Length.zero NAD83_CORS96)
             -- goes via ITRF2000
             let pITRF2014 =
                     fromJust

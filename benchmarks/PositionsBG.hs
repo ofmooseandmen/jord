@@ -24,13 +24,13 @@ egeoc :: Geocentric.Position WGS84
 egeoc = Geocentric.metresPos 4193790.895437 454436.195118 4768166.813801 WGS84
 
 egeod :: Geodetic.Position WGS84
-egeod = Geodetic.wgs84Pos 45 45 h
+egeod = Geodetic.latLongHeightPos 45 45 h WGS84
 
 sgeoc :: Geocentric.Position S84
 sgeoc = Geocentric.metresPos 4193790.895437 454436.195118 4768166.813801 S84
 
 sgeod :: Geodetic.Position S84
-sgeod = Geodetic.s84Pos 45 45 h
+sgeod = Geodetic.latLongHeightPos 45 45 h S84
 
 h :: Length
 h = Length.metres 15000

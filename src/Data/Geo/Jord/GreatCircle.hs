@@ -44,6 +44,7 @@ module Data.Geo.Jord.GreatCircle
     , intersection
     , intersections
     , mean
+    , projection
     ) where
 
 import Data.Fixed (Nano)
@@ -418,6 +419,14 @@ mean ps =
             (\t -> (realToFrac (Math3d.norm (Math3d.add (head t) (last t)) :: Double) :: Nano) == 0)
             ts
     nv = Math3d.unit $ foldl Math3d.add Math3d.zero vs
+
+-- | @projection p ma@ computes the projection of the position @p@ on the minor arc @ma@. Returns 'Nothing' if the
+-- position @p@ is the normal of the minor arc or if the projection is not within the minor arc @ma@ (including start
+-- & end). For example:
+--
+-- >>> TODO
+projection :: (Spherical a) => HorizontalPosition a -> MinorArc a -> Maybe (HorizontalPosition a)
+projection p ma = Nothing
 
 -- private
 alongTrackDistance'' :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> V3 -> Length

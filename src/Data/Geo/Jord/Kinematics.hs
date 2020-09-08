@@ -41,6 +41,7 @@ module Data.Geo.Jord.Kinematics
     -- * Calculations
     , course
     , positionAfter
+    , positionAfter'
     , trackPositionAfter
     , cpa
     , intercept
@@ -123,13 +124,14 @@ course p b = Course (Math3d.vec3 (Math3d.v3z (head r)) (Math3d.v3z (r !! 1)) (Ma
 --
 -- This is equivalent to:
 --
--- > Kinematics.positionAfter' (Kinematics.course p b) s d
+-- > Kinematics.positionAfter' p (Kinematics.course p b) s d
 positionAfter ::
        (Spherical a) => HorizontalPosition a -> Angle -> Speed -> Duration -> HorizontalPosition a
 positionAfter p b s d = position' p (course p b) s (Duration.toSeconds d)
 
--- | @positionAfter p c s d@ computes the horizontal position of a vehicle currently at position @p@ on course @c@ and
+-- | @positionAfter' p c s d@ computes the horizontal position of a vehicle currently at position @p@ on course @c@ and
 -- travelling at speed @s@ after duration @d@ has elapsed.
+-- Note: course must have been calculated from position @p@.
 positionAfter' ::
        (Spherical a) => HorizontalPosition a -> Course -> Speed -> Duration -> HorizontalPosition a
 positionAfter' p c s d = position' p c s (Duration.toSeconds d)

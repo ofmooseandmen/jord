@@ -21,10 +21,15 @@ Jord is a [Haskell](https://www.haskell.org) library that implements various geo
 
 ## How do I build it?
 
-If you have [Stack](https://docs.haskellstack.org/en/stable/README/),
-then:
+If you have [Stack](https://docs.haskellstack.org/en/stable/README/), then:
 ```sh
 $ stack build --test
+```
+
+If you have [Cabal](https://www.haskell.org/cabal/), then:
+```sh
+$ cabal v2-build
+$ cabal v2-test
 ```
 
 ## How do I use it?

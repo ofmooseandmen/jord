@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+
 -- |
 -- Module:      Data.Geo.Jord.LatLong
 -- Copyright:   (c) 2020 Cedric Liegeois
@@ -11,6 +12,8 @@
 --
 module Data.Geo.Jord.LatLong
     ( isValidLatLong
+    , isValidLat
+    , isValidLong
     , latLongDms
     , latLongDmsCompact
     , latLongDmsSymbols
@@ -41,6 +44,20 @@ import Data.Geo.Jord.Parser
 -- both valid for model @m@.
 isValidLatLong :: (Model a) => Angle -> Angle -> a -> Bool
 isValidLatLong lat lon m = isValidLat lat && isValidLong lon m
+
+-- | @isValidLat lat@ determines whether the given latitude is valid - i.e. in range [-90°, 90°].
+isValidLat :: Angle -> Bool
+isValidLat lat = Angle.isWithin lat (Angle.decimalDegrees (-90)) (Angle.decimalDegrees 90)
+
+-- | @isValidLong lon m@ determines whether the given longitude is valid for model @m@.
+--
+-- * If longitude range is L180: in range [-180°, 180°]
+-- * If longitude range is L360: in range [0°, 360°]
+isValidLong :: (Model a) => Angle -> a -> Bool
+isValidLong lon m =
+    case longitudeRange m of
+        L180 -> Angle.isWithin lon (Angle.decimalDegrees (-180)) (Angle.decimalDegrees 180)
+        L360 -> Angle.isWithin lon (Angle.decimalDegrees 0) (Angle.decimalDegrees 360)
 
 -- | latitude and longitude reader.
 -- Formats:
@@ -153,12 +170,3 @@ dmsF degs mins secs =
         Right a -> return a
   where
     e = Angle.dms degs mins secs
-
-isValidLat :: Angle -> Bool
-isValidLat a = Angle.isWithin a (Angle.decimalDegrees (-90)) (Angle.decimalDegrees 90)
-
-isValidLong :: (Model a) => Angle -> a -> Bool
-isValidLong a m =
-    case longitudeRange m of
-        L180 -> Angle.isWithin a (Angle.decimalDegrees (-180)) (Angle.decimalDegrees 180)
-        L360 -> Angle.isWithin a (Angle.decimalDegrees 0) (Angle.decimalDegrees 360)

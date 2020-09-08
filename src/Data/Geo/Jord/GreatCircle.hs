@@ -424,7 +424,10 @@ mean ps =
 -- position @p@ is the normal of the minor arc or if the projection is not within the minor arc @ma@ (including start
 -- & end). For example:
 --
--- >>> TODO
+-- >>> let p = Geodetic.s84Pos 53.2611 (-0.7972)
+-- >>> let ma = fromJust (GreatCircle.minorArc (Geodetic.s84Pos 53.3206 (-1.7297)) (Geodetic.s84Pos 53.1887 0.1334))
+-- >>> GreatCircle.projection p ma
+-- Just Geodetic.s84Pos 53.25835330666666 (-0.7977433863888889)
 projection :: (Spherical a) => HorizontalPosition a -> MinorArc a -> Maybe (HorizontalPosition a)
 projection p ma@(MinorArc na mas mae) =
     case mnb of

@@ -410,10 +410,11 @@ spec = do
             let ma = fromJust (GreatCircle.minorArc s e)
             let p = Geodetic.s84Pos 53.2611 (-0.7972)
             let proj = GreatCircle.projection p ma
-            proj `shouldBe` Just (Geodetic.s84Pos 53.25835333333333 (-0.7977433333333334))
-            -- cross track distance from p to great circle should be distance between projection and p
-            GreatCircle.crossTrackDistance p (fromJust (GreatCircle.through s e)) `shouldBe`
-                GreatCircle.distance (fromJust proj) p
+            proj `shouldBe` Just (Geodetic.s84Pos 53.25835330666666 (-0.7977433863888889))
+            -- absolute cross track distance from p to great circle should be distance between projection and p
+            let stx = (GreatCircle.crossTrackDistance p (fromJust (GreatCircle.through s e)))
+            abs (Length.toMetres stx) `shouldBe`
+                Length.toMetres (GreatCircle.distance (fromJust proj) p)
         it "handles p exactly being the start of the minor arc (1/2)" $ do
             let s = Geodetic.s84Pos 54 15
             let ma = fromJust (GreatCircle.minorArc s (Geodetic.s84Pos 54 20))

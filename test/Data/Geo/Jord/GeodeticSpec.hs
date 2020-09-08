@@ -21,33 +21,45 @@ spec = do
                 Geodetic.latLongHeightPos (-45) (-26) (Length.metres 15000) WGS84
             Geodetic.antipode' (Geodetic.latLongHeightPos 45 154 (Length.metres 15000) S84) `shouldBe`
                 Geodetic.latLongHeightPos (-45) (-26) (Length.metres 15000) S84
-        it "returns the south pole when called with the north pole" $
-            -- just check that latitude is -90; longitude will be 180 but does not matter
-            -- at the pole
-         do
-            Geodetic.latitude (Geodetic.antipode (Geodetic.northPole WGS84)) `shouldBe`
-                Angle.decimalDegrees (-90)
-        it "returns the north pole when called with the south pole" $
-            -- just check that latitude is 90; longitude will be 180 but does not matter
-            -- at the pole
-         do
-            Geodetic.latitude (Geodetic.antipode (Geodetic.southPole WGS84)) `shouldBe`
-                Angle.decimalDegrees 90
+        it "returns the south pole when called with the north pole" $ do
+            Geodetic.antipode (Geodetic.northPole WGS84) `shouldBe` Geodetic.southPole WGS84
+        it "returns the north pole when called with the south pole" $ do
+            Geodetic.antipode (Geodetic.southPole WGS84) `shouldBe` Geodetic.northPole WGS84
     describe "poles" $ do
-        it "returns 90, 0 for the north pole" $ do
+        it "returns 90°, 0° for the north pole" $ do
             Geodetic.latitude (Geodetic.northPole WGS84) `shouldBe` Angle.decimalDegrees 90
             Geodetic.longitude (Geodetic.northPole WGS84) `shouldBe` Angle.zero
-        it "returns -90, 0 for the south pole" $ do
+        it "returns -90°, 0° for the south pole" $ do
             Geodetic.latitude (Geodetic.southPole WGS84) `shouldBe` Angle.decimalDegrees (-90)
             Geodetic.longitude (Geodetic.southPole WGS84) `shouldBe` Angle.zero
+        it "always returns a longitude of 0° at the north pole" $ do
+            let longs = (take 37 (iterate (\x -> x + 10 :: Double) (-180.0)))
+            fmap (\long -> Geodetic.wgs84Pos 90 long) longs `shouldBe`
+                (replicate 37 (Geodetic.northPole WGS84))
+        it "always returns a longitude of 0° at the south pole" $ do
+            let longs = (take 37 (iterate (\x -> x + 10 :: Double) (-180.0)))
+            fmap (\long -> Geodetic.wgs84Pos (-90) long) longs `shouldBe`
+                (replicate 37 (Geodetic.southPole WGS84))
     describe "wrapping latitude/longitude" $ do
         it "wraps a Earth position to [-90°, 90°] and [-180°, 180°]" $ do
-            let p = Geodetic.s84Pos 91 54
+            let p1 = Geodetic.s84Pos 91 54
+            Geodetic.latitude p1 `shouldBe` Angle.decimalDegrees 89
+            Geodetic.longitude p1 `shouldBe` Angle.decimalDegrees (-126)
+            let p2 = Geodetic.s84Pos 91 (-150)
+            Geodetic.latitude p2 `shouldBe` Angle.decimalDegrees 89
+            Geodetic.longitude p2 `shouldBe` Angle.decimalDegrees 30
+        it "wraps a Mars position longitude to [0°, 360°]" $ do
+            let p = Geodetic.latLongPos 89 (-150) Mars2000
             Geodetic.latitude p `shouldBe` Angle.decimalDegrees 89
-            Geodetic.longitude p `shouldBe` Angle.decimalDegrees (-126)
+            Geodetic.longitude p `shouldBe` Angle.decimalDegrees 210
         it "wraps a Mars position to [-90°, 90°] and [0°, 360°]" $ do
             let p = Geodetic.latLongPos 91 (-150) Mars2000
             Geodetic.latitude p `shouldBe` Angle.decimalDegrees 89
+            Geodetic.longitude p `shouldBe` Angle.decimalDegrees 30
+    describe "wrapping n-vector" $ do
+        it "wraps a n-vector Mars position to [-90°, 90°] and [0°, 360°]" $ do
+            let p = Geodetic.nvectorPos (-0.8660254037844387) (-0.49999999999999994) 0 Mars2000
+            Geodetic.latitude p `shouldBe` Angle.zero
             Geodetic.longitude p `shouldBe` Angle.decimalDegrees 210
     describe "Reading valid DMS text" $ do
         it "reads WGS84 horizontal positions" $ do

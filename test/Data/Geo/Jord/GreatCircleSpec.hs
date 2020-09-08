@@ -13,6 +13,7 @@ import Data.Geo.Jord.Geodetic as Geodetic (HorizontalPosition)
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Length as Length
+import qualified Data.Geo.Jord.Math3d as Math3d (cross)
 import Data.Geo.Jord.Models (S84(..))
 
 spec :: Spec
@@ -369,3 +370,64 @@ spec = do
                     , Geodetic.antipode (Geodetic.s84Pos 45 2)
                     ]
             GreatCircle.mean points `shouldBe` Nothing
+    describe "projection" $ do
+        it "returns Nothing if position is the normal to minor arc (1/2)" $ do
+            let s = Geodetic.s84Pos 3 (-10)
+            let e = (Geodetic.s84Pos 4 10)
+            let ma = fromJust (GreatCircle.minorArc s e)
+            let p =
+                    Geodetic.nvectorPos'
+                        (Math3d.cross (Geodetic.nvector s) (Geodetic.nvector e))
+                        S84
+            GreatCircle.projection p ma `shouldBe` Nothing
+        it "returns Nothing if position is the normal to minor arc (2/2)" $ do
+            let ma =
+                    fromJust (GreatCircle.minorArc (Geodetic.s84Pos 0 (-10)) (Geodetic.s84Pos 0 10))
+            let p = Geodetic.northPole S84
+            GreatCircle.projection p ma `shouldBe` Nothing
+        it "returns Nothing if position is the antipode of the normal to minor arc (1/2)" $ do
+            let s = Geodetic.s84Pos 3 (-10)
+            let e = (Geodetic.s84Pos 4 10)
+            let ma = fromJust (GreatCircle.minorArc s e)
+            let p =
+                    Geodetic.antipode
+                        (Geodetic.nvectorPos'
+                             (Math3d.cross (Geodetic.nvector s) (Geodetic.nvector e))
+                             S84)
+            GreatCircle.projection p ma `shouldBe` Nothing
+        it "returns Nothing if position is the antipode of the normal to minor arc (2/2)" $ do
+            let ma =
+                    fromJust (GreatCircle.minorArc (Geodetic.s84Pos 0 (-10)) (Geodetic.s84Pos 0 10))
+            let p = Geodetic.southPole S84
+            GreatCircle.projection p ma `shouldBe` Nothing
+        it "returns Nothing if projection is outside minor arc" $ do
+            let ma = fromJust (GreatCircle.minorArc (Geodetic.s84Pos 54 15) (Geodetic.s84Pos 54 20))
+            let p = Geodetic.s84Pos 54 10
+            GreatCircle.projection p ma `shouldBe` Nothing
+        it "returns the projection if within the minor arc" $ do
+            let s = Geodetic.s84Pos 53.3206 (-1.7297)
+            let e = Geodetic.s84Pos 53.1887 0.1334
+            let ma = fromJust (GreatCircle.minorArc s e)
+            let p = Geodetic.s84Pos 53.2611 (-0.7972)
+            let proj = GreatCircle.projection p ma
+            proj `shouldBe` Just (Geodetic.s84Pos 53.25835330666666 (-0.7977433863888889))
+            -- absolute cross track distance from p to great circle should be distance between projection and p
+            let stx = (GreatCircle.crossTrackDistance p (fromJust (GreatCircle.through s e)))
+            abs (Length.toMetres stx) `shouldBe`
+                Length.toMetres (GreatCircle.distance (fromJust proj) p)
+        it "handles p exactly being the start of the minor arc (1/2)" $ do
+            let s = Geodetic.s84Pos 54 15
+            let ma = fromJust (GreatCircle.minorArc s (Geodetic.s84Pos 54 20))
+            GreatCircle.projection s ma `shouldBe` (Just s)
+        it "handles p exactly being the start of the minor arc (2/2)" $ do
+            let s = Geodetic.s84Pos 13.733333587646484 100.5
+            let ma = fromJust (GreatCircle.minorArc s (Geodetic.s84Pos 12.0 100.58499908447266))
+            GreatCircle.projection s ma `shouldBe` (Just s)
+        it "handles p exactly being the end of the minor arc (1/2)" $ do
+            let e = Geodetic.s84Pos 54 20
+            let ma = fromJust (GreatCircle.minorArc (Geodetic.s84Pos 54 15) e)
+            GreatCircle.projection e ma `shouldBe` (Just e)
+        it "handles p exactly being the end of the minor arc (2/2)" $ do
+            let e = Geodetic.s84Pos 12.0 100.58499908447266
+            let ma = fromJust (GreatCircle.minorArc (Geodetic.s84Pos 13.733333587646484 100) e)
+            GreatCircle.projection e ma `shouldBe` (Just e)

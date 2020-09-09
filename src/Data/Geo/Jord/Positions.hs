@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.Geo.Jord.Position
+-- Module:      Data.Geo.Jord.Positions
 -- Copyright:   (c) 2020 Cedric Liegeois
 -- License:     BSD3
 -- Maintainer:  Cedric Liegeois <ofmooseandmen@yahoo.fr>

@@ -461,9 +461,9 @@ projection p ma@(MinorArc na mas mae) =
     mnb = arcNormal nap p -- normal to great circle (na, p) - if na is p or antipode of p, then projection is not possible.
 
 -- | @side p0 p1 p2@ determines whether @p0@ is left of, right of or on the great circle passing through @p1@ and @p2@ (in this
--- direction). For exmaple∷
+-- direction). For example:
 --
--- TODO
+-- TODO: example + tests
 --
 -- Returns 'None' if @p1@ & @p2@ do not define a great circle (see 'through') or if any of the three position are equal.
 side ::
@@ -475,7 +475,10 @@ side p0 p1 p2
     ms = fmap (Math3d.dot (Geodetic.nvector p0)) (arcNormal p1 p2)
 
 -- | @turn a b c@ computes the angle turned from AB to BC; the angle is positive for left turn, negative for right turn
--- and 0 if all 3 positions are aligned or if any 2 positions are equal.
+-- and 0 if all 3 positions are aligned or if any 2 positions are equal. For example:
+--
+-- >>> GreatCircle.turn (Geodetic.s84Pos 0 0) (Geodetic.s84Pos 45 0) (Geodetic.s84Pos 60 (-10))
+-- 18°11'33.741"
 turn ::
        (Spherical a)
     => HorizontalPosition a

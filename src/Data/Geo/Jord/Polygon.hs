@@ -43,7 +43,6 @@ simple vs
     | head vs == last vs = simple (init vs)
     | length vs < 3 = Left "not enough vertices"
 -- FIXME: check needed: as always no equal/antipodal positions
--- FIXME: check needed: self-intersecting
     | otherwise = simple' vs
 
 circle :: (Spherical a) => HorizontalPosition a -> Length -> Int -> Either String (Polygon a)
@@ -75,12 +74,10 @@ simple' vs = Right (Polygon os es isConcave)
             then vs
             else reverse vs
     es = mkEdges os
-    zzs =
-        if clockwise
-            then zs
-            else reverse zs
+    zzs = zip3' os
     isConcave =
-        length vs > 4 && any (\(a, b, c) -> GreatCircle.side a b c == GreatCircle.LeftOf) zzs
+        length vs > 3 && any (\(a, b, c) -> GreatCircle.side a b c == GreatCircle.LeftOf) zzs
+    -- FIXME: check needed: concave && self-intersecting
 
 zip3' ::
        (Spherical a)

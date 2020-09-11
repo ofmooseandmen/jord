@@ -50,8 +50,6 @@ module Data.Geo.Jord.GreatCircle
     , turn
     ) where
 
-import Data.Maybe (fromMaybe)
-
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
 import Data.Geo.Jord.Ellipsoid (equatorialRadius)
@@ -138,7 +136,7 @@ data Side
     = LeftOf -- ^ position is left of the great circle.
     | RightOf -- ^ position is right of the great circle.
     | None -- ^ position is on the great circle, or the great circle is undefined.
-  deriving (Eq, Show)
+    deriving (Eq, Show)
 
 -- | @alongTrackDistance p a@ computes how far position @p@ is along a path described by the minor arc @a@: if a
 -- perpendicular is drawn from @p@  to the path, the along-track distance is the signed distance from the start point to
@@ -416,7 +414,7 @@ mean :: (Spherical a) => [HorizontalPosition a] -> Maybe (HorizontalPosition a)
 mean [] = Nothing
 mean [p] = Just p
 mean ps =
-    if (any (\a -> a `elem` ps) antipodes)
+    if any (`elem` ps) antipodes
         then Nothing
         else Just
                  (Geodetic.nvectorPos'
@@ -472,9 +470,9 @@ side ::
        (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> HorizontalPosition a -> Side
 side p0 p1 p2
     | p0 == p1 || p0 == p2 = None
-    | otherwise = fromMaybe None (fmap toSide ms)
+    | otherwise = maybe None toSide ms
   where
-    ms = fmap (\n -> Math3d.dot (Geodetic.nvector p0) n) (arcNormal p1 p2)
+    ms = fmap (Math3d.dot (Geodetic.nvector p0)) (arcNormal p1 p2)
 
 -- | @turn a b c@ computes the angle turned from AB to BC; the angle is positive for left turn, negative for right turn
 -- and 0 if all 3 positions are aligned or if any 2 positions are equal.
@@ -486,7 +484,7 @@ turn ::
     -> Angle
 turn a b c =
     case ns of
-        ((Just n1), (Just n2)) -> signedAngleBetween n1 n2 (Just (Geodetic.nvector b))
+        (Just n1, Just n2) -> signedAngleBetween n1 n2 (Just (Geodetic.nvector b))
         (_, _) -> Angle.zero
   where
     ns = (fmap Math3d.unit (arcNormal a b), fmap Math3d.unit (arcNormal b c))

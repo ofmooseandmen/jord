@@ -431,3 +431,22 @@ spec = do
             let e = Geodetic.s84Pos 12.0 100.58499908447266
             let ma = fromJust (GreatCircle.minorArc (Geodetic.s84Pos 13.733333587646484 100) e)
             GreatCircle.projection e ma `shouldBe` (Just e)
+    describe "turn" $ do
+        it "returns a negative angle when turning left" $ do
+            GreatCircle.turn (Geodetic.s84Pos 0 0) (Geodetic.s84Pos 45 0) (Geodetic.s84Pos 60 (-10)) `shouldBe`
+                Angle.decimalDegrees 18.192705871944444
+        it "returns a positive angle when turning right" $ do
+            GreatCircle.turn (Geodetic.s84Pos 0 0) (Geodetic.s84Pos 45 0) (Geodetic.s84Pos 60 10) `shouldBe`
+                Angle.decimalDegrees (-18.192705871944444)
+        it "returns 0 when a, b & c are aligned" $ do
+            GreatCircle.turn (Geodetic.s84Pos 0 0) (Geodetic.s84Pos 45 0) (Geodetic.northPole S84) `shouldBe`
+                Angle.zero
+        it "returns 0 is any 2 of the 3 positions are equal" $ do
+            let a = Geodetic.s84Pos 45 63
+            let b = Geodetic.s84Pos (-54) (-89)
+            GreatCircle.turn a a a `shouldBe` Angle.zero
+            GreatCircle.turn a a b `shouldBe` Angle.zero
+            GreatCircle.turn a b b `shouldBe` Angle.zero
+            GreatCircle.turn b b b `shouldBe` Angle.zero
+            GreatCircle.turn b b a `shouldBe` Angle.zero
+            GreatCircle.turn b a a `shouldBe` Angle.zero

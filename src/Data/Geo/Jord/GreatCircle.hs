@@ -30,6 +30,7 @@ module Data.Geo.Jord.GreatCircle
     , minorArcStart
     , minorArcEnd
     -- * Calculations
+    , Side(..)
     , alongTrackDistance
     , alongTrackDistance'
     , angularDistance
@@ -45,10 +46,11 @@ module Data.Geo.Jord.GreatCircle
     , intersections
     , mean
     , projection
+    , side
+    , turn
     ) where
 
-import Data.Fixed (Nano)
-import Data.List (subsequences)
+import Data.Maybe (fromMaybe)
 
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
@@ -74,16 +76,14 @@ data GreatCircle a =
 instance (Spherical a) => Show (GreatCircle a) where
     show (GreatCircle _ _ s) = s
 
--- | @through p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@.
--- If positions are antipodal, any great circle passing through those positions will be returned.
--- For example:
+-- | @through p1 p2@ returns the 'GreatCircle' passing by both positions @p1@ and @p2@ (in this direction). For example:
 --
 -- >>> let p1 = Geodetic.s84Pos 45.0 (-143.5)
 -- >>> let p2 = Geodetic.s84Pos 46.0 14.5
 -- >>> GreatCircle.through p1 p2
 -- Just Great Circle { through 45°0'0.000"N,143°30'0.000"W (S84) & 46°0'0.000"N,14°30'0.000"E (S84) }
 --
--- Returns 'Nothing' if given positions are equal.
+-- Returns 'Nothing' if given positions are equal or @p1@ is antipode of @p2@.
 through :: (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> Maybe (GreatCircle a)
 through p1 p2 = fmap (\n -> GreatCircle n (Geodetic.model p1) dscr) (arcNormal p1 p2)
   where
@@ -132,6 +132,13 @@ minorArcStart (MinorArc _ s _) = s
 -- | @minorArcEnd ma@ returns the end position of minor arc @ma@.
 minorArcEnd :: (Spherical a) => MinorArc a -> HorizontalPosition a
 minorArcEnd (MinorArc _ _ e) = e
+
+-- | Side of a position w.r.t. to a great circle.
+data Side
+    = LeftOf -- ^ position is left of the great circle.
+    | RightOf -- ^ position is right of the great circle.
+    | None -- ^ position is on the great circle, or the great circle is undefined.
+  deriving (Eq, Show)
 
 -- | @alongTrackDistance p a@ computes how far position @p@ is along a path described by the minor arc @a@: if a
 -- perpendicular is drawn from @p@  to the path, the along-track distance is the signed distance from the start point to
@@ -409,16 +416,14 @@ mean :: (Spherical a) => [HorizontalPosition a] -> Maybe (HorizontalPosition a)
 mean [] = Nothing
 mean [p] = Just p
 mean ps =
-    if null antipodals
-        then Just (Geodetic.nvectorPos' (meanV vs) (Geodetic.model . head $ ps))
-        else Nothing
+    if (any (\a -> a `elem` ps) antipodes)
+        then Nothing
+        else Just
+                 (Geodetic.nvectorPos'
+                      (meanV (fmap Geodetic.nvector ps))
+                      (Geodetic.model . head $ ps))
   where
-    vs = fmap Geodetic.nvector ps
-    ts = filter (\l -> length l == 2) (subsequences vs)
-    antipodals =
-        filter
-            (\t -> (realToFrac (Math3d.norm (Math3d.add (head t) (last t)) :: Double) :: Nano) == 0)
-            ts
+    antipodes = fmap Geodetic.antipode ps
 
 -- | @projection p ma@ computes the projection of the position @p@ on the minor arc @ma@. Returns 'Nothing' if the
 -- position @p@ is the normal of the minor arc or if the projection is not within the minor arc @ma@ (including start
@@ -456,6 +461,35 @@ projection p ma@(MinorArc na mas mae) =
     m = Geodetic.model p
     nap = Geodetic.nvectorPos' na m -- ensure resolution of lat, lon
     mnb = arcNormal nap p -- normal to great circle (na, p) - if na is p or antipode of p, then projection is not possible.
+
+-- | @side p0 p1 p2@ determines whether @p0@ is left of, right of or on the great circle passing through @p1@ and @p2@ (in this
+-- direction). For exmaple∷
+--
+-- TODO
+--
+-- Returns 'None' if @p1@ & @p2@ do not define a great circle (see 'through') or if any of the three position are equal.
+side ::
+       (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> HorizontalPosition a -> Side
+side p0 p1 p2
+    | p0 == p1 || p0 == p2 = None
+    | otherwise = fromMaybe None (fmap toSide ms)
+  where
+    ms = fmap (\n -> Math3d.dot (Geodetic.nvector p0) n) (arcNormal p1 p2)
+
+-- | @turn a b c@ computes the angle turned from AB to BC; the angle is positive for left turn, negative for right turn
+-- and 0 if all 3 positions are aligned or if any 2 positions are equal.
+turn ::
+       (Spherical a)
+    => HorizontalPosition a
+    -> HorizontalPosition a
+    -> HorizontalPosition a
+    -> Angle
+turn a b c =
+    case ns of
+        ((Just n1), (Just n2)) -> signedAngleBetween n1 n2 (Just (Geodetic.nvector b))
+        (_, _) -> Angle.zero
+  where
+    ns = (fmap Math3d.unit (arcNormal a b), fmap Math3d.unit (arcNormal b c))
 
 -- private
 alongTrackDistance'' ::
@@ -530,3 +564,9 @@ signedAngleBetween v1 v2 n = Angle.atan2 sinO cosO
 
 meanV :: [Math3d.V3] -> V3
 meanV vs = Math3d.unit $ foldl Math3d.add Math3d.zero vs
+
+toSide :: Double -> Side
+toSide s
+    | s < 0 = RightOf
+    | s > 0 = LeftOf
+    | otherwise = None

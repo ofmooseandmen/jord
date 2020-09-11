@@ -6,6 +6,7 @@
 - API change - GreatCicle: interpolate -> interpolated, isInsideSurface -> insideSurface
 - API change - Geodesic data type provides initialBearing, finalBearing, length and functions are removed
 - API change - LocalFrames -> Local
+- New API - GreatCircle.turn & GreatCircle.side
 - Bug Fix - GreatCircle.intersection correctly handles minor arcs crossing the equator
 - Bug Fix - All Geodetic positions built from a /n/-vector have the correct angle resolution
 - Bump stack resolver to lts-16.11

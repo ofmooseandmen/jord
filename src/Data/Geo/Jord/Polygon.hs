@@ -44,8 +44,8 @@ import Data.Geo.Jord.Triangle (Triangle)
 -- | A polygon whose vertices are horizontal geodetic positions.
 data Polygon a =
     Polygon
-        { vertices :: [HorizontalPosition a] -- ^ the vertices of the polygon.
-        , edges :: [MinorArc a] -- ^ the edges of the polyon.
+        { vertices :: [HorizontalPosition a] -- ^ vertices of the polygon in __clockwise__ order.
+        , edges :: [MinorArc a] -- ^ edges of the polyon in __clockwise__ order.
         , concave :: Bool -- ^ whether the polygon is concave.
         }
     deriving (Eq, Show)
@@ -119,23 +119,23 @@ simple' vs =
         then Left "self-intersecting edges"
         else Right (Polygon os es isConcave)
   where
-    zs = zip3' vs
+    zs = tuple3 vs
     clockwise = sum (fmap (\(a, b, c) -> Angle.toRadians (GreatCircle.turn a b c)) zs) < 0.0
     os =
         if clockwise
             then vs
             else reverse vs
     es = mkEdges os
-    zzs = zip3' os
+    zzs = tuple3 os
     isConcave =
         length vs > 3 && any (\(a, b, c) -> GreatCircle.side a b c == GreatCircle.LeftOf) zzs
     si = isConcave && selfIntersects es
 
-zip3' ::
+tuple3 ::
        (Spherical a)
     => [HorizontalPosition a]
     -> [(HorizontalPosition a, HorizontalPosition a, HorizontalPosition a)]
-zip3' ps = zip3 l1 l2 l3
+tuple3 ps = zip3 l1 l2 l3
   where
     l1 = last ps : init ps
     l2 = ps

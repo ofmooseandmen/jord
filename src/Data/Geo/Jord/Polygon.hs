@@ -6,20 +6,31 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- TODO
+-- Types and functions for working with polygons at the surface of a __spherical__ celestial body.
+--
+-- In order to use this module you should start with the following imports:
+--
+-- @
+-- import qualified Data.Geo.Jord.Geodetic as Geodetic
+-- import qualified Data.Geo.Jord.Polygon as Polygon
+-- @
 module Data.Geo.Jord.Polygon
-    ( Polygon
+    (
+    -- * The 'Polygon' type
+      Polygon
     , vertices
     , edges
     , concave
+    -- * smart constructors
     , simple
     , circle
     , arc
+    -- * calculations
     , contains
     , triangulate
     ) where
 
-import Data.Maybe (mapMaybe)
+import Data.Maybe (isJust, mapMaybe)
 
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
@@ -30,19 +41,26 @@ import Data.Geo.Jord.Length (Length)
 import Data.Geo.Jord.Model (Spherical)
 import Data.Geo.Jord.Triangle (Triangle)
 
+-- | A polygon whose vertices are horizontal geodetic positions.
 data Polygon a =
     Polygon
-        { vertices :: [HorizontalPosition a]
-        , edges :: [MinorArc a]
-        , concave :: Bool
+        { vertices :: [HorizontalPosition a] -- ^ the vertices of the polygon.
+        , edges :: [MinorArc a] -- ^ the edges of the polyon.
+        , concave :: Bool -- ^ whether the polygon is concave.
         }
+    deriving (Eq, Show)
 
+-- | Simple polygon (outer ring only and not self-intersecting) from given vertices. Returns an error ('Left') if:
+--
+--     * less than 3 vertices are given.
+--     * the given vertices defines self-intersecting edges.
+--     * the given vertices contains duplicated positions or antipodal positions.
 simple :: (Spherical a) => [HorizontalPosition a] -> Either String (Polygon a)
 simple vs
     | null vs = Left "no vertex"
     | head vs == last vs = simple (init vs)
     | length vs < 3 = Left "not enough vertices"
--- FIXME: check needed: as always no equal/antipodal positions
+    -- FIXME: no equal/antipodal positions
     | otherwise = simple' vs
 
 circle :: (Spherical a) => HorizontalPosition a -> Length -> Int -> Either String (Polygon a)
@@ -64,8 +82,42 @@ triangulate :: (Spherical a) => Polygon a -> [Triangle a]
 triangulate _ = []
 
 -- private
+-- | [mAB, mBC, mCD, mDE, mEA]
+-- no intersections:
+-- mAB vs [mCD, mDE]
+-- mBC vs [mDE, mEA]
+-- mCD vs [mEA]
+selfIntersects :: (Spherical a) => [MinorArc a] -> Bool
+selfIntersects ps
+    | length ps < 4 = False
+    | otherwise = any intersects pairs
+  where
+    (_, pairs) = makePairs' (ps, [])
+
+intersects :: (Spherical a) => (MinorArc a, [MinorArc a]) -> Bool
+intersects (ma, mas) = any (\ma' -> isJust (GreatCircle.intersection ma ma')) mas
+
+makePairs' ::
+       (Spherical a)
+    => ([MinorArc a], [(MinorArc a, [MinorArc a])])
+    -> ([MinorArc a], [(MinorArc a, [MinorArc a])])
+makePairs' (xs, ps)
+    | length xs < 3 = (xs, ps)
+    | otherwise = makePairs' (nxs, np : ps)
+  where
+    nxs = tail xs
+    -- if ps is empty (first call), drop last minor arc as it connect to first minor arc
+    versus =
+        if null ps
+            then init . tail . tail $ xs
+            else tail . tail $ xs
+    np = (head xs, versus)
+
 simple' :: (Spherical a) => [HorizontalPosition a] -> Either String (Polygon a)
-simple' vs = Right (Polygon os es isConcave)
+simple' vs =
+    if si
+        then Left "self-intersecting edges"
+        else Right (Polygon os es isConcave)
   where
     zs = zip3' vs
     clockwise = sum (fmap (\(a, b, c) -> Angle.toRadians (GreatCircle.turn a b c)) zs) < 0.0
@@ -77,7 +129,7 @@ simple' vs = Right (Polygon os es isConcave)
     zzs = zip3' os
     isConcave =
         length vs > 3 && any (\(a, b, c) -> GreatCircle.side a b c == GreatCircle.LeftOf) zzs
-    -- FIXME: check needed: concave && self-intersecting
+    si = isConcave && selfIntersects es
 
 zip3' ::
        (Spherical a)

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3214e820b498ef4637b28f0c74b023a59bc5c3081182356e72a7d13962c097f4
+-- hash: 050908c2f1fd8bf860b2cff5007f3b6485a1beee639998e3476563430a075c88
 
 name:           jord
 version:        2.0.0.0
@@ -120,6 +120,8 @@ test-suite jord-test
       Data.Geo.Jord.KinematicsSpec
       Data.Geo.Jord.LengthSpec
       Data.Geo.Jord.LocalSpec
+      Data.Geo.Jord.Places
+      Data.Geo.Jord.PolygonSpec
       Data.Geo.Jord.PositionsSpec
       Data.Geo.Jord.RotationSpec
       Data.Geo.Jord.SpeedSpec

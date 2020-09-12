@@ -15,6 +15,7 @@ import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Length as Length
 import qualified Data.Geo.Jord.Math3d as Math3d (cross)
 import Data.Geo.Jord.Models (S84(..))
+import Data.Geo.Jord.Places
 
 spec :: Spec
 spec = do
@@ -218,14 +219,6 @@ spec = do
         let p3 = Geodetic.s84Pos 46 1
         let p4 = Geodetic.s84Pos 46 2
         let p5 = Geodetic.s84Pos 45.1 1.1
-        let malmo = Geodetic.s84Pos 55.6050 13.0038
-        let ystad = Geodetic.s84Pos 55.4295 13.82
-        let lund = Geodetic.s84Pos 55.7047 13.1910
-        let helsingborg = Geodetic.s84Pos 56.0465 12.6945
-        let kristianstad = Geodetic.s84Pos 56.0294 14.1567
-        let hoor = Geodetic.s84Pos 55.9295 13.5297
-        let hassleholm = Geodetic.s84Pos 56.1589 13.7668
-        let copenhagen = Geodetic.s84Pos 55.6761 12.5683
         it "return False if polygon is empty" $ GreatCircle.enclosedBy p1 [] `shouldBe` False
         it "return False if polygon does not define at least a triangle" $
             GreatCircle.enclosedBy p1 [p1, p2] `shouldBe` False
@@ -431,6 +424,21 @@ spec = do
             let e = Geodetic.s84Pos 12.0 100.58499908447266
             let ma = fromJust (GreatCircle.minorArc (Geodetic.s84Pos 13.733333587646484 100) e)
             GreatCircle.projection e ma `shouldBe` (Just e)
+    describe "side" $ do
+        it "retuns None if p1 is antipode of p2" $ do
+            GreatCircle.side ystad helsingborg (Geodetic.antipode helsingborg) `shouldBe` GreatCircle.None
+        it "returns None if (p1, p2) are equal" $ do
+            GreatCircle.side ystad helsingborg helsingborg `shouldBe` GreatCircle.None
+        it "returns None if p0 is on the great circle" $ do
+            GreatCircle.side (Geodetic.s84Pos 0 0) (Geodetic.s84Pos 45 0) (Geodetic.northPole S84) `shouldBe`
+                GreatCircle.None
+            GreatCircle.side helsingborg helsingborg kristianstad `shouldBe` GreatCircle.None
+            GreatCircle.side kristianstad helsingborg kristianstad `shouldBe` GreatCircle.None
+        it "return LeftOf or RightOf" $ do
+            GreatCircle.side ystad helsingborg kristianstad `shouldBe` GreatCircle.RightOf
+            GreatCircle.side ystad kristianstad helsingborg `shouldBe` GreatCircle.LeftOf
+            GreatCircle.side malmo lund helsingborg `shouldBe` GreatCircle.LeftOf
+            GreatCircle.side malmo helsingborg lund `shouldBe` GreatCircle.RightOf
     describe "turn" $ do
         it "returns a negative angle when turning left" $ do
             GreatCircle.turn (Geodetic.s84Pos 0 0) (Geodetic.s84Pos 45 0) (Geodetic.s84Pos 60 (-10)) `shouldBe`

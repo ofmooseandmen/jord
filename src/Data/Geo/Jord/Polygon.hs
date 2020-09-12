@@ -102,9 +102,9 @@ arc c r sa ea nb
   where
     range = Angle.clockwiseDifference sa ea
     n = fromIntegral nb :: Double
-    inc = (Angle.toRadians range) / (n - 1.0)
+    inc = Angle.toRadians range / (n - 1.0)
     r0 = Angle.toRadians sa
-    as = take nb (iterate (\x -> x + inc) r0)
+    as = take nb (iterate (+ inc) r0)
 
 -- | @contains poly p@ returns 'True' if position @p@ is enclosed by the vertices of polygon
 -- @poly@ - see 'GreatCircle.enclosedBy'.
@@ -186,7 +186,7 @@ discretiseArc c r as = Polygon ps (mkEdges ps) False
     erm = Length.toMetres . meanRadius . surface $ m
     rm = erm * sin (Length.toMetres r / erm)
     z = sqrt (erm * erm - rm * rm)
-    rya = pi / 2.0 - (Angle.toRadians lat)
+    rya = pi / 2.0 - Angle.toRadians lat
     cy = cos rya
     sy = sin rya
     ry = [Math3d.vec3 cy 0 sy, Math3d.vec3 0 1 0, Math3d.vec3 (-sy) 0 cy]
@@ -196,4 +196,4 @@ discretiseArc c r as = Polygon ps (mkEdges ps) False
     rz = [Math3d.vec3 cz (-sz) 0, Math3d.vec3 sz cz 0, Math3d.vec3 0 0 1]
     anp = fmap (\a -> Math3d.vec3 ((-rm) * cos a) (rm * sin a) z) as -- arc at north pole
     rot = fmap (\v -> Math3d.multM (Math3d.multM v ry) rz) anp -- rotate each point to arc centre
-    ps = fmap (\v -> Geodetic.nvectorPos' v m) rot
+    ps = fmap (`Geodetic.nvectorPos'` m) rot

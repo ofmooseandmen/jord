@@ -147,7 +147,7 @@ assertPoly ep c r nb eBrngs = do
     let aDists = fmap (GreatCircle.distance c) vs
     let eDists = replicate nb r
     let distErrs = zipWith (\l1 l2 -> abs (Length.toMetres (Length.subtract l1 l2))) aDists eDists
-    all (\e -> e < 0.01) distErrs `shouldBe` True
+    all (< 0.01) distErrs `shouldBe` True
     let aBrngs = mapMaybe (GreatCircle.initialBearing c) vs
-    let brngErrs = zipWith (\a1 a2 -> abs ((Angle.toDecimalDegrees a1) - a2)) aBrngs eBrngs
-    all (\e -> e < 0.01) brngErrs `shouldBe` True
+    let brngErrs = zipWith (\a1 a2 -> abs (Angle.toDecimalDegrees a1 - a2)) aBrngs eBrngs
+    all (< 0.01) brngErrs `shouldBe` True

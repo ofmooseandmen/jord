@@ -34,11 +34,15 @@ import Data.Maybe (isJust, mapMaybe)
 
 import Data.Geo.Jord.Angle (Angle)
 import qualified Data.Geo.Jord.Angle as Angle
+import Data.Geo.Jord.Ellipsoid (meanRadius)
 import Data.Geo.Jord.Geodetic (HorizontalPosition)
+import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.GreatCircle (MinorArc)
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import Data.Geo.Jord.Length (Length)
-import Data.Geo.Jord.Model (Spherical)
+import qualified Data.Geo.Jord.Length as Length
+import qualified Data.Geo.Jord.Math3d as Math3d
+import Data.Geo.Jord.Model (Spherical, surface)
 import Data.Geo.Jord.Triangle (Triangle)
 
 -- | A polygon whose vertices are horizontal geodetic positions.
@@ -63,9 +67,26 @@ simple vs
     -- FIXME: no equal/antipodal positions
     | otherwise = simple' vs
 
+-- | Circle from given centre and radius. The resulting polygon contains @nb@ vertices equally distant from one
+-- another. Returns an error ('Left') if:
+--
+--     * given radius is 0
+--     * given number of positions is less than 3
 circle :: (Spherical a) => HorizontalPosition a -> Length -> Int -> Either String (Polygon a)
-circle c r nb = Left "TODO"
+circle c r nb
+    | r <= Length.zero = Left "invalid radius"
+    | nb < 3 = Left "invalid number of positions"
+    | otherwise = Right (discretiseArc c r as)
+  where
+    n = fromIntegral nb :: Double
+    as = take nb (iterate (\x -> x + pi * 2.0 / n) 0.0)
 
+-- | Arc from given centre, radius and given start/end angles. The resulting polygon contains @nb@ vertices equally
+-- distant from one another. Returns an error ('Left') if:
+--
+--     * given radius is 0
+--     * given number of positions is less than 3
+--     * difference between start and end angle is 0
 arc :: (Spherical a)
     => HorizontalPosition a
     -> Length
@@ -73,8 +94,20 @@ arc :: (Spherical a)
     -> Angle
     -> Int
     -> Either String (Polygon a)
-arc c r sa ea nb = Left "TODO"
+arc c r sa ea nb
+    | r <= Length.zero = Left "invalid radius"
+    | nb < 3 = Left "invalid number of positions"
+    | range == Angle.zero = Left "invalid range"
+    | otherwise = Right (discretiseArc c r as)
+  where
+    range = Angle.clockwiseDifference sa ea
+    n = fromIntegral nb :: Double
+    inc = (Angle.toRadians range) / (n - 1.0)
+    r0 = Angle.toRadians sa
+    as = take nb (iterate (\x -> x + inc) r0)
 
+-- | @contains poly p@ returns 'True' if position @p@ is enclosed by the vertices of polygon
+-- @poly@ - see 'GreatCircle.enclosedBy'.
 contains :: (Spherical a) => Polygon a -> HorizontalPosition a -> Bool
 contains poly p = GreatCircle.enclosedBy p (vertices poly)
 
@@ -143,3 +176,24 @@ tuple3 ps = zip3 l1 l2 l3
 
 mkEdges :: (Spherical a) => [HorizontalPosition a] -> [MinorArc a]
 mkEdges ps = mapMaybe (uncurry GreatCircle.minorArc) (zip ps (tail ps ++ [head ps]))
+
+discretiseArc :: (Spherical a) => HorizontalPosition a -> Length -> [Double] -> Polygon a
+discretiseArc c r as = Polygon ps (mkEdges ps) False
+  where
+    m = Geodetic.model c
+    lat = Geodetic.latitude c
+    lon = Geodetic.longitude c
+    erm = Length.toMetres . meanRadius . surface $ m
+    rm = erm * sin (Length.toMetres r / erm)
+    z = sqrt (erm * erm - rm * rm)
+    rya = pi / 2.0 - (Angle.toRadians lat)
+    cy = cos rya
+    sy = sin rya
+    ry = [Math3d.vec3 cy 0 sy, Math3d.vec3 0 1 0, Math3d.vec3 (-sy) 0 cy]
+    rza = Angle.toRadians lon
+    cz = cos rza
+    sz = sin rza
+    rz = [Math3d.vec3 cz (-sz) 0, Math3d.vec3 sz cz 0, Math3d.vec3 0 0 1]
+    anp = fmap (\a -> Math3d.vec3 ((-rm) * cos a) (rm * sin a) z) as -- arc at north pole
+    rot = fmap (\v -> Math3d.multM (Math3d.multM v ry) rz) anp -- rotate each point to arc centre
+    ps = fmap (\v -> Geodetic.nvectorPos' v m) rot

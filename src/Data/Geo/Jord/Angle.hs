@@ -25,6 +25,7 @@ module Data.Geo.Jord.Angle
     -- * Calculations
     , arcLength
     , central
+    , clockwiseDifference
     , isNegative
     , isWithin
     , negate
@@ -136,6 +137,17 @@ arcLength a r = Length.metres (Length.toMetres r * toRadians a)
 -- | @central l r@ computes the central 'Angle' from the arc length @l@ and radius @r@.
 central :: Length -> Length -> Angle
 central s r = radians (Length.toMetres s / Length.toMetres r)
+
+-- | @clockwiseDifference f s@ computes the angle between given angles, rotating clockwise.
+clockwiseDifference :: Angle -> Angle -> Angle
+clockwiseDifference f s = decimalDegrees d
+  where
+    d = cd (toDecimalDegrees f) (toDecimalDegrees s)
+
+cd :: Double -> Double -> Double
+cd d1 d2
+  | d2 < d1 = cd d1 (d2 + 360.0)
+  | otherwise = d2 - d1
 
 -- | Returns the given 'Angle' negated.
 negate :: Angle -> Angle

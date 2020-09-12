@@ -426,7 +426,8 @@ spec = do
             GreatCircle.projection e ma `shouldBe` (Just e)
     describe "side" $ do
         it "retuns None if p1 is antipode of p2" $ do
-            GreatCircle.side ystad helsingborg (Geodetic.antipode helsingborg) `shouldBe` GreatCircle.None
+            GreatCircle.side ystad helsingborg (Geodetic.antipode helsingborg) `shouldBe`
+                GreatCircle.None
         it "returns None if (p1, p2) are equal" $ do
             GreatCircle.side ystad helsingborg helsingborg `shouldBe` GreatCircle.None
         it "returns None if p0 is on the great circle" $ do

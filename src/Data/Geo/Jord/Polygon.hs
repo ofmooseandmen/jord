@@ -95,7 +95,7 @@ selfIntersects ps
     (_, pairs) = makePairs' (ps, [])
 
 intersects :: (Spherical a) => (MinorArc a, [MinorArc a]) -> Bool
-intersects (ma, mas) = any (\ma' -> isJust (GreatCircle.intersection ma ma')) mas
+intersects (ma, mas) = any (isJust . GreatCircle.intersection ma) mas
 
 makePairs' ::
        (Spherical a)

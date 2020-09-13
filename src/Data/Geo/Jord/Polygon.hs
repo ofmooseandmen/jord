@@ -121,7 +121,7 @@ arc c r sa ea nb
 contains :: (Spherical a) => Polygon a -> HorizontalPosition a -> Bool
 contains poly p = GreatCircle.enclosedBy p (vertices poly)
 
--- | Triangluates the given polygon using the ear clipping method.
+-- | Triangulates the given polygon using the ear clipping method.
 --
 -- May return an empty list if the algorithm fails to find an ear (which probably indicates a bug in the implementation).
 triangulate :: (Spherical a) => Polygon a -> [Triangle a]
@@ -139,21 +139,21 @@ earClipping :: (Spherical a) => [HorizontalPosition a] -> [Triangle a] -> [Trian
 earClipping vs ts
     | length vs == 3 = reverse (triangle vs : ts)
     | otherwise =
-        case (findEar vs) of
+        case findEar vs of
             Nothing -> []
             (Just (p, e, n)) -> earClipping vs' ts'
                 where ts' = Triangle.unsafeMake p e n : ts
-                      vs' = filter (\v -> v /= e) vs
+                      vs' = filter (/= e) vs
 
 findEar ::
        (Spherical a)
     => [HorizontalPosition a]
     -> Maybe (HorizontalPosition a, HorizontalPosition a, HorizontalPosition a)
-findEar ps = find (\c -> isEar c rs) convex
+findEar ps = find (`isEar` rs) convex
   where
     rs = reflices ps
     t3 = tuple3 ps
-    convex = filter (\(_, v, _) -> (v `notElem` rs)) t3
+    convex = filter (\(_, v, _) -> v `notElem` rs) t3
 
 -- | a convex vertex @c@ is an ear if triangle (prev, c, next) contains no reflex.
 isEar ::
@@ -161,7 +161,7 @@ isEar ::
     => (HorizontalPosition a, HorizontalPosition a, HorizontalPosition a)
     -> [HorizontalPosition a]
     -> Bool
-isEar (p, c, n) rs = all (\r -> not (GreatCircle.enclosedBy r vs)) rs
+isEar (p, c, n) = all (\r -> not (GreatCircle.enclosedBy r vs))
   where
     vs = [p, c, n]
 
@@ -205,12 +205,10 @@ makePairs' (xs, ps)
     np = (head xs, versus)
 
 simple' :: (Spherical a) => [HorizontalPosition a] -> Either Error (Polygon a)
-simple' vs =
-    if length es /= length vs
-        then Left InvalidEdge
-        else if si
-                 then Left SeflIntersectingEdge
-                 else Right (Polygon os es isConcave)
+simple' vs
+    | length es /= length vs = Left InvalidEdge
+    | si = Left SeflIntersectingEdge
+    | otherwise = Right (Polygon os es isConcave)
   where
     zs = tuple3 vs
     clockwise = sum (fmap (\(a, b, c) -> Angle.toRadians (GreatCircle.turn a b c)) zs) < 0.0

@@ -58,11 +58,11 @@ data Polygon a =
     deriving (Eq, Show)
 
 data Error
-    = NotEnoughVertices -- ^ less than 3 vertices were supplied
-    | InvalidEdge -- ^ 2 consecutives vertices are antipodal or equal
-    | InvalidRadius -- ^ radius of circle or arc is <= 0
-    | EmptyArcRange -- ^ arc start angle == end angle
-    | SeflIntersectingEdge -- ^ 2 edges of the polygon intersect
+    = NotEnoughVertices -- ^ less than 3 vertices were supplied.
+    | InvalidEdge -- ^ 2 consecutives vertices are antipodal or equal.
+    | InvalidRadius -- ^ radius of circle or arc is <= 0.
+    | EmptyArcRange -- ^ arc start angle == end angle.
+    | SeflIntersectingEdge -- ^ 2 edges of the polygon intersect.
     deriving (Eq, Show)
 
 -- | Simple polygon (outer ring only and not self-intersecting) from given vertices. Returns an error ('Left') if:
@@ -121,6 +121,9 @@ arc c r sa ea nb
 contains :: (Spherical a) => Polygon a -> HorizontalPosition a -> Bool
 contains poly p = GreatCircle.enclosedBy p (vertices poly)
 
+-- | Triangluates the given polygon using the ear clipping method.
+--
+-- May return an empty list if the algorithm fails to find an ear (which probably indicates a bug in the implementation).
 triangulate :: (Spherical a) => Polygon a -> [Triangle a]
 triangulate p
     | length vs == 3 = [triangle vs]

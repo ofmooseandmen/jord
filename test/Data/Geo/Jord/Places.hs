@@ -18,6 +18,9 @@ dar_es_salaam = s84Pos (-6.7924) 39.2083
 djibouti :: HorizontalPosition S84
 djibouti = s84Pos 11.8251 42.5903
 
+goteborg :: HorizontalPosition S84
+goteborg = s84Pos 57.7 11.966667
+
 harare :: HorizontalPosition S84
 harare = s84Pos (-17.8252) 31.0335
 
@@ -50,6 +53,9 @@ malmo = s84Pos 55.6050 13.0038
 
 narobi :: HorizontalPosition S84
 narobi = s84Pos (-1.2921) 36.8219
+
+stockholm :: HorizontalPosition S84
+stockholm = s84Pos 59.35 18.066667
 
 ystad :: HorizontalPosition S84
 ystad = s84Pos 55.4295 13.82

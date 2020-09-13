@@ -1,6 +1,6 @@
 ### 2.0.0.0
 
-- API change - all modules must be imported as qualified
+- API change - all modules should be imported as qualified
 - API change - Position has been split between Geodetic & Geocentric
 - API change - positions conversion/transformation are provided by Positions module
 - API change - GreatCicle: interpolate -> interpolated, isInsideSurface -> enclosedBy

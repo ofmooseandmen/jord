@@ -106,3 +106,16 @@ spec = do
         it "computes arc length with central angle of 0.4 microarcsecond as 0" $
             Angle.arcLength (Angle.decimalDegrees (0.4 / 3600000000.0)) (Length.kilometres 1) `shouldBe`
             Length.zero
+    describe "clockwiseDifference" $ do
+        it "returns 0 if both angles are equal" $ do
+            Angle.clockwiseDifference (Angle.decimalDegrees 154) (Angle.decimalDegrees 154) `shouldBe`
+                Angle.zero
+        it "return the difference between the 2 angles clockwise" $ do
+            Angle.clockwiseDifference Angle.zero (Angle.decimalDegrees 10) `shouldBe`
+                Angle.decimalDegrees 10
+            Angle.clockwiseDifference Angle.zero (Angle.decimalDegrees (-10)) `shouldBe`
+                Angle.decimalDegrees 350
+            Angle.clockwiseDifference (Angle.decimalDegrees 350) (Angle.decimalDegrees 10) `shouldBe`
+                Angle.decimalDegrees 20
+            Angle.clockwiseDifference (Angle.decimalDegrees 350) (Angle.decimalDegrees 370) `shouldBe`
+                Angle.decimalDegrees 20

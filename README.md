@@ -18,6 +18,7 @@ Jord is a [Haskell](https://www.haskell.org) library that implements various geo
 - geodesic: surface distance, initial & final bearing and destination,
 - kinematics: position from p0, bearing and speed, closest point of approach between tracks, intercept (time, speed, minimum speed),
 - transformation between coordinate systems (both fixed and time-dependent).
+- polygon triangulation
 
 ## How do I build it?
 

@@ -463,8 +463,12 @@ projection p ma@(MinorArc na mas mae) =
 -- | @side p0 p1 p2@ determines whether @p0@ is left of, right of or on the great circle passing through @p1@ and @p2@ (in this
 -- direction). For example:
 --
--- TODO: example + tests
---
+-- >>> GreatCircle.side (Geodetic.s84Pos 10 10) (Geodetic.s84Pos 0 0) (Geodetic.northPole S84)
+-- RightOf
+-- >>> GreatCircle.side (Geodetic.s84Pos 10 (-10)) (Geodetic.s84Pos 0 0) (Geodetic.northPole S84)
+-- LeftOf
+-- >>> GreatCircle.side (Geodetic.s84Pos 10 0) (Geodetic.s84Pos 0 0) (Geodetic.northPole S84)
+-- None
 -- Returns 'None' if @p1@ & @p2@ do not define a great circle (see 'through') or if any of the three position are equal.
 side ::
        (Spherical a) => HorizontalPosition a -> HorizontalPosition a -> HorizontalPosition a -> Side

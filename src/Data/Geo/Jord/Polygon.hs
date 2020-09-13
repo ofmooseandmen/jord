@@ -22,6 +22,7 @@ module Data.Geo.Jord.Polygon
     , edges
     , concave
     -- * smart constructors
+    , Error(..)
     , simple
     , circle
     , arc
@@ -30,6 +31,7 @@ module Data.Geo.Jord.Polygon
     , triangulate
     ) where
 
+import Data.List (find)
 import Data.Maybe (isJust, mapMaybe)
 
 import Data.Geo.Jord.Angle (Angle)
@@ -44,6 +46,7 @@ import qualified Data.Geo.Jord.Length as Length
 import qualified Data.Geo.Jord.Math3d as Math3d
 import Data.Geo.Jord.Model (Spherical, surface)
 import Data.Geo.Jord.Triangle (Triangle)
+import qualified Data.Geo.Jord.Triangle as Triangle
 
 -- | A polygon whose vertices are horizontal geodetic positions.
 data Polygon a =
@@ -54,17 +57,24 @@ data Polygon a =
         }
     deriving (Eq, Show)
 
+data Error
+    = NotEnoughVertices -- ^ less than 3 vertices were supplied
+    | InvalidEdge -- ^ 2 consecutives vertices are antipodal or equal
+    | InvalidRadius -- ^ radius of circle or arc is <= 0
+    | EmptyArcRange -- ^ arc start angle == end angle
+    | SeflIntersectingEdge -- ^ 2 edges of the polygon intersect
+    deriving (Eq, Show)
+
 -- | Simple polygon (outer ring only and not self-intersecting) from given vertices. Returns an error ('Left') if:
 --
 --     * less than 3 vertices are given.
 --     * the given vertices defines self-intersecting edges.
 --     * the given vertices contains duplicated positions or antipodal positions.
-simple :: (Spherical a) => [HorizontalPosition a] -> Either String (Polygon a)
+simple :: (Spherical a) => [HorizontalPosition a] -> Either Error (Polygon a)
 simple vs
-    | null vs = Left "no vertex"
+    | null vs = Left NotEnoughVertices
     | head vs == last vs = simple (init vs)
-    | length vs < 3 = Left "not enough vertices"
-    -- FIXME: no equal/antipodal positions
+    | length vs < 3 = Left NotEnoughVertices
     | otherwise = simple' vs
 
 -- | Circle from given centre and radius. The resulting polygon contains @nb@ vertices equally distant from one
@@ -72,10 +82,10 @@ simple vs
 --
 --     * given radius is 0
 --     * given number of positions is less than 3
-circle :: (Spherical a) => HorizontalPosition a -> Length -> Int -> Either String (Polygon a)
+circle :: (Spherical a) => HorizontalPosition a -> Length -> Int -> Either Error (Polygon a)
 circle c r nb
-    | r <= Length.zero = Left "invalid radius"
-    | nb < 3 = Left "invalid number of positions"
+    | r <= Length.zero = Left InvalidRadius
+    | nb < 3 = Left NotEnoughVertices
     | otherwise = Right (discretiseArc c r as)
   where
     n = fromIntegral nb :: Double
@@ -93,11 +103,11 @@ arc :: (Spherical a)
     -> Angle
     -> Angle
     -> Int
-    -> Either String (Polygon a)
+    -> Either Error (Polygon a)
 arc c r sa ea nb
-    | r <= Length.zero = Left "invalid radius"
-    | nb < 3 = Left "invalid number of positions"
-    | range == Angle.zero = Left "invalid range"
+    | r <= Length.zero = Left InvalidRadius
+    | nb < 3 = Left NotEnoughVertices
+    | range == Angle.zero = Left EmptyArcRange
     | otherwise = Right (discretiseArc c r as)
   where
     range = Angle.clockwiseDifference sa ea
@@ -112,9 +122,54 @@ contains :: (Spherical a) => Polygon a -> HorizontalPosition a -> Bool
 contains poly p = GreatCircle.enclosedBy p (vertices poly)
 
 triangulate :: (Spherical a) => Polygon a -> [Triangle a]
-triangulate _ = []
+triangulate p
+    | length vs == 3 = [triangle vs]
+    | otherwise = earClipping vs []
+  where
+    vs = vertices p
 
 -- private
+triangle :: (Spherical a) => [HorizontalPosition a] -> Triangle a
+triangle vs = Triangle.unsafeMake (head vs) (vs !! 1) (vs !! 2)
+
+earClipping :: (Spherical a) => [HorizontalPosition a] -> [Triangle a] -> [Triangle a]
+earClipping vs ts
+    | length vs == 3 = reverse (triangle vs : ts)
+    | otherwise =
+        case (findEar vs) of
+            Nothing -> []
+            (Just (p, e, n)) -> earClipping vs' ts'
+                where ts' = Triangle.unsafeMake p e n : ts
+                      vs' = filter (\v -> v /= e) vs
+
+findEar ::
+       (Spherical a)
+    => [HorizontalPosition a]
+    -> Maybe (HorizontalPosition a, HorizontalPosition a, HorizontalPosition a)
+findEar ps = find (\c -> isEar c rs) convex
+  where
+    rs = reflices ps
+    t3 = tuple3 ps
+    convex = filter (\(_, v, _) -> (v `notElem` rs)) t3
+
+-- | a convex vertex @c@ is an ear if triangle (prev, c, next) contains no reflex.
+isEar ::
+       (Spherical a)
+    => (HorizontalPosition a, HorizontalPosition a, HorizontalPosition a)
+    -> [HorizontalPosition a]
+    -> Bool
+isEar (p, c, n) rs = all (\r -> not (GreatCircle.enclosedBy r vs)) rs
+  where
+    vs = [p, c, n]
+
+-- | A reflex is a vertex where the polygon is concave.
+-- a vertex is a reflex if previous vertex is left (assuming a clockwise polygon), otherwise it is a convex vertex
+reflices :: (Spherical a) => [HorizontalPosition a] -> [HorizontalPosition a]
+reflices ps = fmap (\(_, c, _) -> c) rs
+  where
+    t3 = tuple3 ps
+    rs = filter (\(p, c, n) -> GreatCircle.side p c n == GreatCircle.LeftOf) t3
+
 -- | [mAB, mBC, mCD, mDE, mEA]
 -- no intersections:
 -- mAB vs [mCD, mDE]
@@ -146,11 +201,13 @@ makePairs' (xs, ps)
             else tail . tail $ xs
     np = (head xs, versus)
 
-simple' :: (Spherical a) => [HorizontalPosition a] -> Either String (Polygon a)
+simple' :: (Spherical a) => [HorizontalPosition a] -> Either Error (Polygon a)
 simple' vs =
-    if si
-        then Left "self-intersecting edges"
-        else Right (Polygon os es isConcave)
+    if length es /= length vs
+        then Left InvalidEdge
+        else if si
+                 then Left SeflIntersectingEdge
+                 else Right (Polygon os es isConcave)
   where
     zs = tuple3 vs
     clockwise = sum (fmap (\(a, b, c) -> Angle.toRadians (GreatCircle.turn a b c)) zs) < 0.0
@@ -172,7 +229,7 @@ tuple3 ps = zip3 l1 l2 l3
   where
     l1 = last ps : init ps
     l2 = ps
-    l3 = tail ps ++ [head ps] ++ [head ps]
+    l3 = tail ps ++ [head ps]
 
 mkEdges :: (Spherical a) => [HorizontalPosition a] -> [MinorArc a]
 mkEdges ps = mapMaybe (uncurry GreatCircle.minorArc) (zip ps (tail ps ++ [head ps]))

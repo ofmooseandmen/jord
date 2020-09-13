@@ -15,15 +15,17 @@ import Data.Geo.Jord.Length (Length)
 import qualified Data.Geo.Jord.Length as Length
 import Data.Geo.Jord.Model (Spherical)
 import Data.Geo.Jord.Places
-import Data.Geo.Jord.Polygon (Polygon)
+import Data.Geo.Jord.Polygon (Error(..), Polygon)
 import qualified Data.Geo.Jord.Polygon as Polygon
+import Data.Geo.Jord.Triangle (Triangle)
+import qualified Data.Geo.Jord.Triangle as Triangle
 
 spec :: Spec
 spec = do
     describe "simple" $ do
         it "returns an error if less than 3 vertices" $ do
             let ps = [Geodetic.s84Pos (-2) (-2), Geodetic.s84Pos 2 2]
-            Polygon.simple ps `shouldBe` Left "not enough vertices"
+            Polygon.simple ps `shouldBe` Left NotEnoughVertices
         it "returns an error if edges self-intersects" $ do
             let ps =
                     [ Geodetic.s84Pos (-2) (-2)
@@ -32,7 +34,7 @@ spec = do
                     , Geodetic.s84Pos (-2) 2
                     , Geodetic.s84Pos 2 2
                     ]
-            Polygon.simple ps `shouldBe` Left "self-intersecting edges"
+            Polygon.simple ps `shouldBe` Left SeflIntersectingEdge
         it "returns an error if edges self-intersects (quad)" $ do
             let ps =
                     [ Geodetic.s84Pos (-2) (-2)
@@ -40,7 +42,7 @@ spec = do
                     , Geodetic.s84Pos (-2) 2
                     , Geodetic.s84Pos 2 2
                     ]
-            Polygon.simple ps `shouldBe` Left "self-intersecting edges"
+            Polygon.simple ps `shouldBe` Left SeflIntersectingEdge
         it "returns a concave polygon (4 vertices in clockwise order)" $ do
             let p = Polygon.simple [ystad, hoor, helsingborg, kristianstad]
             fmap Polygon.concave p `shouldBe` Right True
@@ -72,11 +74,10 @@ spec = do
             fmap Polygon.concave p `shouldBe` Right False
     describe "circle" $ do
         it "returns a error if radius <= 0" $ do
-            Polygon.circle malmo Length.zero 10 `shouldBe` Left "invalid radius"
-            Polygon.circle malmo (Length.metres (-1)) 10 `shouldBe` Left "invalid radius"
+            Polygon.circle malmo Length.zero 10 `shouldBe` Left InvalidRadius
+            Polygon.circle malmo (Length.metres (-1)) 10 `shouldBe` Left InvalidRadius
         it "returns a error if radius <= 0" $ do
-            Polygon.circle malmo (Length.metres 1000) 2 `shouldBe`
-                Left "invalid number of positions"
+            Polygon.circle malmo (Length.metres 1000) 2 `shouldBe` Left NotEnoughVertices
         it "returns a convex polygon" $ do
             let c = Geodetic.s84Pos 55.6050 13.0038
             let r = Length.metres 2000.0
@@ -87,12 +88,12 @@ spec = do
             assertPoly ep c r nb eBrngs
     describe "arc" $ do
         it "returns an error if radius <= 0" $ do
-            Polygon.arc malmo Length.zero Angle.zero Angle.zero 10 `shouldBe` Left "invalid radius"
+            Polygon.arc malmo Length.zero Angle.zero Angle.zero 10 `shouldBe` Left InvalidRadius
             Polygon.arc malmo (Length.metres (-1)) Angle.zero Angle.zero 10 `shouldBe`
-                Left "invalid radius"
+                Left InvalidRadius
         it "returns an error if radius <= 0" $ do
             Polygon.arc malmo (Length.metres 1000) Angle.zero Angle.zero 2 `shouldBe`
-                Left "invalid number of positions"
+                Left NotEnoughVertices
         it "returns an error if start = end angle" $ do
             Polygon.arc
                 malmo
@@ -100,7 +101,7 @@ spec = do
                 (Angle.decimalDegrees 154)
                 (Angle.decimalDegrees 154)
                 4 `shouldBe`
-                Left "invalid range"
+                Left EmptyArcRange
         it "returns a convex polygon (start < end)" $ do
             let c = Geodetic.s84Pos 55.6050 13.0038
             let r = Length.metres 2000.0
@@ -129,10 +130,69 @@ spec = do
                                       else x)
                              (iterate (\x -> x + 270.0 / (n - 1.0)) 180.0))
             assertPoly ep c r nb eBrngs
+    describe "triangulate" $ do
+        it "triangluates a concave clockwise quad (1/2)" $ do
+            let p = simple [kristianstad, ystad, helsingborg, horby]
+            let ts = Polygon.triangulate p
+            ts `shouldBe` [triangle horby kristianstad ystad, triangle ystad helsingborg horby]
+        it "triangluates a concave clockwise quad (2/2)" $ do
+            let p = simple [ystad, helsingborg, kristianstad, horby]
+            let ts = Polygon.triangulate p
+            ts `shouldBe`
+                [triangle horby ystad helsingborg, triangle helsingborg kristianstad horby]
+        it "triangluates a concave clockwise pentagon" $ do
+            let p = simple [ystad, malmo, lund, helsingborg, kristianstad]
+            let ts = Polygon.triangulate p
+            ts `shouldBe`
+                [ triangle kristianstad ystad malmo
+                , triangle kristianstad malmo lund
+                , triangle lund helsingborg kristianstad
+                ]
+        it "triangluates a concave clockwise polygon with 7 vertices" $ do
+            let p = simple [bangui, juba, djibouti, antananrivo, dar_es_salaam, kinshasa, narobi]
+            let ts = Polygon.triangulate p
+            ts `shouldBe`
+                [ triangle narobi bangui juba
+                , triangle narobi juba djibouti
+                , triangle narobi djibouti antananrivo
+                , triangle narobi antananrivo dar_es_salaam
+                , triangle dar_es_salaam kinshasa narobi
+                ]
+        it "triangluates a concave counterclockwise pentagon" $ do
+            let p = simple [ystad, lund, kristianstad, helsingborg, malmo]
+            let ts = Polygon.triangulate p
+            ts `shouldBe`
+                [ triangle helsingborg kristianstad lund
+                , triangle malmo helsingborg lund
+                , triangle malmo lund ystad
+                ]
+        it "triangluates a convex clockwise quad" $ do
+            let p = simple [ystad, malmo, helsingborg, kristianstad]
+            let ts = Polygon.triangulate p
+            ts `shouldBe`
+                [triangle kristianstad ystad malmo, triangle malmo helsingborg kristianstad]
+        it "triangulates a convex polygon with 6 vertices" $ do
+            let p = simple [bangui, juba, narobi, dar_es_salaam, harare, kinshasa]
+            let ts = Polygon.triangulate p
+            ts `shouldBe`
+                [ triangle kinshasa bangui juba
+                , triangle kinshasa juba narobi
+                , triangle kinshasa narobi dar_es_salaam
+                , triangle dar_es_salaam harare kinshasa
+                ]
+        it "triangluates a convex counterclockwise quad" $ do
+            let p = simple [ystad, kristianstad, helsingborg, malmo]
+            let ts = Polygon.triangulate p
+            ts `shouldBe`
+                [triangle ystad malmo helsingborg, triangle helsingborg kristianstad ystad]
+        it "triangluates a triangle" $ do
+            let p = simple [ystad, malmo, helsingborg]
+            let ts = Polygon.triangulate p
+            ts `shouldBe` [triangle ystad malmo helsingborg]
 
 assertPoly ::
        (Spherical a)
-    => Either String (Polygon a)
+    => Either Error (Polygon a)
     -> HorizontalPosition a
     -> Length
     -> Int
@@ -151,3 +211,14 @@ assertPoly ep c r nb eBrngs = do
     let aBrngs = mapMaybe (GreatCircle.initialBearing c) vs
     let brngErrs = zipWith (\a1 a2 -> abs (Angle.toDecimalDegrees a1 - a2)) aBrngs eBrngs
     all (< 0.01) brngErrs `shouldBe` True
+
+simple :: (Spherical a) => [HorizontalPosition a] -> Polygon a
+simple vs = fromRight (error "should be right") (Polygon.simple vs)
+
+triangle ::
+       (Spherical a)
+    => HorizontalPosition a
+    -> HorizontalPosition a
+    -> HorizontalPosition a
+    -> Triangle a
+triangle = Triangle.unsafeMake

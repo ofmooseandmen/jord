@@ -1,13 +1,17 @@
 ### 2.0.0.0
 
-- API change - all modules must be imported as qualified
+- API change - all modules should be imported as qualified
 - API change - Position has been split between Geodetic & Geocentric
 - API change - positions conversion/transformation are provided by Positions module
-- API change - GreatCicle: interpolate -> interpolated, isInsideSurface -> insideSurface
+- API change - GreatCicle: interpolate -> interpolated, isInsideSurface -> enclosedBy
 - API change - Geodesic data type provides initialBearing, finalBearing, length and functions are removed
 - API change - LocalFrames -> Local
-- Bug Fix - GreatCircle.intersection correctly handles minor arcs crossing the equator
-- Bug Fix - All Geodetic positions built from a /n/-vector have the correct angle resolution
+- API change - provide separate data type for horizontal positions and positions with height
+- New API    - GreatCircle: turn & side
+- New API    - Polygon: simple, circle, arc, contains & triangulate
+- New API    - Triangle: contains, circumcentre & centroid
+- Bug Fix    - GreatCircle.intersection correctly handles minor arcs crossing the equator
+- Bug Fix    - All Geodetic positions built from a n-vector have the correct angle resolution
 - Bump stack resolver to lts-16.11
 - Examples in readme are compile to make sure they are valid
 - Use github actions for CI

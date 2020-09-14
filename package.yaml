@@ -38,9 +38,11 @@ library:
     - Data.Geo.Jord.Math3d
     - Data.Geo.Jord.Model
     - Data.Geo.Jord.Models
+    - Data.Geo.Jord.Polygon
     - Data.Geo.Jord.Positions
     - Data.Geo.Jord.Rotation
     - Data.Geo.Jord.Speed
+    - Data.Geo.Jord.Triangle
     - Data.Geo.Jord.Tx
     - Data.Geo.Jord.Txs
   other-modules:
@@ -73,7 +75,7 @@ tests:
     main:                Spec.hs
     verbatim:
       build-tool-depends:
-        hspec-discover:hspec-discover 
+        hspec-discover:hspec-discover
     source-dirs:         test
     dependencies:
       - jord

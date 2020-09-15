@@ -487,7 +487,7 @@ example15 = do
               \    intercept position    = " ++ (show interceptPosition) ++ "\n\
               \    interceptor bearing   = " ++ (show interceptorBearing) ++ "\n")
 ```
-## Solutions to coordinate transformation problems
+## Solutions to coordinates transformation problems
 
 ### Example 16: Transformation between fixed models 
 

@@ -51,17 +51,17 @@ import qualified Data.Geo.Jord.Length as Length
 import qualified Data.Geo.Jord.Local as Local
 import qualified Data.Geo.Jord.Positions as Positions
 import qualified Data.Geo.Jord.Speed as Speed
+import qualified Data.Geo.Jord.Tx as Tx
 ```
 
-Import data types and models and transformation parameters:
+Note: modules can be selectively imported as non-qualified, but i.m.o. the code reads better when modules are imported qualified.
+
+Import models and transformation parameters:
 
 ```haskell
-import Data.Geo.Jord.Angle(Angle)
-import Data.Geo.Jord.Kinematics(Track(..))
-import Data.Geo.Jord.Length(Length)
-import Data.Geo.Jord.Local(Ned(..), Delta(..))
+import Data.Geo.Jord.Model (Epoch(..))
 import Data.Geo.Jord.Models
-import Data.Geo.Jord.Speed(Speed)
+import qualified Data.Geo.Jord.Txs as Txs
 ```
 
 ## Solutions to the 10 examples from [NavLab](https://www.navlab.net/nvector)
@@ -358,14 +358,14 @@ closest possible distance.*
 ```haskell
 example13 :: IO()
 example13 = do
-    let ownship = Track
-                 (Geodetic.s84Pos 20 (-60))
-                 (Angle.decimalDegrees 10)
-                 (Speed.knots 15)
-    let intruder = Track
-                 (Geodetic.s84Pos 34 (-50))
-                 (Angle.decimalDegrees 220)
-                 (Speed.knots 300)
+    let ownship = Kinematics.Track
+                     (Geodetic.s84Pos 20 (-60))
+                     (Angle.decimalDegrees 10)
+                     (Speed.knots 15)
+    let intruder = Kinematics.Track
+                       (Geodetic.s84Pos 34 (-50))
+                       (Angle.decimalDegrees 220)
+                       (Speed.knots 300)
 
     let cpa = Kinematics.cpa ownship intruder
     let timeToCpa = fmap Kinematics.timeToCpa cpa
@@ -396,10 +396,10 @@ of the interceptor, the distance travelled to intercept, and the latitude and lo
 ```haskell
 example14 :: IO()
 example14 = do
-    let track = Track
-                (Geodetic.s84Pos 34 (-50))
-                (Angle.decimalDegrees 220)
-                (Speed.knots 600)
+    let track = Kinematics.Track
+                    (Geodetic.s84Pos 34 (-50))
+                    (Angle.decimalDegrees 220)
+                    (Speed.knots 600)
     let interceptor = Geodetic.s84Pos 20 (-60)
     let interceptTime = Duration.seconds 2700
 
@@ -437,7 +437,7 @@ then the time required to intercept is computed.*
 ```haskell
 example15 :: IO()
 example15 = do
-    let track = Track
+    let track = Kinematics.Track
                     (Geodetic.s84Pos 34 (-50))
                     (Angle.decimalDegrees 220)
                     (Speed.knots 600)
@@ -487,6 +487,55 @@ example15 = do
               \    intercept position    = " ++ (show interceptPosition) ++ "\n\
               \    interceptor bearing   = " ++ (show interceptorBearing) ++ "\n")
 ```
+## Solutions to coordinate transformation problems
+
+### Example 16: Transformation between fixed models 
+
+Convert the coordinates of a geocentric position between the WGS84 model and the NAD83 model.
+
+```haskell
+example16 :: IO()
+example16 = do
+    let pWGS84 = Geocentric.metresPos 4193790.895437 454436.195118 4768166.813801 WGS84 
+
+    -- using explicit parameters:
+    let tx = Tx.params Txs.from_WGS84_to_NAD83 
+    let pNAD83 = Positions.transform' pWGS84 NAD83 tx
+    -- Position {gx = 4193.792080781km, gy = 454.433921298km, gz = 4768.16615479km, model = NAD83}
+
+    -- using the transformation graph:
+    let pNAD83' = Positions.transform pWGS84 NAD83 Txs.fixed
+    -- Just (Position {gx = 4193.792080781km, gy = 454.433921298km, gz = 4768.16615479km, model = NAD83})
+
+    putStrLn ("Coordinates transformation, Example 16: WGS84 -> NAD83\n\
+              \    WGS84 = " ++ (show pWGS84) ++ "\n\
+              \    NAD83 = " ++ (show pNAD83) ++ "\n\
+              \    NAD83 = " ++ (show pNAD83') ++ "\n")
+```
+
+### Example 17: Transformation between time dependent models 
+
+Convert the coordinates of a geocentric position between the ITRF2014, ITRF2000 and NAD83 (CORS96) models 
+
+```haskell
+example17 :: IO()
+example17 = do
+    let pITRF2014 = Geocentric.metresPos 4193790.895437 454436.195118 4768166.813801 ITRF2014 
+
+    -- using explicit parameters:
+    let tx = Tx.params Txs.from_ITRF2014_to_ITRF2000
+    let pITRF2000 = Positions.transformAt' pITRF2014 (Epoch 2014.0) ITRF2000 tx 
+    -- Position {gx = 4193.790907273km, gy = 454.436197881km, gz = 4768.166792308km, model = ITRF2000}
+
+    -- using the transformation graph (goes via ITRF2000):
+    let pNAD83 = Positions.transformAt pITRF2014 (Epoch 2014.0) NAD83_CORS96 Txs.timeDependent 
+    -- Just (Position {gx = 4193.791801305km, gy = 454.433876376km, gz = 4768.166397281km, model = NAD83_CORS96})
+
+    putStrLn ("Coordinates transformation, Example 17: ITRF2014 -> ITRF2000 -> NAD83 (CORS96)\n\
+              \    ITRF2014       = " ++ (show pITRF2014) ++ "\n\
+              \    ITRF2000       = " ++ (show pITRF2000) ++ "\n\
+              \    NAD83 (CORS96) = " ++ (show pNAD83) ++ "\n")
+```
 ***
 
 ```haskell
@@ -507,4 +556,6 @@ main = do
     example13
     example14
     example15
+    example16
+    example17
 ```

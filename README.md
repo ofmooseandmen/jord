@@ -49,6 +49,7 @@ import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Kinematics as Kinematics
 import qualified Data.Geo.Jord.Length as Length
 import qualified Data.Geo.Jord.Local as Local
+import qualified Data.Geo.Jord.Polygon as Polygon
 import qualified Data.Geo.Jord.Positions as Positions
 import qualified Data.Geo.Jord.Speed as Speed
 import qualified Data.Geo.Jord.Tx as Tx
@@ -538,6 +539,68 @@ example17 = do
 ```
 ***
 
+## Solutions to polygon triangulation
+
+### Example 18: Triangulation of a simple polygon
+
+```haskell
+example18 :: IO()
+example18 = do
+    let p = Polygon.simple
+                [ Geodetic.s84Pos 45 45
+                , Geodetic.s84Pos (-45) 45
+                , Geodetic.s84Pos (-45) (-45)
+                , Geodetic.s84Pos 45 (-45)
+                ]
+
+    let ts = fmap Polygon.triangulate p
+    -- Right [ Triangle 45°0'0.000"N,45°0'0.000"W (S84) 45°0'0.000"N,45°0'0.000"E (S84) 45°0'0.000"S,45°0'0.000"E (S84)
+    --       , Triangle 45°0'0.000"S,45°0'0.000"E (S84) 45°0'0.000"S,45°0'0.000"W (S84) 45°0'0.000"N,45°0'0.000"W (S84)
+    --       ]
+
+    putStrLn ("Polygon triangulation, Example 18: Simple polygon\n\
+              \    triangles = " ++ (show ts) ++ "\n")   
+```
+
+### Example 19: Triangulation of a circle
+
+```haskell
+example19 :: IO()
+example19 = do
+    let p = Polygon.circle (Geodetic.s84Pos 0 0) (Length.kilometres 10) 10
+
+    let ts = fmap Polygon.triangulate p
+    -- Right [ Triangle 0°4'21.923"N,0°3'10.298"W (S84) 0°5'23.755"N,0°0'0.000"E (S84) 0°4'21.923"N,0°3'10.298"E (S84)
+    --       , Triangle 0°4'21.923"N,0°3'10.298"W (S84) 0°4'21.923"N,0°3'10.298"E (S84) 0°1'40.045"N,0°5'7.909"E (S84)
+    --       , Triangle 0°4'21.923"N,0°3'10.298"W (S84) 0°1'40.045"N,0°5'7.909"E (S84) 0°1'40.045"S,0°5'7.909"E (S84)
+    --       , Triangle 0°4'21.923"N,0°3'10.298"W (S84) 0°1'40.045"S,0°5'7.909"E (S84) 0°4'21.923"S,0°3'10.298"E (S84)
+    --       , Triangle 0°4'21.923"N,0°3'10.298"W (S84) 0°4'21.923"S,0°3'10.298"E (S84) 0°5'23.755"S,0°0'0.000"E (S84)
+    --       , Triangle 0°4'21.923"N,0°3'10.298"W (S84) 0°5'23.755"S,0°0'0.000"E (S84) 0°4'21.923"S,0°3'10.298"W (S84)
+    --       , Triangle 0°4'21.923"N,0°3'10.298"W (S84) 0°4'21.923"S,0°3'10.298"W (S84) 0°1'40.045"S,0°5'7.909"W (S84)
+    --       , Triangle 0°1'40.045"S,0°5'7.909"W (S84) 0°1'40.045"N,0°5'7.909"W (S84) 0°4'21.923"N,0°3'10.298"W (S84)
+    --       ]
+
+    putStrLn ("Polygon triangulation, Example 19: Circle\n\
+              \    triangles = " ++ (show ts) ++ "\n")   
+```
+
+### Example 20: Triangulation of an arc
+
+```haskell
+example20 :: IO()
+example20 = do
+    let p = Polygon.arc (Geodetic.s84Pos 0 0) (Length.kilometres 10) (Angle.decimalDegrees 10) (Angle.decimalDegrees  20) 5
+
+    let ts = fmap Polygon.triangulate p
+    -- Right [ Triangle 0°5'4.230"N,0°1'50.730"E (S84) 0°5'18.836"N,0°0'56.219"E (S84) 0°5'16.081"N,0°1'10.073"E (S84)
+    --       , Triangle 0°5'4.230"N,0°1'50.730"E (S84) 0°5'16.081"N,0°1'10.073"E (S84) 0°5'12.723"N,0°1'23.794"E (S84)
+    --       , Triangle 0°5'12.723"N,0°1'23.794"E (S84) 0°5'8.770"N,0°1'37.355"E (S84) 0°5'4.230"N,0°1'50.730"E (S84)
+    --       ]
+
+    putStrLn ("Polygon triangulation, Example 20: Arc\n\
+              \    triangles = " ++ (show ts) ++ "\n")   
+```
+
 ```haskell
 main :: IO()
 main = do
@@ -558,4 +621,7 @@ main = do
     example15
     example16
     example17
+    example18
+    example19
+    example20
 ```

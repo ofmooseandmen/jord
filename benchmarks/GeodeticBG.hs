@@ -11,7 +11,7 @@ import Data.Geo.Jord.Math3d (V3)
 benchmark :: Benchmark
 benchmark =
     bgroup
-        "Position"
+        "Geodetic"
         [ bench "nvectorFromLatLong" $ whnf Geodetic.nvectorFromLatLong ll
         , bench "nvectorToLatLong" $ whnf Geodetic.nvectorToLatLong nv
         ]

@@ -14,10 +14,16 @@ benchmark :: Benchmark
 benchmark =
     bgroup
         "Positions"
-        [ bench "toGeodetic (ellipsoidal)" $ whnf Positions.toGeodetic egeoc
-        , bench "toGeocentric (ellipsoidal)" $ whnf Positions.toGeocentric egeod
-        , bench "toGeodetic (spherical)" $ whnf Positions.toGeodetic sgeoc
-        , bench "toGeocentric (spherical)" $ whnf Positions.toGeocentric sgeod
+        [ bgroup
+              "ellipsoidal"
+              [ bench "toGeodetic" $ whnf Positions.toGeodetic egeoc
+              , bench "toGeocentric" $ whnf Positions.toGeocentric egeod
+              ]
+        , bgroup
+              "spherical"
+              [ bench "toGeodetic" $ whnf Positions.toGeodetic sgeoc
+              , bench "toGeocentric" $ whnf Positions.toGeocentric sgeod
+              ]
         ]
 
 egeoc :: Geocentric.Position WGS84

@@ -57,6 +57,7 @@ data Polygon a =
         }
     deriving (Eq, Show)
 
+-- | Error returned when attempting to create a polygon from invalid data. 
 data Error
     = NotEnoughVertices -- ^ less than 3 vertices were supplied.
     | InvalidEdge -- ^ 2 consecutives vertices are antipodal or equal.

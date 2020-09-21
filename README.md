@@ -35,7 +35,7 @@ $ cabal v2-test
 
 ## How do I use it?
 
-[See documentation on Hackage](http://hackage.haskell.org/package/jord/docs/Data-Geo-Jord.html)
+[See documentation on Hackage](http://hackage.haskell.org/package/jord)
 
 Import the core functional modules as qualified:
 
